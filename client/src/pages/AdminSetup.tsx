@@ -1,0 +1,294 @@
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Shield, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { useLocation } from "wouter";
+
+export default function AdminSetup() {
+  const [, navigate] = useLocation();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSetup, setIsSetup] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    organizationName: "",
+  });
+
+  useEffect(() => {
+    checkSetupStatus();
+  }, []);
+
+  const checkSetupStatus = async () => {
+    try {
+      const response = await fetch('/api/auth/check-setup');
+      const data = await response.json();
+      
+      if (data.isSetup) {
+        setIsSetup(true);
+        // Redirect to login if already set up
+        setTimeout(() => navigate('/login'), 2000);
+      }
+    } catch (err) {
+      console.error('Failed to check setup status:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    // Validation
+    if (!formData.email || !formData.password || !formData.confirmPassword || !formData.organizationName) {
+      setError("All fields are required");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/auth/setup-admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          organizationName: formData.organizationName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(true);
+        // Redirect to login after 2 seconds
+        setTimeout(() => navigate('/login'), 2000);
+      } else {
+        setError(data.message || 'Failed to set up admin');
+      }
+    } catch (err) {
+      setError("Failed to connect to server");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-orange-500 mx-auto mb-4" />
+          <p className="text-gray-600">Checking setup status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isSetup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 text-center">
+            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">System Already Set Up</h2>
+            <p className="text-gray-600 mb-4">Redirecting to login...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 text-center">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            </motion.div>
+            <h2 className="text-2xl font-bold mb-2">Setup Complete!</h2>
+            <p className="text-gray-600 mb-4">Admin account created successfully</p>
+            <p className="text-sm text-gray-500">Redirecting to login...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
+      >
+        <Card className="shadow-xl">
+          <CardHeader className="text-center pb-4">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="flex justify-center mb-4"
+            >
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center">
+                <Shield className="w-8 h-8 text-white" />
+              </div>
+            </motion.div>
+            <CardTitle className="text-2xl font-bold text-gray-800">
+              Admin Setup
+            </CardTitle>
+            <p className="text-sm text-gray-600 mt-2">
+              Create your admin account to get started
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="organizationName">Organization Name</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input
+                      id="organizationName"
+                      type="text"
+                      placeholder="Enter organization name"
+                      value={formData.organizationName}
+                      onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })}
+                      disabled={isSubmitting}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Name of your organization</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Admin Email</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="admin@example.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      disabled={isSubmitting}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Admin email address</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Min. 8 characters"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      disabled={isSubmitting}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Minimum 8 characters</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="Confirm password"
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      disabled={isSubmitting}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Re-enter password</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg"
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{error}</span>
+                </motion.div>
+              )}
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Setting up...
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="w-4 h-4 mr-2" />
+                        Create Admin Account
+                      </>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Create admin account and complete setup</p>
+                </TooltipContent>
+              </Tooltip>
+            </form>
+
+            <div className="mt-6 text-center text-xs text-gray-500">
+              <p>This will create the first admin user with full system access</p>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  );
+}
