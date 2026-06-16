@@ -1,10 +1,31 @@
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const cors = require('cors');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.GATEWAY_PORT || 3009;
+
+// PostgreSQL configuration for translations
+const translationsPool = new Pool({
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 5432,
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'Rasika',
+  database: 'hashibasha_org',
+});
+
+// In-memory cache for translations
+const translationsCache = {
+  en: null,
+  ar: null,
+  lastUpdated: {
+    en: null,
+    ar: null,
+  },
+  cacheDuration: 5 * 60 * 1000, // 5 minutes
+};
 
 // Middleware
 app.use(cors({
@@ -91,6 +112,54 @@ app.use('/api/user', userProxy);
 app.use('/api/notification', notificationProxy);
 app.use('/api/permission', permissionProxy);
 app.use('/api/audits', auditsProxy);
+
+// Translations endpoint with caching
+app.get('/api/translations/:lang', async (req, res) => {
+  const { lang } = req.params;
+  const validLanguages = ['en', 'ar'];
+  
+  if (!validLanguages.includes(lang)) {
+    return res.status(400).json({ error: 'Invalid language. Use "en" or "ar"' });
+  }
+
+  // Check cache
+  const now = Date.now();
+  if (translationsCache[lang] && 
+      translationsCache.lastUpdated[lang] && 
+      (now - translationsCache.lastUpdated[lang]) < translationsCache.cacheDuration) {
+    return res.json(translationsCache[lang]);
+  }
+
+  try {
+    const result = await translationsPool.query(
+      'SELECT key, CASE WHEN $1 = \'en\' THEN en ELSE ar END as translation FROM translations',
+      [lang]
+    );
+
+    const translations = {};
+    result.rows.forEach(row => {
+      translations[row.key] = row.translation;
+    });
+
+    // Update cache
+    translationsCache[lang] = translations;
+    translationsCache.lastUpdated[lang] = now;
+
+    res.json(translations);
+  } catch (error) {
+    console.error('Error fetching translations:', error);
+    res.status(500).json({ error: 'Failed to fetch translations' });
+  }
+});
+
+// Clear translations cache endpoint (for admin use)
+app.post('/api/translations/cache/clear', (req, res) => {
+  translationsCache.en = null;
+  translationsCache.ar = null;
+  translationsCache.lastUpdated.en = null;
+  translationsCache.lastUpdated.ar = null;
+  res.json({ message: 'Translations cache cleared' });
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {

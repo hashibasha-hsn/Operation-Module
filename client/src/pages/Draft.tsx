@@ -70,7 +70,7 @@ export default function Draft() {
         transition={{ duration: 0.5, delay: 0.1 }}
         className="flex items-center gap-2 text-sm text-gray-500"
       >
-        <span>Last Updated At: 07:20 PM</span>
+        <span>Last Updated At: -</span>
         <RefreshCw className="w-4 h-4 cursor-pointer hover:text-gray-700" />
       </motion.div>
 
@@ -130,7 +130,7 @@ export default function Draft() {
             <TooltipTrigger asChild>
               <Input
                 type="text"
-                value="10-03-2026"
+                value=""
                 className="w-32 border-gray-300 focus:border-orange-500"
               />
             </TooltipTrigger>
@@ -144,7 +144,7 @@ export default function Draft() {
               <div className="relative">
                 <Input
                   type="text"
-                  value="10-06-2026"
+                  value=""
                   className="w-32 border-gray-300 pr-8 focus:border-orange-500"
                 />
                 <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />

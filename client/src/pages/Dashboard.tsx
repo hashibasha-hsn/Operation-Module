@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,14 +19,32 @@ import {
   ChevronRight,
   BarChart3,
   Info,
+  Flame,
+  Eye,
+  MessageCircle,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Dashboard() {
   const { t } = useLanguage();
   const [dateOffset, setDateOffset] = useState(0);
+  const [noticeboardPosts, setNoticeboardPosts] = useState<any[]>([]);
   const currentDate = new Date();
   const daysOfWeek = [];
+
+  useEffect(() => {
+    fetchNoticeboardPosts();
+  }, []);
+
+  const fetchNoticeboardPosts = async () => {
+    try {
+      const response = await fetch('http://localhost:3012/noticeboard?organizationId=default-org');
+      const data = await response.json();
+      setNoticeboardPosts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to fetch noticeboard posts:', err);
+    }
+  };
 
   // Generate calendar days based on offset
   for (let i = 0; i < 3; i++) {
@@ -249,7 +267,7 @@ export default function Dashboard() {
 
                   {/* Task List */}
                   <div className="space-y-3">
-                    {["Task 1", "Task 2", "Task 3"].map((task, idx) => (
+                    {[].map((task: string, idx: number) => (
                       <Tooltip key={task}>
                         <TooltipTrigger asChild>
                           <motion.div
@@ -303,60 +321,86 @@ export default function Dashboard() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Video/Media Placeholder */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
+                  {!Array.isArray(noticeboardPosts) || noticeboardPosts.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 text-sm">
+                      {t('noNoticeboardPostsAvailable')}
+                    </div>
+                  ) : (
+                    noticeboardPosts.slice(0, 3).map((post) => (
                       <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="bg-gradient-to-br from-yellow-400 via-orange-500 to-orange-600 rounded-lg aspect-video flex items-center justify-center cursor-pointer shadow-md hover:shadow-lg transition-all duration-300 relative overflow-hidden"
+                        key={post.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                        className="space-y-3"
                       >
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border-2 border-white/40">
-                            <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-white border-b-[12px] border-b-transparent ml-1"></div>
-                          </div>
+                        {post.fileUrl && (
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="rounded-lg aspect-video overflow-hidden cursor-pointer shadow-md hover:shadow-lg transition-all duration-300 relative"
+                          >
+                            <img
+                              src={post.fileUrl}
+                              alt={post.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </motion.div>
+                        )}
+                        <div>
+                          <h3 className="font-semibold text-sm text-gray-800">{post.title}</h3>
+                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">{post.description}</p>
+                        </div>
+                        <div className="flex gap-4 mt-3 text-xs">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <motion.div
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="flex items-center gap-1 cursor-pointer text-gray-600 hover:text-gray-800 transition-all duration-300"
+                              >
+                                <Flame className="w-4 h-4 text-orange-500" />
+                                <span>{post.likesCount || 0}</span>
+                              </motion.div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t('likes')}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <motion.div
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="flex items-center gap-1 cursor-pointer text-gray-600 hover:text-gray-800 transition-all duration-300"
+                              >
+                                <Eye className="w-4 h-4 text-blue-500" />
+                                <span>{post.viewsCount || 0}</span>
+                              </motion.div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t('views')}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <motion.div
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="flex items-center gap-1 cursor-pointer text-gray-600 hover:text-gray-800 transition-all duration-300"
+                              >
+                                <MessageCircle className="w-4 h-4 text-green-500" />
+                                <span>{post.commentsCount || 0}</span>
+                              </motion.div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t('comments')}</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       </motion.div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t('playVideo')}</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Notice Details */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    <h3 className="font-semibold text-sm text-gray-800">Hashi Basha</h3>
-                    <p className="text-xs text-gray-600 mt-1">
-                      When the taste and flavor meets, the details of the tale begin Hashi Basha.
-                    </p>
-                    <div className="flex gap-4 mt-3 text-xs">
-                      {[
-                        { emoji: "👍", label: "145 Likes", color: "text-gray-600", tooltipKey: "likeThisNotice" },
-                        { emoji: "👎", label: "7 Dislikes", color: "text-gray-600", tooltipKey: "dislikeThisNotice" },
-                        { emoji: "💬", label: "15 Discussions", color: "text-gray-600", tooltipKey: "viewDiscussions" },
-                      ].map((item, idx) => (
-                        <Tooltip key={item.label}>
-                          <TooltipTrigger asChild>
-                            <motion.div
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              className={`flex items-center gap-1 cursor-pointer ${item.color} hover:text-gray-800 transition-all duration-300`}
-                            >
-                              <span>{item.emoji}</span>
-                              <span>{item.label}</span>
-                            </motion.div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t(item.tooltipKey)}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ))}
-                    </div>
-                  </motion.div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </motion.div>

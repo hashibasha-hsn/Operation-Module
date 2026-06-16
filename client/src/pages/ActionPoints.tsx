@@ -335,7 +335,7 @@ export default function ActionPoints() {
                         <Badge
                           variant={ap.priority === 'high' ? 'destructive' : ap.priority === 'medium' ? 'default' : 'secondary'}
                         >
-                          {ap.priority}
+                          {t(ap.priority)}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -348,13 +348,13 @@ export default function ActionPoints() {
                               ap.status === 'in_progress' ? 'secondary' : 'outline'
                             }
                           >
-                            {ap.status}
+                            {t(ap.status)}
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell>{ap.assignedTo || 'N/A'}</TableCell>
+                      <TableCell>{ap.assignedTo || t('notAvailable')}</TableCell>
                       <TableCell>
-                        {ap.dueDate ? new Date(ap.dueDate).toLocaleDateString() : 'N/A'}
+                        {ap.dueDate ? new Date(ap.dueDate).toLocaleDateString() : t('notAvailable')}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -396,7 +396,7 @@ export default function ActionPoints() {
                   <Badge
                     variant={ap.priority === 'high' ? 'destructive' : ap.priority === 'medium' ? 'default' : 'secondary'}
                   >
-                    {ap.priority}
+                    {t(ap.priority)}
                   </Badge>
                 </div>
               </CardHeader>
@@ -407,16 +407,16 @@ export default function ActionPoints() {
                     <span className="text-muted-foreground">{t('status')}:</span>
                     <div className="flex items-center gap-1">
                       {getStatusIcon(ap.status)}
-                      <span>{ap.status}</span>
+                      <span>{t(ap.status)}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">{t('assignedTo')}:</span>
-                    <span>{ap.assignedTo || 'N/A'}</span>
+                    <span>{ap.assignedTo || t('notAvailable')}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">{t('dueDate')}:</span>
-                    <span>{ap.dueDate ? new Date(ap.dueDate).toLocaleDateString() : 'N/A'}</span>
+                    <span>{ap.dueDate ? new Date(ap.dueDate).toLocaleDateString() : t('notAvailable')}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">{t('timeLeft')}:</span>
@@ -463,7 +463,7 @@ export default function ActionPoints() {
                     <Badge
                       variant={selectedActionPoint.priority === 'high' ? 'destructive' : selectedActionPoint.priority === 'medium' ? 'default' : 'secondary'}
                     >
-                      {selectedActionPoint.priority}
+                      {t(selectedActionPoint.priority)}
                     </Badge>
                   </div>
                 </div>
@@ -477,23 +477,23 @@ export default function ActionPoints() {
                         selectedActionPoint.status === 'in_progress' ? 'secondary' : 'outline'
                       }
                     >
-                      {selectedActionPoint.status}
+                      {t(selectedActionPoint.status)}
                     </Badge>
                   </div>
                 </div>
                 <div>
                   <Label>{t('dueDate')}</Label>
                   <div className="text-sm mt-1">
-                    {selectedActionPoint.dueDate ? new Date(selectedActionPoint.dueDate).toLocaleString() : 'N/A'}
+                    {selectedActionPoint.dueDate ? new Date(selectedActionPoint.dueDate).toLocaleString() : t('notAvailable')}
                   </div>
                 </div>
                 <div>
                   <Label>{t('assignedTo')}</Label>
-                  <div className="text-sm mt-1">{selectedActionPoint.assignedTo || 'N/A'}</div>
+                  <div className="text-sm mt-1">{selectedActionPoint.assignedTo || t('notAvailable')}</div>
                 </div>
                 <div>
                   <Label>{t('createdBy')}</Label>
-                  <div className="text-sm mt-1">{selectedActionPoint.createdBy || 'N/A'}</div>
+                  <div className="text-sm mt-1">{selectedActionPoint.createdBy || t('notAvailable')}</div>
                 </div>
               </div>
 

@@ -58,51 +58,9 @@ export default function CustomDashboards() {
 
   const tabs = ["Process & Workflow", "Ticket & Action Point"];
 
-  const mockDashboards = {
-    "Process & Workflow": [
-      {
-        id: "DASH-001",
-        name: "Daily Process Compliance",
-        type: "process",
-        chartType: "bar",
-        kpis: { completion: 85, compliance: 78, pending: 12 },
-        lastUpdated: "2024-01-15",
-      },
-      {
-        id: "DASH-002",
-        name: "Weekly Audit Trends",
-        type: "audit",
-        chartType: "line",
-        kpis: { completion: 72, compliance: 68, pending: 18 },
-        lastUpdated: "2024-01-14",
-      },
-      {
-        id: "DASH-003",
-        name: "Store Performance Overview",
-        type: "process",
-        chartType: "pie",
-        kpis: { completion: 90, compliance: 85, pending: 8 },
-        lastUpdated: "2024-01-13",
-      },
-    ],
-    "Ticket & Action Point": [
-      {
-        id: "DASH-004",
-        name: "Ticket Resolution Time",
-        type: "ticket",
-        chartType: "line",
-        kpis: { open: 25, inProgress: 15, completed: 45 },
-        lastUpdated: "2024-01-15",
-      },
-      {
-        id: "DASH-005",
-        name: "Action Point Status",
-        type: "actionPoint",
-        chartType: "bar",
-        kpis: { open: 30, inProgress: 20, completed: 50 },
-        lastUpdated: "2024-01-14",
-      },
-    ],
+  const mockDashboards: Record<string, any[]> = {
+    "Process & Workflow": [],
+    "Ticket & Action Point": [],
   };
 
   const chartTypes = [

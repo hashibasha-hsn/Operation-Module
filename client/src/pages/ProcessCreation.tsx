@@ -1,17 +1,17 @@
-import { ArrowLeft, Type, Hammer, Settings, User, Save, Upload, Search, Plus, Settings as SettingsIcon, Download, Check } from "lucide-react";
-import { useLocation } from "wouter";
+import { Search, Plus, Settings as SettingsIcon, Download, Check, Upload } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import ProcessHeader from "@/components/ProcessHeader";
 
-const ALL_USERS = ['John Doe', 'Jane Smith', 'Mike Johnson', 'Sarah Williams', 'Tom Brown', 'Emily Davis'];
-const ALL_STORES = ['Store A', 'Store B – Mall', 'Store C – Airport', 'Store D – Central', 'Store E – North', 'Store F – South'];
+const ALL_USERS: string[] = [];
+const ALL_STORES: string[] = [];
 
 export default function ProcessCreation() {
-  const [, navigate] = useLocation();
+  const [activeTab, setActiveTab] = useState("assign");
   const [assignBy, setAssignBy] = useState("store");
   const [profileAccordionOpen, setProfileAccordionOpen] = useState(true);
   const [qaTab, setQaTab] = useState("designation");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [selectedStores, setSelectedStores] = useState<string[]>(['Store A']);
+  const [selectedStores, setSelectedStores] = useState<string[]>([]);
   const [userInput, setUserInput] = useState("");
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
@@ -19,6 +19,19 @@ export default function ProcessCreation() {
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const storeDropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    // Navigation is handled by ProcessHeader component
+  };
+
+  const handleSave = () => {
+    console.log('Save');
+  };
+
+  const handlePublish = () => {
+    console.log('Publish');
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -32,16 +45,6 @@ export default function ProcessCreation() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const handleTabChange = (value: string) => {
-    if (value === "title") {
-      navigate("/title-setup");
-    } else if (value === "build") {
-      navigate("/create-form");
-    } else if (value === "properties") {
-      navigate("/process-creation");
-    }
-  };
 
   const handleAssignByChange = (value: string) => {
     setAssignBy(value);
@@ -81,72 +84,12 @@ export default function ProcessCreation() {
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', background: '#fff', fontSize: '14px', color: '#374151', minHeight: '100vh' }}>
-      {/* TOP NAV */}
-      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: '48px', background: 'linear-gradient(to right, #0f172a, #1e3a8a)', borderBottom: '1px solid rgba(30, 58, 138, 0.3)', gap: '12px' }}>
-        <button
-          onClick={() => navigate("/process")}
-          style={{ color: '#fff', fontSize: '13px', background: 'none', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', borderRadius: '5px', whiteSpace: 'nowrap' }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.background = 'none'; }}
-        >
-          <ArrowLeft size={15} />
-          Back
-        </button>
-
-        <div style={{ display: 'flex', gap: '2px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', padding: '3px' }}>
-          <button
-            onClick={() => handleTabChange("title")}
-            style={{ padding: '5px 18px', fontSize: '13px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', transition: 'background 0.15s, color 0.15s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.background = 'transparent'; }}
-          >
-            <Type size={15} />
-            Title
-          </button>
-          <button
-            onClick={() => handleTabChange("build")}
-            style={{ padding: '5px 18px', fontSize: '13px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', transition: 'background 0.15s, color 0.15s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.background = 'transparent'; }}
-          >
-            <Hammer size={15} />
-            Build
-          </button>
-          <button
-            onClick={() => handleTabChange("properties")}
-            style={{ padding: '5px 18px', fontSize: '13px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', transition: 'background 0.15s, color 0.15s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.background = 'transparent'; }}
-          >
-            <Settings size={15} />
-            Properties
-          </button>
-          <button
-            style={{ padding: '5px 18px', fontSize: '13px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: '#f97316', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', transition: 'background 0.15s, color 0.15s' }}
-          >
-            <User size={15} />
-            Assign
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: '7px' }}>
-            Flow:
-            <div style={{ width: '38px', height: '20px', background: 'rgba(255,255,255,0.2)', borderRadius: '10px', position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
-              <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: '2px' }}></div>
-            </div>
-            Legacy
-          </div>
-          <button style={{ padding: '5px 14px', border: '1px solid rgba(255,255,255,0.3)', background: 'transparent', color: '#fff', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.background = 'transparent'; }}>
-            <Save size={15} />
-            SAVE
-          </button>
-          <button style={{ padding: '5px 16px', background: '#f97316', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px' }} onMouseEnter={(e) => e.currentTarget.style.background = '#ea580c'} onMouseLeave={(e) => e.currentTarget.style.background = '#f97316'}>
-            <Upload size={15} />
-            Publish
-          </button>
-        </div>
-      </nav>
+      <ProcessHeader 
+        activeTab={activeTab} 
+        onTabChange={handleTabChange}
+        onSave={handleSave}
+        onPublish={handlePublish}
+      />
 
       {/* ASSIGN BY BAR */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#fff', borderBottom: '1px solid #e5e7eb' }}>

@@ -3,6 +3,8 @@ import { TagsService } from './tags.service';
 import { AdvDropdownTag } from './adv-dropdown-tag.entity';
 import { AdvDropdownValue } from './adv-dropdown-value.entity';
 import { AssigneeProfile } from './assignee-profile.entity';
+import { ProcessTag } from './process-tag.entity';
+import { QuestionTag } from './question-tag.entity';
 
 @Controller('tags')
 export class TagsController {
@@ -74,5 +76,57 @@ export class TagsController {
   @Delete('assignee-profile/:id')
   removeAssigneeProfile(@Param('id') id: string) {
     return this.tagsService.removeAssigneeProfile(id);
+  }
+
+  // Process Tag Endpoints
+  @Post('process')
+  createProcessTag(@Body() createTagDto: Partial<ProcessTag>) {
+    return this.tagsService.createProcessTag(createTagDto);
+  }
+
+  @Get('process')
+  findAllProcessTags(@Query('organizationId') organizationId: string) {
+    return this.tagsService.findAllProcessTags(organizationId);
+  }
+
+  @Get('process/:id')
+  findOneProcessTag(@Param('id') id: string) {
+    return this.tagsService.findOneProcessTag(id);
+  }
+
+  @Put('process/:id')
+  updateProcessTag(@Param('id') id: string, @Body() updateTagDto: Partial<ProcessTag>) {
+    return this.tagsService.updateProcessTag(id, updateTagDto);
+  }
+
+  @Delete('process/:id')
+  removeProcessTag(@Param('id') id: string) {
+    return this.tagsService.removeProcessTag(id);
+  }
+
+  // Question Tag Endpoints
+  @Post('question')
+  createQuestionTag(@Body() createTagDto: Partial<QuestionTag>) {
+    return this.tagsService.createQuestionTag(createTagDto);
+  }
+
+  @Get('question')
+  findAllQuestionTags(@Query('organizationId') organizationId: string) {
+    return this.tagsService.findAllQuestionTags(organizationId);
+  }
+
+  @Get('question/:id')
+  findOneQuestionTag(@Param('id') id: string) {
+    return this.tagsService.findOneQuestionTag(id);
+  }
+
+  @Put('question/:id')
+  updateQuestionTag(@Param('id') id: string, @Body() updateTagDto: Partial<QuestionTag>) {
+    return this.tagsService.updateQuestionTag(id, updateTagDto);
+  }
+
+  @Delete('question/:id')
+  removeQuestionTag(@Param('id') id: string) {
+    return this.tagsService.removeQuestionTag(id);
   }
 }

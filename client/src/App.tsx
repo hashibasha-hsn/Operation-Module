@@ -7,10 +7,12 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { PermissionProvider } from "./contexts/PermissionContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import Layout from "./components/Layout";
+import './i18n';
 import Dashboard from "./pages/Dashboard";
 import CreatorMode from "./pages/CreatorMode";
 import Process from "./pages/Process";
 import Audit from "./pages/Audit";
+import AuditLogs from "./pages/AuditLogs";
 import Draft from "./pages/Draft";
 import Users from "./pages/Users";
 import Attendance from "./pages/Attendance";
@@ -22,6 +24,8 @@ import Entities from "./pages/Entities";
 import Tags from "./pages/Tags";
 import Settings from "./pages/Settings";
 import ProcessCreation from "./pages/ProcessCreation";
+import TitleSetup from "./pages/TitleSetup";
+import ProcessSettings from "./pages/ProcessSettings";
 import AuditCreation from "./pages/AuditCreation";
 import CreateForm from "./pages/CreateForm";
 import Security from "./pages/Security";
@@ -61,6 +65,7 @@ import AssetTableConfig from "./pages/AssetTableConfig";
 import Courses from "./pages/Courses";
 import ProfileSettings from "./pages/ProfileSettings";
 import Noticeboard from "./pages/Noticeboard";
+import NoticeBoardList from "./pages/NoticeBoardList";
 import PlatformSettings from "./pages/PlatformSettings";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import BIDashboard from "./pages/BIDashboard";
@@ -76,7 +81,7 @@ function Router() {
       <Route path={"/creator-mode"} component={() => <Layout><CreatorMode /></Layout>} />
       <Route path={"/tasks"} component={() => <Layout><Tasks /></Layout>} />
       <Route path={"/process"} component={() => <Layout><Process /></Layout>} />
-      <Route path={"/audit"} component={() => <Layout><Audit /></Layout>} />
+      <Route path={"/audit"} component={() => <Layout><AuditLogs /></Layout>} />
       <Route path={"/audit-setup"} component={() => <Layout><AuditSetup /></Layout>} />
       <Route path={"/draft"} component={() => <Layout><Draft /></Layout>} />
       <Route path={"/users"} component={() => <Layout><Users /></Layout>} />
@@ -89,6 +94,8 @@ function Router() {
       <Route path={"/tags"} component={() => <Layout><Tags /></Layout>} />
       <Route path={"/settings"} component={() => <Layout><Settings /></Layout>} />
       <Route path={"/process-creation"} component={() => <Layout><ProcessCreation /></Layout>} />
+      <Route path={"/title-setup"} component={() => <Layout><TitleSetup /></Layout>} />
+      <Route path={"/process-settings"} component={() => <Layout><ProcessSettings /></Layout>} />
       <Route path={"/audit-creation"} component={() => <Layout><AuditCreation /></Layout>} />
       <Route path={"/create-form"} component={() => <Layout><CreateForm /></Layout>} />
       <Route path={"/security"} component={() => <Layout><Security /></Layout>} />
@@ -124,7 +131,7 @@ function Router() {
       <Route path={"/asset-table-config"} component={() => <Layout><AssetTableConfig /></Layout>} />
       <Route path={"/courses"} component={() => <Layout><Courses /></Layout>} />
       <Route path={"/profile-settings"} component={() => <Layout><ProfileSettings /></Layout>} />
-      <Route path={"/noticeboard"} component={() => <Layout><Noticeboard /></Layout>} />
+      <Route path={"/noticeboard"} component={() => <Layout><NoticeBoardList /></Layout>} />
       <Route path={"/platform-settings"} component={() => <Layout><PlatformSettings /></Layout>} />
       <Route path={"/executive-dashboard"} component={() => <Layout><ExecutiveDashboard /></Layout>} />
       <Route path={"/bi-dashboard"} component={() => <Layout><BIDashboard /></Layout>} />

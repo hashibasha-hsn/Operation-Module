@@ -132,7 +132,7 @@ export default function Process() {
 
         <Tabs defaultValue="process" className="w-full">
 
-          <TabsList className="grid w-full grid-cols-4 bg-transparent border-b rounded-none h-auto p-0">
+          <TabsList className="grid w-full grid-cols-3 bg-transparent border-b rounded-none h-auto p-0">
 
             <TabsTrigger
 
@@ -167,18 +167,6 @@ export default function Process() {
             >
 
               Draft
-
-            </TabsTrigger>
-
-            <TabsTrigger
-
-              value="template"
-
-              className="data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 data-[state=active]:bg-transparent rounded-none px-5 py-4 text-base font-semibold transition-all duration-300 ease-in-out hover:bg-gray-50"
-
-            >
-
-              Template Library
 
             </TabsTrigger>
 
@@ -729,48 +717,6 @@ export default function Process() {
                 <p className="text-gray-500 text-lg font-medium">{t('draftProcesses')}</p>
 
                 <p className="text-gray-400 text-sm mt-1">{t('continueWorkingOnDrafts')}</p>
-
-              </motion.div>
-
-            </motion.div>
-
-          </TabsContent>
-
-
-
-          <TabsContent value="template">
-
-            <motion.div
-
-              initial={{ opacity: 0, y: 20 }}
-
-              animate={{ opacity: 1, y: 0 }}
-
-              className="text-center py-16"
-
-            >
-
-              <motion.div
-
-                initial={{ scale: 0 }}
-
-                animate={{ scale: 1 }}
-
-                transition={{ duration: 0.5 }}
-
-                className="flex flex-col items-center justify-center"
-
-              >
-
-                <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-
-                  <LayoutGrid className="w-10 h-10 text-orange-500" />
-
-                </div>
-
-                <p className="text-gray-600 text-xl font-semibold">Template Library</p>
-
-                <p className="text-gray-500 text-base mt-2">{t('browseAndUseTemplates')}</p>
 
               </motion.div>
 

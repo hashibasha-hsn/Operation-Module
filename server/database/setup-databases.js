@@ -58,7 +58,9 @@ async function setupDatabases() {
       { database: 'hashibasha_user', file: 'user-schema.sql' },
       { database: 'hashibasha_org', file: 'org-schema.sql' },
       { database: 'hashibasha_notification', file: 'notification-schema.sql' },
-      { database: 'hashibasha_permission', file: 'permission-schema.sql' }
+      { database: 'hashibasha_permission', file: 'permission-schema.sql' },
+      { database: 'hashibasha_org', file: 'noticeboard-schema.sql' },
+      { database: 'hashibasha_org', file: 'translations-schema.sql' }
     ];
 
     for (const { database, file } of schemaFiles) {

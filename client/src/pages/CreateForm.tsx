@@ -5,16 +5,25 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Edit2, Type, Hammer, Settings, User, Grid2x2, Calculator, Calendar, Clock, Timer, Calculator as CalculatorIcon, Pen, MapPin, Users, Building2, FolderOpen, Folder, ChevronDown, Trash2, Copy, FileText, Check, Paperclip, MessageSquareMore, MessageSquarePlus, Clipboard, FilePlus, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Zap, Scan, AlertCircle } from "lucide-react";
+import { Edit2, Type, Settings, Grid2x2, Calculator, Calendar, Clock, Timer, Calculator as CalculatorIcon, Pen, MapPin, Users, Building2, FolderOpen, Folder, ChevronDown, Trash2, Copy, FileText, Check, Paperclip, MessageSquareMore, MessageSquarePlus, Clipboard, FilePlus, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Zap, Scan, AlertCircle } from "lucide-react";
 import { useState, useRef } from "react";
-import { useLocation } from "wouter";
 import AssignTabContent from "@/components/AssignTabContent";
+import ProcessHeader from "@/components/ProcessHeader";
 
 export default function CreateForm() {
-  const [, navigate] = useLocation();
+  const [activeTab, setActiveTab] = useState("build");
 
-  const handleGoBack = () => {
-    window.history.back();
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    // Navigation is handled by ProcessHeader component
+  };
+
+  const handleSave = () => {
+    console.log('Save');
+  };
+
+  const handlePublish = () => {
+    console.log('Publish');
   };
 
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -156,45 +165,13 @@ export default function CreateForm() {
   };
   return (
     <div className="min-h-screen bg-background">
+      <ProcessHeader 
+        activeTab={activeTab} 
+        onTabChange={handleTabChange}
+        onSave={handleSave}
+        onPublish={handlePublish}
+      />
       <Tabs defaultValue="build" className="flex-1">
-        {/* Header */}
-        <div className="border-b border-blue-900/30 bg-gradient-to-r from-[#0f172a] to-[#1e3a8a] px-6 py-4 flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-4">
-            <TabsList className="inline-flex h-9 items-center justify-center rounded-lg bg-white/10 p-1 text-white/70 shadow-sm w-auto gap-2">
-              <TabsTrigger
-                value="title"
-                className="data-[state=active]:bg-orange-500 data-[state=active]:text-white rounded-md flex items-center gap-2"
-              >
-                <Type className="w-4 h-4" />
-                Title
-              </TabsTrigger>
-              <TabsTrigger
-                value="build"
-                className="data-[state=active]:bg-orange-500 data-[state=active]:text-white rounded-md flex items-center gap-2"
-              >
-                <Hammer className="w-4 h-4" />
-                Build
-              </TabsTrigger>
-              <TabsTrigger
-                value="properties"
-                className="data-[state=active]:bg-orange-500 data-[state=active]:text-white rounded-md flex items-center gap-2"
-              >
-                <Settings className="w-4 h-4" />
-                Properties
-              </TabsTrigger>
-              <TabsTrigger
-                value="assign"
-                className="data-[state=active]:bg-orange-500 data-[state=active]:text-white rounded-md flex items-center gap-2"
-              >
-                <User className="w-4 h-4" />
-                Assign
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white">
-            SAVE
-          </Button>
-        </div>
         <TabsContent value="title" className="space-y-6 p-6">
           {/* Click to edit fields */}
           <div className="space-y-4">

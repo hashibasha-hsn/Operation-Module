@@ -4,6 +4,9 @@ import { Repository } from 'typeorm';
 import { AdvDropdownTag } from './adv-dropdown-tag.entity';
 import { AdvDropdownValue } from './adv-dropdown-value.entity';
 import { AssigneeProfile } from './assignee-profile.entity';
+import { UserProfile } from '../profiles/user-profile.entity';
+import { ProcessTag } from './process-tag.entity';
+import { QuestionTag } from './question-tag.entity';
 
 @Injectable()
 export class TagsService {
@@ -14,6 +17,12 @@ export class TagsService {
     private advDropdownValueRepository: Repository<AdvDropdownValue>,
     @InjectRepository(AssigneeProfile)
     private assigneeProfileRepository: Repository<AssigneeProfile>,
+    @InjectRepository(UserProfile)
+    private userProfileRepository: Repository<UserProfile>,
+    @InjectRepository(ProcessTag)
+    private processTagRepository: Repository<ProcessTag>,
+    @InjectRepository(QuestionTag)
+    private questionTagRepository: Repository<QuestionTag>,
   ) {}
 
   // Adv Dropdown Tag Methods
@@ -62,8 +71,19 @@ export class TagsService {
   }
 
   // Assignee Profile Methods
-  async createAssigneeProfile(profileData: Partial<AssigneeProfile>): Promise<AssigneeProfile> {
-    const profile = this.assigneeProfileRepository.create(profileData);
+  async createAssigneeProfile(profileData: Partial<AssigneeProfile & { userIds?: string[] }>): Promise<AssigneeProfile> {
+    const { userIds, ...restProfileData } = profileData;
+    
+    // Fetch user objects if userIds are provided
+    let users: UserProfile[] = [];
+    if (userIds && userIds.length > 0) {
+      users = await this.userProfileRepository.findByIds(userIds);
+    }
+    
+    const profile = this.assigneeProfileRepository.create({
+      ...restProfileData,
+      users,
+    });
     return await this.assigneeProfileRepository.save(profile);
   }
 
@@ -89,5 +109,57 @@ export class TagsService {
 
   async removeAssigneeProfile(id: string): Promise<void> {
     await this.assigneeProfileRepository.delete(id);
+  }
+
+  // Process Tag Methods
+  async createProcessTag(tagData: Partial<ProcessTag>): Promise<ProcessTag> {
+    const tag = this.processTagRepository.create(tagData);
+    return await this.processTagRepository.save(tag);
+  }
+
+  async findAllProcessTags(organizationId: string): Promise<ProcessTag[]> {
+    return await this.processTagRepository.find({
+      where: { organizationId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findOneProcessTag(id: string): Promise<ProcessTag> {
+    return await this.processTagRepository.findOne({ where: { id } });
+  }
+
+  async updateProcessTag(id: string, tagData: Partial<ProcessTag>): Promise<ProcessTag> {
+    await this.processTagRepository.update(id, tagData);
+    return await this.findOneProcessTag(id);
+  }
+
+  async removeProcessTag(id: string): Promise<void> {
+    await this.processTagRepository.delete(id);
+  }
+
+  // Question Tag Methods
+  async createQuestionTag(tagData: Partial<QuestionTag>): Promise<QuestionTag> {
+    const tag = this.questionTagRepository.create(tagData);
+    return await this.questionTagRepository.save(tag);
+  }
+
+  async findAllQuestionTags(organizationId: string): Promise<QuestionTag[]> {
+    return await this.questionTagRepository.find({
+      where: { organizationId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findOneQuestionTag(id: string): Promise<QuestionTag> {
+    return await this.questionTagRepository.findOne({ where: { id } });
+  }
+
+  async updateQuestionTag(id: string, tagData: Partial<QuestionTag>): Promise<QuestionTag> {
+    await this.questionTagRepository.update(id, tagData);
+    return await this.findOneQuestionTag(id);
+  }
+
+  async removeQuestionTag(id: string): Promise<void> {
+    await this.questionTagRepository.delete(id);
   }
 }

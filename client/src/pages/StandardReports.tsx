@@ -168,17 +168,17 @@ export default function StandardReports() {
         <Avatar className="w-20 h-20">
           <AvatarImage src="/placeholder-user.jpg" alt="User Avatar" />
           <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-red-500 text-white text-2xl font-bold">
-            SH
+            -
           </AvatarFallback>
         </Avatar>
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Sayed Hussain</h2>
+          <h2 className="text-2xl font-bold text-gray-900">-</h2>
           <Badge variant="secondary" className="mt-2 bg-blue-100 text-blue-800 hover:bg-blue-200">
-            IT Manager
+            -
           </Badge>
           <div className="flex items-center text-muted-foreground text-sm mt-2">
             <MapPin className="w-4 h-4 mr-1" />
-            <span>hashibasha - Head Office</span>
+            <span>-</span>
           </div>
         </div>
       </div>

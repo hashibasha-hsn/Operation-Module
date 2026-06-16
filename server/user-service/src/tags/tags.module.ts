@@ -5,11 +5,14 @@ import { TagsController } from './tags.controller';
 import { AdvDropdownTag } from './adv-dropdown-tag.entity';
 import { AdvDropdownValue } from './adv-dropdown-value.entity';
 import { AssigneeProfile } from './assignee-profile.entity';
+import { UserProfile } from '../profiles/user-profile.entity';
+import { ProcessTag } from './process-tag.entity';
+import { QuestionTag } from './question-tag.entity';
 import { ProfilesModule } from '../profiles/profiles.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([AdvDropdownTag, AdvDropdownValue, AssigneeProfile]),
+    TypeOrmModule.forFeature([AdvDropdownTag, AdvDropdownValue, AssigneeProfile, UserProfile, ProcessTag, QuestionTag]),
     ProfilesModule,
   ],
   controllers: [TagsController],

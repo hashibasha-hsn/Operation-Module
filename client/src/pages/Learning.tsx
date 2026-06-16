@@ -45,7 +45,7 @@ export default function Learning() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Leadership Rank</p>
-                    <p className="text-xl font-bold text-gray-900">#12</p>
+                    <p className="text-xl font-bold text-gray-900">-</p>
                   </div>
                 </div>
               </motion.div>
@@ -69,7 +69,7 @@ export default function Learning() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Time Spent</p>
-                    <p className="text-xl font-bold text-gray-900">24h 30m</p>
+                    <p className="text-xl font-bold text-gray-900">-</p>
                   </div>
                 </div>
               </motion.div>
@@ -93,7 +93,7 @@ export default function Learning() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Completed Courses</p>
-                    <p className="text-xl font-bold text-gray-900">8</p>
+                    <p className="text-xl font-bold text-gray-900">-</p>
                   </div>
                 </div>
               </motion.div>
@@ -117,7 +117,7 @@ export default function Learning() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Total Courses</p>
-                    <p className="text-xl font-bold text-gray-900">15</p>
+                    <p className="text-xl font-bold text-gray-900">-</p>
                   </div>
                 </div>
               </motion.div>
@@ -141,7 +141,7 @@ export default function Learning() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Total Score</p>
-                    <p className="text-xl font-bold text-gray-900">850</p>
+                    <p className="text-xl font-bold text-gray-900">-</p>
                   </div>
                 </div>
               </motion.div>
@@ -165,7 +165,7 @@ export default function Learning() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Learning Progress</p>
-                    <p className="text-xl font-bold text-gray-900">53%</p>
+                    <p className="text-xl font-bold text-gray-900">-</p>
                   </div>
                 </div>
               </motion.div>

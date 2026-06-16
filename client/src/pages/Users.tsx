@@ -52,8 +52,10 @@ import {
   X,
   Settings,
 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function UsersPage() {
+  const { t } = useLanguage();
   const [users, setUsers] = useState<any[]>([]);
   const [entities, setEntities] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalUsers: 0, activeUsers: 0, inactiveUsers: 0, validEmails: 0 });
@@ -134,14 +136,14 @@ export default function UsersPage() {
   const [designationPermissions, setDesignationPermissions] = useState<any[]>([]);
 
   const tabs = [
-    "Users",
-    "Designation",
-    "Team",
-    "User Hierarchy",
-    "Advance Mapping",
-    "Removed User",
-    "User Tags",
-    "Hybrid Assignee",
+    { key: "Users", label: t('users') },
+    { key: "Designation", label: t('designation') },
+    { key: "Team", label: t('team') },
+    { key: "User Hierarchy", label: t('userHierarchy') },
+    { key: "Advance Mapping", label: t('advanceMapping') },
+    { key: "Removed User", label: t('removedUser') },
+    { key: "User Tags", label: t('userTags') },
+    { key: "Hybrid Assignee", label: t('hybridAssignee') },
   ];
 
   const fetchEntities = async () => {
@@ -765,7 +767,7 @@ export default function UsersPage() {
       <div className="border-b bg-card">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold">User Management</h1>
+            <h1 className="text-xl font-semibold">{t('userManagement')}</h1>
           </div>
         </div>
 
@@ -774,16 +776,16 @@ export default function UsersPage() {
           <div className="flex gap-1 overflow-x-auto">
             {tabs.map((tab) => (
               <Button
-                key={tab}
-                variant={activeTab === tab ? "default" : "ghost"}
+                key={tab.key}
+                variant={activeTab === tab.key ? "default" : "ghost"}
                 className={`rounded-t-lg border-b-2 ${
-                  activeTab === tab
+                  activeTab === tab.key
                     ? "border-primary"
                     : "border-transparent hover:border-muted-foreground/30"
                 }`}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => setActiveTab(tab.key)}
               >
-                {tab}
+                {tab.label}
               </Button>
             ))}
           </div>
@@ -797,19 +799,19 @@ export default function UsersPage() {
             <div className="flex flex-wrap gap-6">
               <div className="flex items-center gap-3 bg-card border rounded-lg px-4 py-3">
                 <UsersIcon className="w-5 h-5 text-muted-foreground" />
-                <p className="text-sm font-medium">Total Users</p>
+                <p className="text-sm font-medium">{t('totalUsers')}</p>
               </div>
               <div className="flex items-center gap-3 bg-card border rounded-lg px-4 py-3">
                 <Switch checked={showActive} onCheckedChange={setShowActive} />
-                <p className="text-sm font-medium">Active</p>
+                <p className="text-sm font-medium">{t('active')}</p>
               </div>
               <div className="flex items-center gap-3 bg-card border rounded-lg px-4 py-3">
                 <Switch checked={showInactive} onCheckedChange={setShowInactive} />
-                <p className="text-sm font-medium">In-Active</p>
+                <p className="text-sm font-medium">{t('inactive')}</p>
               </div>
               <div className="flex items-center gap-3 bg-card border rounded-lg px-4 py-3">
                 <Mail className="w-5 h-5 text-muted-foreground" />
-                <p className="text-sm font-medium">Valid Emails</p>
+                <p className="text-sm font-medium">{t('validEmails')}</p>
               </div>
             </div>
 
@@ -821,7 +823,7 @@ export default function UsersPage() {
               <div className="flex-1 min-w-[200px] relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search Users"
+                  placeholder={t('searchUsers')}
                   className="pl-10"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -830,32 +832,32 @@ export default function UsersPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2">
-                    Valid Email
+                    {t('validEmail')}
                     <ChevronDown className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem>All</DropdownMenuItem>
-                  <DropdownMenuItem>Valid</DropdownMenuItem>
-                  <DropdownMenuItem>Invalid</DropdownMenuItem>
+                  <DropdownMenuItem>{t('all')}</DropdownMenuItem>
+                  <DropdownMenuItem>{t('valid')}</DropdownMenuItem>
+                  <DropdownMenuItem>{t('invalid')}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2">
-                    Name (ASC)
+                    {t('nameAsc')}
                     <ChevronDown className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem>Name (ASC)</DropdownMenuItem>
-                  <DropdownMenuItem>Name (DESC)</DropdownMenuItem>
-                  <DropdownMenuItem>Email (ASC)</DropdownMenuItem>
-                  <DropdownMenuItem>Email (DESC)</DropdownMenuItem>
+                  <DropdownMenuItem>{t('nameAsc')}</DropdownMenuItem>
+                  <DropdownMenuItem>{t('nameDesc')}</DropdownMenuItem>
+                  <DropdownMenuItem>{t('emailAsc')}</DropdownMenuItem>
+                  <DropdownMenuItem>{t('emailDesc')}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="outline">Apply</Button>
-              <Button variant="ghost">Reset</Button>
+              <Button variant="outline">{t('apply')}</Button>
+              <Button variant="ghost">{t('reset')}</Button>
             </div>
 
             {/* Action Buttons */}
@@ -865,19 +867,19 @@ export default function UsersPage() {
                 <DialogTrigger asChild>
                   <Button variant="outline" className="gap-2">
                     <Plus className="w-4 h-4" />
-                    Bulk User
+                    {t('bulkUser')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-lg">
                   <DialogHeader>
-                    <DialogTitle>Bulk Upload Users</DialogTitle>
+                    <DialogTitle>{t('bulkUploadUsers')}</DialogTitle>
                     <DialogDescription>
-                      Upload a CSV or Excel file to create multiple users at once.
+                      {t('bulkUploadUsersDescription')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="space-y-2">
-                      <Label htmlFor="bulkFile">Upload File</Label>
+                      <Label htmlFor="bulkFile">{t('uploadFile')}</Label>
                       <div className="flex items-center justify-center w-full">
                         <label
                           htmlFor="bulkFile"
@@ -886,7 +888,7 @@ export default function UsersPage() {
                           <div className="flex flex-col items-center justify-center pt-5 pb-6">
                             <Plus className="w-8 h-8 mb-2 text-muted-foreground" />
                             <p className="text-sm text-muted-foreground">
-                              {bulkFile ? bulkFile.name : "Click to upload CSV or Excel file"}
+                              {bulkFile ? bulkFile.name : t('clickToUploadCsvOrExcelFile')}
                             </p>
                           </div>
                           <input
@@ -900,24 +902,24 @@ export default function UsersPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Required Columns</Label>
+                      <Label>{t('requiredColumns')}</Label>
                       <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
-                        <p className="font-medium mb-2">Your file must include these columns:</p>
+                        <p className="font-medium mb-2">{t('yourFileMustIncludeTheseColumns')}</p>
                         <ul className="list-disc list-inside space-y-1">
-                          <li>Name</li>
-                          <li>Email</li>
-                          <li>Employee ID</li>
-                          <li>Designation</li>
-                          <li>Manager</li>
+                          <li>{t('name')}</li>
+                          <li>{t('email')}</li>
+                          <li>{t('employeeId')}</li>
+                          <li>{t('designation')}</li>
+                          <li>{t('manager')}</li>
                         </ul>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="entity">Entity</Label>
+                      <Label htmlFor="entity">{t('entity')}</Label>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" className="w-full justify-between">
-                            {formData.entity || "Select Entity"}
+                            {formData.entity || t('selectEntity')}
                             <ChevronDown className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -936,10 +938,10 @@ export default function UsersPage() {
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsBulkDialogOpen(false)}>
-                      Cancel
+                      {t('cancel')}
                     </Button>
                     <Button onClick={() => setIsBulkDialogOpen(false)}>
-                      Upload Users
+                      {t('uploadUsers')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -950,24 +952,24 @@ export default function UsersPage() {
                 <DialogTrigger asChild>
                   <Button className="gap-2">
                     <Plus className="w-4 h-4" />
-                    New User
+                    {t('newUser')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Add New User</DialogTitle>
+                    <DialogTitle>{t('addNewUser')}</DialogTitle>
                     <DialogDescription>
-                      Fill in the details to create a new user account.
+                      {t('fillInTheDetailsToCreateANewUserAccount')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="entity">Entity</Label>
+                        <Label htmlFor="entity">{t('entity')}</Label>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="w-full justify-between">
-                              {formData.entity || "Select Entity"}
+                              {formData.entity || t('selectEntity')}
                               <ChevronDown className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -984,39 +986,39 @@ export default function UsersPage() {
                         </DropdownMenu>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
+                        <Label htmlFor="name">{t('name')}</Label>
                         <Input
                           id="name"
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          placeholder="Enter name"
+                          placeholder={t('enterName')}
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="employeeId">Employee ID</Label>
+                        <Label htmlFor="employeeId">{t('employeeId')}</Label>
                         <Input
                           id="employeeId"
                           value={formData.employeeId}
                           onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                          placeholder="Enter employee ID"
+                          placeholder={t('enterEmployeeId')}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="email">{t('email')}</Label>
                         <Input
                           id="email"
                           type="email"
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          placeholder="Enter email"
+                          placeholder={t('enterEmail')}
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="validEmail">Valid Email</Label>
+                        <Label htmlFor="validEmail">{t('validEmail')}</Label>
                         <div className="flex items-center gap-2">
                           <Switch
                             id="validEmail"
@@ -1024,23 +1026,23 @@ export default function UsersPage() {
                             onCheckedChange={(checked) => setFormData({ ...formData, validEmail: checked })}
                           />
                           <span className="text-sm text-muted-foreground">
-                            {formData.validEmail ? "Valid" : "Invalid"}
+                            {formData.validEmail ? t('valid') : t('invalid')}
                           </span>
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password">{t('password')}</Label>
                         <Input
                           id="password"
                           type="password"
                           value={formData.password}
                           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                          placeholder="Enter password"
+                          placeholder={t('enterPassword')}
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phoneNumber">Phone Number</Label>
+                      <Label htmlFor="phoneNumber">{t('phoneNumber')}</Label>
                       <div className="flex gap-2">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1065,18 +1067,18 @@ export default function UsersPage() {
                           id="phoneNumber"
                           value={formData.phoneNumber}
                           onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                          placeholder="Enter phone number"
+                          placeholder={t('enterPhoneNumber')}
                           className="flex-1"
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="manager">Manager</Label>
+                        <Label htmlFor="manager">{t('manager')}</Label>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="w-full justify-between">
-                              {formData.manager || "Select Manager"}
+                              {formData.manager || t('selectManager')}
                               <ChevronDown className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -1093,11 +1095,11 @@ export default function UsersPage() {
                         </DropdownMenu>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="designation">Designation</Label>
+                        <Label htmlFor="designation">{t('designation')}</Label>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="w-full justify-between">
-                              {formData.designation || "Select Designation"}
+                              {formData.designation || t('selectDesignation')}
                               <ChevronDown className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -1117,45 +1119,45 @@ export default function UsersPage() {
                     <Collapsible open={isProcessAssignmentOpen} onOpenChange={setIsProcessAssignmentOpen}>
                       <CollapsibleTrigger asChild>
                         <Button variant="outline" className="w-full justify-between">
-                          Process Assignment
+                          {t('processAssignment')}
                           <ChevronRight className={`w-4 h-4 transition-transform ${isProcessAssignmentOpen ? "rotate-90" : ""}`} />
                         </Button>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="space-y-4 mt-4">
                         <div className="space-y-2">
-                          <Label htmlFor="process">Select Process</Label>
+                          <Label htmlFor="process">{t('selectProcess')}</Label>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="outline" className="w-full justify-between">
-                                Select Process
+                                {t('selectProcess')}
                                 <ChevronDown className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-full">
-                              <DropdownMenuItem>Process 1</DropdownMenuItem>
-                              <DropdownMenuItem>Process 2</DropdownMenuItem>
-                              <DropdownMenuItem>Process 3</DropdownMenuItem>
+                              <DropdownMenuItem>{t('process1')}</DropdownMenuItem>
+                              <DropdownMenuItem>{t('process2')}</DropdownMenuItem>
+                              <DropdownMenuItem>{t('process3')}</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
                       </CollapsibleContent>
                     </Collapsible>
                     <div className="space-y-2">
-                      <Label htmlFor="tags">Tags</Label>
+                      <Label htmlFor="tags">{t('tags')}</Label>
                       <Input
                         id="tags"
                         value={formData.tags}
                         onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                        placeholder="Enter tags (comma separated)"
+                        placeholder={t('enterTagsCommaSeparated')}
                       />
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      Cancel
+                      {t('cancel')}
                     </Button>
                     <Button onClick={handleCreateUser}>
-                      Create User
+                      {t('createUser')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1165,19 +1167,19 @@ export default function UsersPage() {
               <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Edit User</DialogTitle>
+                    <DialogTitle>{t('editUser')}</DialogTitle>
                     <DialogDescription>
-                      Update user details. Manager is required when editing.
+                      {t('updateUserDetailsManagerIsRequiredWhenEditing')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="edit-entity">Entity</Label>
+                        <Label htmlFor="edit-entity">{t('entity')}</Label>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="w-full justify-between">
-                              {editFormData.entity || "Select Entity"}
+                              {editFormData.entity || t('selectEntity')}
                               <ChevronDown className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -1194,39 +1196,39 @@ export default function UsersPage() {
                         </DropdownMenu>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-name">Name</Label>
+                        <Label htmlFor="edit-name">{t('name')}</Label>
                         <Input
                           id="edit-name"
                           value={editFormData.name}
                           onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                          placeholder="Enter name"
+                          placeholder={t('enterName')}
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="edit-employeeId">Employee ID</Label>
+                        <Label htmlFor="edit-employeeId">{t('employeeId')}</Label>
                         <Input
                           id="edit-employeeId"
                           value={editFormData.employeeId}
                           onChange={(e) => setEditFormData({ ...editFormData, employeeId: e.target.value })}
-                          placeholder="Enter employee ID"
+                          placeholder={t('enterEmployeeId')}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-email">Email</Label>
+                        <Label htmlFor="edit-email">{t('email')}</Label>
                         <Input
                           id="edit-email"
                           type="email"
                           value={editFormData.email}
                           onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                          placeholder="Enter email"
+                          placeholder={t('enterEmail')}
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="edit-phoneNumber">Phone Number</Label>
+                        <Label htmlFor="edit-phoneNumber">{t('phoneNumber')}</Label>
                         <div className="flex gap-2">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -1245,19 +1247,19 @@ export default function UsersPage() {
                             id="edit-phoneNumber"
                             value={editFormData.phoneNumber}
                             onChange={(e) => setEditFormData({ ...editFormData, phoneNumber: e.target.value })}
-                            placeholder="Enter phone number"
+                            placeholder={t('enterPhoneNumber')}
                             className="flex-1"
                           />
                         </div>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="edit-manager">
-                          Manager <span className="text-destructive">*</span>
+                          {t('manager')} <span className="text-destructive">*</span>
                         </Label>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="w-full justify-between">
-                              {editFormData.manager || "Select Manager"}
+                              {editFormData.manager || t('selectManager')}
                               <ChevronDown className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -1276,11 +1278,11 @@ export default function UsersPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="edit-designation">Designation</Label>
+                        <Label htmlFor="edit-designation">{t('designation')}</Label>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="w-full justify-between">
-                              {editFormData.designation || "Select Designation"}
+                              {editFormData.designation || t('selectDesignation')}
                               <ChevronDown className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -1297,22 +1299,22 @@ export default function UsersPage() {
                         </DropdownMenu>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-tags">Tags</Label>
+                        <Label htmlFor="edit-tags">{t('tags')}</Label>
                         <Input
                           id="edit-tags"
                           value={editFormData.tags}
                           onChange={(e) => setEditFormData({ ...editFormData, tags: e.target.value })}
-                          placeholder="Enter tags (comma separated)"
+                          placeholder={t('enterTagsCommaSeparated')}
                         />
                       </div>
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsEditUserDialogOpen(false)}>
-                      Cancel
+                      {t('cancel')}
                     </Button>
                     <Button onClick={handleUpdateUser}>
-                      Update User
+                      {t('updateUser')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1327,32 +1329,44 @@ export default function UsersPage() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader>
-                    <DialogTitle>Customize Table Columns</DialogTitle>
+                    <DialogTitle>{t('customizeTableColumns')}</DialogTitle>
                     <DialogDescription>
-                      Select up to 8 fields to display in the user table.
+                      {t('selectUpTo8FieldsToDisplayInTheUserTable')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
-                    {['name', 'email', 'designation', 'manager', 'storeId', 'storeName', 'createdAt', 'lastLogin', 'validEmail', 'status', 'action'].map((column) => (
-                      <div key={column} className="flex items-center gap-2">
+                    {[
+                      { key: 'name', label: t('name') },
+                      { key: 'email', label: t('email') },
+                      { key: 'designation', label: t('designation') },
+                      { key: 'manager', label: t('manager') },
+                      { key: 'storeId', label: t('storeId') },
+                      { key: 'storeName', label: t('storeName') },
+                      { key: 'createdAt', label: t('createdAt') },
+                      { key: 'lastLogin', label: t('lastLogin') },
+                      { key: 'validEmail', label: t('validEmail') },
+                      { key: 'status', label: t('status') },
+                      { key: 'action', label: t('action') }
+                    ].map((column) => (
+                      <div key={column.key} className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          id={`column-${column}`}
-                          checked={visibleColumns.includes(column)}
-                          onChange={() => handleToggleColumn(column)}
+                          id={`column-${column.key}`}
+                          checked={visibleColumns.includes(column.key)}
+                          onChange={() => handleToggleColumn(column.key)}
                         />
-                        <label htmlFor={`column-${column}`} className="text-sm capitalize">
-                          {column}
+                        <label htmlFor={`column-${column.key}`} className="text-sm">
+                          {column.label}
                         </label>
                       </div>
                     ))}
                     <p className="text-xs text-muted-foreground">
-                      {visibleColumns.length}/8 fields selected
+                      {visibleColumns.length}/8 {t('fieldsSelected')}
                     </p>
                   </div>
                   <DialogFooter>
                     <Button onClick={() => setIsColumnSettingsOpen(false)}>
-                      Save
+                      {t('save')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1365,9 +1379,9 @@ export default function UsersPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>Export</DropdownMenuItem>
-                  <DropdownMenuItem>Import</DropdownMenuItem>
-                  <DropdownMenuItem>Refresh</DropdownMenuItem>
+                  <DropdownMenuItem>{t('export')}</DropdownMenuItem>
+                  <DropdownMenuItem>{t('import')}</DropdownMenuItem>
+                  <DropdownMenuItem>{t('refresh')}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>{/* END Action Buttons */}
@@ -1378,43 +1392,43 @@ export default function UsersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Designation</TableHead>
-                      <TableHead>Manager</TableHead>
-                      <TableHead>Store Id</TableHead>
-                      <TableHead>Store Name</TableHead>
-                      <TableHead>Created At</TableHead>
-                      <TableHead>Last Login</TableHead>
-                      <TableHead>Valid Email</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Action</TableHead>
+                      <TableHead>{t('name')}</TableHead>
+                      <TableHead>{t('email')}</TableHead>
+                      <TableHead>{t('designation')}</TableHead>
+                      <TableHead>{t('manager')}</TableHead>
+                      <TableHead>{t('storeId')}</TableHead>
+                      <TableHead>{t('storeName')}</TableHead>
+                      <TableHead>{t('createdAt')}</TableHead>
+                      <TableHead>{t('lastLogin')}</TableHead>
+                      <TableHead>{t('validEmail')}</TableHead>
+                      <TableHead>{t('status')}</TableHead>
+                      <TableHead>{t('action')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
                         <TableCell colSpan={11} className="text-center py-12">
-                          Loading users...
+                          {t('loadingUsers')}
                         </TableCell>
                       </TableRow>
                     ) : users.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
-                          No users available
+                          {t('noUsersAvailable')}
                         </TableCell>
                       </TableRow>
                     ) : (
                       users.map((user: any) => (
                         <TableRow key={user.id}>
-                          <TableCell className="font-medium">{user.name || 'N/A'}</TableCell>
-                          <TableCell>{user.email || 'N/A'}</TableCell>
-                          <TableCell>{user.designation || 'N/A'}</TableCell>
-                          <TableCell>{user.manager || 'N/A'}</TableCell>
-                          <TableCell>{user.storeId || 'N/A'}</TableCell>
-                          <TableCell>{user.storeName || 'N/A'}</TableCell>
-                          <TableCell>{user.createdAt || 'N/A'}</TableCell>
-                          <TableCell>{user.lastLogin || 'N/A'}</TableCell>
+                          <TableCell className="font-medium">{user.name || t('notAvailable')}</TableCell>
+                          <TableCell>{user.email || t('notAvailable')}</TableCell>
+                          <TableCell>{user.designation || t('notAvailable')}</TableCell>
+                          <TableCell>{user.manager || t('notAvailable')}</TableCell>
+                          <TableCell>{user.storeId || t('notAvailable')}</TableCell>
+                          <TableCell>{user.storeName || t('notAvailable')}</TableCell>
+                          <TableCell>{user.createdAt || t('notAvailable')}</TableCell>
+                          <TableCell>{user.lastLogin || t('notAvailable')}</TableCell>
                           <TableCell>
                             <Switch
                               checked={user.validEmail || false}
@@ -1426,20 +1440,20 @@ export default function UsersPage() {
                               variant={user.status === 'Active' ? 'default' : 'destructive'}
                               className="rounded-full"
                             >
-                              {user.status || 'Active'}
+                              {user.status || t('active')}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
                               <Button variant="ghost" size="sm" onClick={() => handleEditUser(user)}>
-                                Edit
+                                {t('edit')}
                               </Button>
                               <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => {
                                 const userId = user.userId || user.id;
                                 console.log('Delete button clicked for user:', user.name, 'with ID:', userId);
                                 handleDeleteUser(userId);
                               }}>
-                                Delete
+                                {t('delete')}
                               </Button>
                             </div>
                           </TableCell>
@@ -1459,36 +1473,36 @@ export default function UsersPage() {
                 <DialogTrigger asChild>
                   <Button className="gap-2">
                     <Plus className="w-4 h-4" />
-                    Add Designation
+                    {t('addDesignation')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader>
-                    <DialogTitle>Create Designation</DialogTitle>
+                    <DialogTitle>{t('createDesignation')}</DialogTitle>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
                       <Label htmlFor="designation">
-                        Designation <span className="text-destructive">*</span>
+                        {t('designation')} <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         id="designation"
-                        placeholder="designation"
+                        placeholder={t('designation')}
                         value={designationData.designation}
                         onChange={(e) => setDesignationData({ ...designationData, designation: e.target.value })}
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="reportingDesignation">Reporting Designation</Label>
+                      <Label htmlFor="reportingDesignation">{t('reportingDesignation')}</Label>
                       <Select
                         value={designationData.reportingDesignation}
                         onValueChange={(value) => setDesignationData({ ...designationData, reportingDesignation: value === 'none' ? '' : value })}
                       >
                         <SelectTrigger id="reportingDesignation">
-                          <SelectValue placeholder="Select reporting designation" />
+                          <SelectValue placeholder={t('selectReportingDesignation')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="none">{t('none')}</SelectItem>
                           {designations.map((d: any) => (
                             <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
                           ))}
@@ -1497,14 +1511,14 @@ export default function UsersPage() {
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="systemRole">
-                        System Role <span className="text-destructive">*</span>
+                        {t('systemRole')} <span className="text-destructive">*</span>
                       </Label>
                       <Select
                         value={designationData.systemRole}
                         onValueChange={(value) => setDesignationData({ ...designationData, systemRole: value })}
                       >
                         <SelectTrigger id="systemRole">
-                          <SelectValue placeholder="Select system role" />
+                          <SelectValue placeholder={t('selectSystemRole')} />
                         </SelectTrigger>
                         <SelectContent>
                           {systemRoles.map((role: any) => (
@@ -1514,7 +1528,7 @@ export default function UsersPage() {
                       </Select>
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="hasCreatorAccess">Creator Access</Label>
+                      <Label htmlFor="hasCreatorAccess">{t('creatorAccess')}</Label>
                       <div className="flex items-center gap-2">
                         <Switch
                           id="hasCreatorAccess"
@@ -1522,17 +1536,17 @@ export default function UsersPage() {
                           onCheckedChange={(checked) => setDesignationData({ ...designationData, hasCreatorAccess: checked })}
                         />
                         <span className="text-sm text-muted-foreground">
-                          {designationData.hasCreatorAccess ? "Can create workflows" : "Cannot create workflows"}
+                          {designationData.hasCreatorAccess ? t('canCreateWorkflows') : t('cannotCreateWorkflows')}
                         </span>
                       </div>
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsDesignationDialogOpen(false)}>
-                      Cancel
+                      {t('cancel')}
                     </Button>
                     <Button onClick={handleCreateDesignation}>
-                      Create Designation
+                      {t('createDesignation')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1542,32 +1556,32 @@ export default function UsersPage() {
               <Dialog open={isEditDesignationDialogOpen} onOpenChange={setIsEditDesignationDialogOpen}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Edit Designation</DialogTitle>
+                    <DialogTitle>{t('editUser')} {t('designation')}</DialogTitle>
                     <DialogDescription>
-                      Update the designation details.
+                      {t('updateUserDetailsManagerIsRequiredWhenEditing')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="edit-designation">Designation</Label>
+                      <Label htmlFor="edit-designation">{t('designation')}</Label>
                       <Input
                         id="edit-designation"
-                        placeholder="designation"
+                        placeholder={t('designation')}
                         value={designationData.designation}
                         onChange={(e) => setDesignationData({ ...designationData, designation: e.target.value })}
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="edit-reportingDesignation">Reporting Designation</Label>
+                      <Label htmlFor="edit-reportingDesignation">{t('reportingDesignation')}</Label>
                       <Select
                         value={designationData.reportingDesignation}
                         onValueChange={(value) => setDesignationData({ ...designationData, reportingDesignation: value === 'none' ? '' : value })}
                       >
                         <SelectTrigger id="edit-reportingDesignation">
-                          <SelectValue placeholder="Select reporting designation" />
+                          <SelectValue placeholder={t('selectReportingDesignation')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="none">{t('none')}</SelectItem>
                           {designations.map((d: any) => (
                             <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
                           ))}
@@ -1576,14 +1590,14 @@ export default function UsersPage() {
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="edit-systemRole">
-                        System Role <span className="text-destructive">*</span>
+                        {t('systemRole')} <span className="text-destructive">*</span>
                       </Label>
                       <Select
                         value={designationData.systemRole}
                         onValueChange={(value) => setDesignationData({ ...designationData, systemRole: value })}
                       >
                         <SelectTrigger id="edit-systemRole">
-                          <SelectValue placeholder="Select system role" />
+                          <SelectValue placeholder={t('selectSystemRole')} />
                         </SelectTrigger>
                         <SelectContent>
                           {systemRoles.map((role: any) => (
@@ -1593,7 +1607,7 @@ export default function UsersPage() {
                       </Select>
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="edit-hasCreatorAccess">Creator Access</Label>
+                      <Label htmlFor="edit-hasCreatorAccess">{t('creatorAccess')}</Label>
                       <div className="flex items-center gap-2">
                         <Switch
                           id="edit-hasCreatorAccess"
@@ -1601,17 +1615,17 @@ export default function UsersPage() {
                           onCheckedChange={(checked) => setDesignationData({ ...designationData, hasCreatorAccess: checked })}
                         />
                         <span className="text-sm text-muted-foreground">
-                          {designationData.hasCreatorAccess ? "Can create workflows" : "Cannot create workflows"}
+                          {designationData.hasCreatorAccess ? t('canCreateWorkflows') : t('cannotCreateWorkflows')}
                         </span>
                       </div>
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsEditDesignationDialogOpen(false)}>
-                      Cancel
+                      {t('cancel')}
                     </Button>
                     <Button onClick={handleUpdateDesignation}>
-                      Update Designation
+                      {t('updateUser')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1621,7 +1635,7 @@ export default function UsersPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search Designation"
+                    placeholder={t('searchUsers')}
                     className="pl-10 w-64"
                   />
                 </div>
@@ -1632,9 +1646,9 @@ export default function UsersPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Export</DropdownMenuItem>
-                    <DropdownMenuItem>Import</DropdownMenuItem>
-                    <DropdownMenuItem>Refresh</DropdownMenuItem>
+                    <DropdownMenuItem>{t('export')}</DropdownMenuItem>
+                    <DropdownMenuItem>{t('import')}</DropdownMenuItem>
+                    <DropdownMenuItem>{t('refresh')}</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -1646,41 +1660,41 @@ export default function UsersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Designation</TableHead>
-                      <TableHead>Reporting Designation</TableHead>
-                      <TableHead>System Role</TableHead>
-                      <TableHead>Creator Access</TableHead>
-                      <TableHead>Action</TableHead>
+                      <TableHead>{t('designation')}</TableHead>
+                      <TableHead>{t('reportingDesignation')}</TableHead>
+                      <TableHead>{t('systemRole')}</TableHead>
+                      <TableHead>{t('creatorAccess')}</TableHead>
+                      <TableHead>{t('action')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {designations.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                          No designations available
+                          {t('noDesignationsAvailable')}
                         </TableCell>
                       </TableRow>
                     ) : (
                       designations.map((designation: any) => (
                         <TableRow key={designation.id}>
                           <TableCell className="font-medium">{designation.name}</TableCell>
-                          <TableCell>{designation.reportingDesignationName || 'N/A'}</TableCell>
-                          <TableCell>{designation.systemRole?.displayName || 'N/A'}</TableCell>
+                          <TableCell>{designation.reportingDesignationName || t('notAvailable')}</TableCell>
+                          <TableCell>{designation.systemRole?.displayName || t('notAvailable')}</TableCell>
                           <TableCell>
                             <Badge variant={designation.hasCreatorAccess ? 'default' : 'secondary'}>
-                              {designation.hasCreatorAccess ? 'Yes' : 'No'}
+                              {designation.hasCreatorAccess ? t('yes') : t('no')}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Button variant="ghost" size="sm" onClick={() => handleEditDesignation(designation)}>
-                                Edit
+                                {t('edit')}
                               </Button>
                               <Button variant="ghost" size="sm" onClick={() => handleOpenPermissionDialog(designation)}>
-                                Permissions
+                                {t('permissions')}
                               </Button>
                               <Button variant="ghost" size="sm" onClick={() => handleDeleteDesignation(designation.id)}>
-                                Delete
+                                {t('delete')}
                               </Button>
                             </div>
                           </TableCell>

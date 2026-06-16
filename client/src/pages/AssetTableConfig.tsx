@@ -69,26 +69,7 @@ export default function AssetTableConfig() {
     isRequired: false,
   });
 
-  const mockTables = [
-    {
-      id: "ATBL-001",
-      tableName: "Equipment Assets",
-      assignmentType: "global",
-      enableCustomAssetId: true,
-      lockTableOperations: false,
-      customFieldsCount: 5,
-      createdAt: "2024-01-15",
-    },
-    {
-      id: "ATBL-002",
-      tableName: "License & Permits",
-      assignmentType: "limited",
-      enableCustomAssetId: true,
-      lockTableOperations: true,
-      customFieldsCount: 3,
-      createdAt: "2024-01-14",
-    },
-  ];
+  const mockTables: any[] = [];
 
   const fieldTypes = [
     { value: "text", label: "Text", icon: FileText },

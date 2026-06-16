@@ -48,44 +48,13 @@ export default function FeatureReports() {
     { name: "Assessment Reports", icon: CheckCircle, description: "View assessment scores and results" },
   ];
 
-  const mockReportData = {
-    "Process Reports": [
-      { id: "PROC-001", name: "Opening Checklist", store: "Store A", status: "Completed", completion: 95, date: "2024-01-15" },
-      { id: "PROC-002", name: "Hygiene Check", store: "Store B", status: "In Progress", completion: 60, date: "2024-01-15" },
-      { id: "PROC-003", name: "Closing Checklist", store: "Store C", status: "Pending", completion: 0, date: "2024-01-15" },
-      { id: "PROC-004", name: "Safety Inspection", store: "Store A", status: "Completed", completion: 88, date: "2024-01-14" },
-      { id: "PROC-005", name: "Inventory Check", store: "Store D", status: "Completed", completion: 72, date: "2024-01-14" },
-    ],
-    "Action Points Reports": [
-      { id: "AP-001", title: "Fix AC Unit", store: "Store A", priority: "High", status: "Open", assignee: "John Doe", dueDate: "2024-01-20" },
-      { id: "AP-002", title: "Replace Light Bulb", store: "Store B", priority: "Medium", status: "In Progress", assignee: "Jane Smith", dueDate: "2024-01-18" },
-      { id: "AP-003", title: "Clean Storage Area", store: "Store C", priority: "Low", status: "Completed", assignee: "Bob Johnson", dueDate: "2024-01-15" },
-      { id: "AP-004", title: "Update Signage", store: "Store A", priority: "Medium", status: "On Hold", assignee: "Alice Brown", dueDate: "2024-01-22" },
-    ],
-    "Ticket Reports": [
-      { id: "TKT-001", title: "Equipment Failure", store: "Store A", priority: "Highest", status: "Open", assignedTo: "John Doe", createdAt: "2024-01-15" },
-      { id: "TKT-002", title: "Inventory Discrepancy", store: "Store B", priority: "High", status: "In Progress", assignedTo: "Jane Smith", createdAt: "2024-01-14" },
-      { id: "TKT-003", title: "Customer Complaint", store: "Store C", priority: "Medium", status: "Closed", assignedTo: "Bob Johnson", createdAt: "2024-01-13" },
-      { id: "TKT-004", title: "Schedule Conflict", store: "Store D", priority: "Low", status: "Completed", assignedTo: "Alice Brown", createdAt: "2024-01-12" },
-    ],
-    "Asset Reports": [
-      { id: "AST-001", name: "Refrigerator Unit", store: "Store A", status: "Active", condition: "Good", lastMaintenance: "2024-01-10" },
-      { id: "AST-002", name: "POS Terminal", store: "Store B", status: "Active", condition: "Fair", lastMaintenance: "2024-01-08" },
-      { id: "AST-003", name: "Security Camera", store: "Store C", status: "Maintenance", condition: "Poor", lastMaintenance: "2024-01-05" },
-      { id: "AST-004", name: "Display Shelf", store: "Store A", status: "Active", condition: "Good", lastMaintenance: "2024-01-12" },
-    ],
-    "Learning Reports": [
-      { id: "LRN-001", course: "Safety Training", user: "John Doe", progress: 100, status: "Completed", completedDate: "2024-01-15" },
-      { id: "LRN-002", course: "Customer Service", user: "Jane Smith", progress: 75, status: "In Progress", completedDate: null },
-      { id: "LRN-003", course: "Product Knowledge", user: "Bob Johnson", progress: 45, status: "In Progress", completedDate: null },
-      { id: "LRN-004", course: "Compliance Training", user: "Alice Brown", progress: 100, status: "Completed", completedDate: "2024-01-14" },
-    ],
-    "Assessment Reports": [
-      { id: "ASM-001", name: "Monthly Quiz", user: "John Doe", score: 85, status: "Passed", date: "2024-01-15" },
-      { id: "ASM-002", name: "Safety Test", user: "Jane Smith", score: 92, status: "Passed", date: "2024-01-15" },
-      { id: "ASM-003", name: "Product Knowledge Test", user: "Bob Johnson", score: 68, status: "Failed", date: "2024-01-14" },
-      { id: "ASM-004", name: "Compliance Exam", user: "Alice Brown", score: 78, status: "Passed", date: "2024-01-13" },
-    ],
+  const mockReportData: Record<string, any[]> = {
+    "Process Reports": [],
+    "Action Points Reports": [],
+    "Ticket Reports": [],
+    "Asset Reports": [],
+    "Learning Reports": [],
+    "Assessment Reports": [],
   };
 
   const currentData = mockReportData[activeReport as keyof typeof mockReportData] || [];

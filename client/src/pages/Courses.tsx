@@ -72,56 +72,7 @@ export default function Courses() {
 
   const tabs = ["All Courses", "My Courses", "Published", "Draft"];
 
-  const mockCourses = [
-    {
-      id: "CRS-001",
-      title: "Safety Training",
-      description: "Comprehensive safety protocols for all employees",
-      category: "Onboarding",
-      status: "published",
-      progress: 85,
-      enrolled: 150,
-      completed: 127,
-      expiresAt: "2024-12-31",
-      createdAt: "2024-01-15",
-    },
-    {
-      id: "CRS-002",
-      title: "Customer Service Excellence",
-      description: "Best practices for customer interactions",
-      category: "Skills",
-      status: "published",
-      progress: 45,
-      enrolled: 200,
-      completed: 90,
-      expiresAt: "2024-06-30",
-      createdAt: "2024-01-14",
-    },
-    {
-      id: "CRS-003",
-      title: "Product Knowledge",
-      description: "Learn about our products and services",
-      category: "Training",
-      status: "draft",
-      progress: 0,
-      enrolled: 0,
-      completed: 0,
-      expiresAt: null,
-      createdAt: "2024-01-13",
-    },
-    {
-      id: "CRS-004",
-      title: "Compliance Training",
-      description: "Regulatory compliance requirements",
-      category: "Compliance",
-      status: "published",
-      progress: 92,
-      enrolled: 180,
-      completed: 165,
-      expiresAt: "2025-01-01",
-      createdAt: "2024-01-12",
-    },
-  ];
+  const mockCourses: any[] = [];
 
   const filteredCourses = mockCourses.filter((course: any) =>
     course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||

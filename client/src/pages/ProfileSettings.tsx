@@ -40,14 +40,14 @@ export default function ProfileSettings() {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
   const [profileData, setProfileData] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@example.com",
-    phone: "+1 234 567 890",
-    designation: "Store Manager",
-    store: "Store A",
-    reportingManager: "Jane Smith",
-    bio: "Experienced store manager with 5+ years in retail.",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    designation: "",
+    store: "",
+    reportingManager: "",
+    bio: "",
   });
 
   const [passwordData, setPasswordData] = useState({

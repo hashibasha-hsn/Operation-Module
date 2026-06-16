@@ -2,12 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BusinessEntity } from './entity.entity';
+import { RemovedEntity } from './removed-entity.entity';
 
 @Injectable()
 export class EntitiesService {
   constructor(
     @InjectRepository(BusinessEntity)
     private entitiesRepository: Repository<BusinessEntity>,
+    @InjectRepository(RemovedEntity)
+    private removedEntitiesRepository: Repository<RemovedEntity>,
   ) {}
 
   async create(entityData: Partial<BusinessEntity>): Promise<BusinessEntity> {
@@ -42,11 +45,27 @@ export class EntitiesService {
   }
 
   async remove(id: string): Promise<void> {
-    await this.entitiesRepository.delete(id);
-  }
-
-  async updateStatus(id: string, status: boolean): Promise<BusinessEntity> {
-    await this.entitiesRepository.update(id, { status });
-    return await this.findOne(id);
+    const entity = await this.findOne(id);
+    if (entity) {
+      // Move to removed entities table
+      const removedEntity = this.removedEntitiesRepository.create({
+        id: entity.id,
+        storeName: entity.storeName,
+        area: entity.area,
+        entityId: entity.entityId,
+        storeStatus: entity.storeStatus,
+        city: entity.city,
+        staff: entity.staff,
+        latitude: entity.latitude,
+        longitude: entity.longitude,
+        storeRadius: entity.storeRadius,
+        organizationId: entity.organizationId,
+        tags: entity.tags,
+        originalCreatedAt: entity.createdAt,
+      });
+      await this.removedEntitiesRepository.save(removedEntity);
+      // Delete from main entities table
+      await this.entitiesRepository.delete(id);
+    }
   }
 }

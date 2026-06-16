@@ -23,9 +23,6 @@ export class BusinessEntity {
   @Column({ nullable: true, type: 'integer' })
   staff: number;
 
-  @Column({ default: true })
-  status: boolean;
-
   @Column({ type: 'decimal', precision: 10, scale: 8, default: 0.00000000 })
   latitude: number;
 
@@ -37,6 +34,9 @@ export class BusinessEntity {
 
   @Column()
   organizationId: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  tags: any;
 
   @CreateDateColumn()
   createdAt: Date;

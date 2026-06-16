@@ -36,11 +36,6 @@ export class EntitiesController {
     return this.entitiesService.update(id, updateEntityDto);
   }
 
-  @Put(':id/status')
-  updateStatus(@Param('id') id: string, @Body('status') status: boolean) {
-    return this.entitiesService.updateStatus(id, status);
-  }
-
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.entitiesService.remove(id);
