@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableHeader,
@@ -53,6 +54,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import * as XLSX from 'xlsx';
 
 export default function UsersPage() {
   const { t } = useLanguage();
@@ -81,6 +83,7 @@ export default function UsersPage() {
     designation: "",
     tags: "",
   });
+  const [selectedTags, setSelectedTags] = useState<any>({});
   const [designationData, setDesignationData] = useState({
     designation: "",
     reportingDesignation: "",
@@ -97,9 +100,12 @@ export default function UsersPage() {
   const [isUserTagDialogOpen, setIsUserTagDialogOpen] = useState(false);
   const [userTagData, setUserTagData] = useState({
     name: "",
-    values: "",
-    isMandatory: false,
+    tagValues: [] as string[],
+    mandatory: false,
   });
+  const [editingUserTag, setEditingUserTag] = useState<any>(null);
+  const [createTagWithValue, setCreateTagWithValue] = useState(false);
+  const [tagValueInput, setTagValueInput] = useState("");
   const [userTeams, setUserTeams] = useState<any[]>([]);
   const [isUserTeamDialogOpen, setIsUserTeamDialogOpen] = useState(false);
   const [userTeamData, setUserTeamData] = useState({
@@ -121,9 +127,13 @@ export default function UsersPage() {
     designation: "",
     tags: "",
   });
+  const [editSelectedTags, setEditSelectedTags] = useState<any>({});
   const [isColumnSettingsOpen, setIsColumnSettingsOpen] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState([
-    'name', 'email', 'designation', 'manager', 'storeId', 'storeName', 'createdAt', 'lastLogin', 'validEmail', 'status', 'action'
+    'name', 'email', 'designation', 'manager', 'entityId', 'storeName', 'createdAt', 'lastLogin', 'validEmail', 'status', 'action'
+  ]);
+  const [tempVisibleColumns, setTempVisibleColumns] = useState([
+    'name', 'email', 'designation', 'manager', 'entityId', 'storeName', 'createdAt', 'lastLogin', 'validEmail', 'status', 'action'
   ]);
   const [selectedUserForMapping, setSelectedUserForMapping] = useState<any>(null);
   const [isAdvanceMappingDialogOpen, setIsAdvanceMappingDialogOpen] = useState(false);
@@ -134,6 +144,7 @@ export default function UsersPage() {
   const [selectedDesignationForPermissions, setSelectedDesignationForPermissions] = useState<any>(null);
   const [features, setFeatures] = useState<any[]>([]);
   const [designationPermissions, setDesignationPermissions] = useState<any[]>([]);
+  const [removedUsers, setRemovedUsers] = useState<any[]>([]);
 
   const tabs = [
     { key: "Users", label: t('users') },
@@ -158,11 +169,19 @@ export default function UsersPage() {
 
   const fetchUserTags = async () => {
     try {
-      const response = await fetch('http://localhost:3002/user-tags?organizationId=default-org');
+      const response = await fetch('http://localhost:3009/api/user/user-tags?organizationId=default-org');
       const data = await response.json();
-      setUserTags(data || []);
+      // Transform database response to match frontend structure
+      const transformedTags = Array.isArray(data) ? data.map((tag: any) => ({
+        id: tag.id,
+        tag: tag.tagName,
+        tagValues: Array.isArray(tag.tagValues) ? tag.tagValues : (typeof tag.tagValues === 'string' ? JSON.parse(tag.tagValues) : []),
+        mandatory: tag.mandatory
+      })) : [];
+      setUserTags(transformedTags);
     } catch (err) {
       console.error('Failed to fetch user tags:', err);
+      setUserTags([]);
     }
   };
 
@@ -189,6 +208,9 @@ export default function UsersPage() {
     if (activeTab === "Designation") {
       fetchDesignations();
       fetchSystemRoles();
+    }
+    if (activeTab === "Removed User") {
+      fetchRemovedUsers();
     }
   }, [activeTab]);
 
@@ -395,7 +417,12 @@ export default function UsersPage() {
     try {
       const response = await fetch('http://localhost:3002/users');
       const data = await response.json();
-      setUsers(data.users || []);
+      // Parse tags if they come as JSON strings from the database
+      const usersWithParsedTags = (data.users || []).map((user: any) => ({
+        ...user,
+        tags: typeof user.tags === 'string' ? JSON.parse(user.tags) : (user.tags || {})
+      }));
+      setUsers(usersWithParsedTags);
     } catch (err) {
       console.error('Failed to fetch users:', err);
     } finally {
@@ -413,10 +440,78 @@ export default function UsersPage() {
     }
   };
 
-  const handleToggleValidEmail = (userId: string) => {
-    setUsers(users.map((user: any) =>
-      user.id === userId ? { ...user, validEmail: !user.validEmail } : user
-    ));
+  const fetchRemovedUsers = async () => {
+    try {
+      const response = await fetch('http://localhost:3002/users/removed');
+      if (!response.ok) {
+        console.error('Failed to fetch removed users:', response.statusText);
+        setRemovedUsers([]);
+        return;
+      }
+      const text = await response.text();
+      if (!text) {
+        setRemovedUsers([]);
+        return;
+      }
+      const data = JSON.parse(text);
+      setRemovedUsers(data || []);
+    } catch (err) {
+      console.error('Failed to fetch removed users:', err);
+      setRemovedUsers([]);
+    }
+  };
+
+  const handleRestoreUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to restore this user?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:3002/users/removed/${userId}/restore`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        alert('User restored successfully');
+        fetchRemovedUsers();
+        fetchUsers();
+        fetchStats();
+      } else {
+        alert('Failed to restore user');
+      }
+    } catch (err) {
+      console.error('Error restoring user:', err);
+      alert('Error restoring user');
+    }
+  };
+
+  const handleToggleValidEmail = async (userId: string) => {
+    try {
+      const response = await fetch(`http://localhost:3002/users/${userId}/toggle-valid-email`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        fetchUsers();
+        fetchStats();
+      } else {
+        console.error('Failed to toggle valid email');
+      }
+    } catch (err) {
+      console.error('Error toggling valid email:', err);
+    }
+  };
+
+  const handleToggleUserStatus = async (userId: string) => {
+    try {
+      const response = await fetch(`http://localhost:3002/users/${userId}/toggle-status`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        fetchUsers();
+        fetchStats();
+      } else {
+        console.error('Failed to toggle user status');
+      }
+    } catch (err) {
+      console.error('Error toggling user status:', err);
+    }
   };
 
   const handleCreateUser = async () => {
@@ -437,7 +532,7 @@ export default function UsersPage() {
           designation: formData.designation,
           manager: formData.manager,
           validEmail: formData.validEmail,
-          tags: formData.tags,
+          tags: selectedTags,
           isActive: true,
         }),
       });
@@ -466,6 +561,7 @@ export default function UsersPage() {
           validEmail: false, password: "", phoneNumber: "", countryCode: "+1",
           manager: "", designation: "", tags: "",
         });
+        setSelectedTags({});
         setIsDialogOpen(false);
         fetchUsers();
       } else {
@@ -478,19 +574,21 @@ export default function UsersPage() {
 
   const handleCreateUserTag = async () => {
     try {
-      const response = await fetch('http://localhost:3002/user-tags', {
+      const response = await fetch('http://localhost:3009/api/user/user-tags', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: userTagData.name,
-          values: userTagData.values,
-          isMandatory: userTagData.isMandatory,
+          tagName: userTagData.name,
+          tagValues: userTagData.tagValues,
+          mandatory: userTagData.mandatory ? 'YES' : 'NO',
           organizationId: 'default-org',
         }),
       });
 
       if (response.ok) {
-        setUserTagData({ name: "", values: "", isMandatory: false });
+        setUserTagData({ name: "", tagValues: [], mandatory: false });
+        setCreateTagWithValue(false);
+        setTagValueInput("");
         setIsUserTagDialogOpen(false);
         fetchUserTags();
       } else {
@@ -498,6 +596,67 @@ export default function UsersPage() {
       }
     } catch (err) {
       console.error('Error creating user tag:', err);
+    }
+  };
+
+  const handleEditUserTag = (tag: any) => {
+    const values = Array.isArray(tag.tagValues) ? tag.tagValues : [];
+    setUserTagData({
+      name: tag.tag,
+      tagValues: values,
+      mandatory: tag.mandatory === 'YES',
+    });
+    setCreateTagWithValue(values.length > 0);
+    setEditingUserTag(tag);
+    setIsUserTagDialogOpen(true);
+  };
+
+  const handleUpdateUserTag = async () => {
+    if (!editingUserTag) return;
+
+    try {
+      const response = await fetch(`http://localhost:3009/api/user/user-tags/${editingUserTag.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tagName: userTagData.name,
+          tagValues: userTagData.tagValues,
+          mandatory: userTagData.mandatory ? 'YES' : 'NO',
+        }),
+      });
+
+      if (response.ok) {
+        setUserTagData({ name: "", tagValues: [], mandatory: false });
+        setCreateTagWithValue(false);
+        setTagValueInput("");
+        setIsUserTagDialogOpen(false);
+        setEditingUserTag(null);
+        fetchUserTags();
+      } else {
+        console.error('Failed to update user tag');
+      }
+    } catch (err) {
+      console.error('Error updating user tag:', err);
+    }
+  };
+
+  const handleDeleteUserTag = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this tag?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3009/api/user/user-tags/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        fetchUserTags();
+      } else {
+        console.error('Failed to delete user tag');
+      }
+    } catch (err) {
+      console.error('Error deleting user tag:', err);
     }
   };
 
@@ -539,6 +698,7 @@ export default function UsersPage() {
       designation: user.designation || "",
       tags: user.tags || "",
     });
+    setEditSelectedTags(user.tags || {});
     setIsEditUserDialogOpen(true);
   };
 
@@ -597,13 +757,14 @@ export default function UsersPage() {
           designation: editFormData.designation,
           manager: editFormData.manager,
           validEmail: editFormData.validEmail,
-          tags: editFormData.tags,
+          tags: editSelectedTags,
         }),
       });
 
       if (response.ok) {
         setIsEditUserDialogOpen(false);
         setEditingUser(null);
+        setEditSelectedTags({});
         fetchUsers();
       } else {
         console.error('Failed to update user');
@@ -614,17 +775,23 @@ export default function UsersPage() {
   };
 
   const handleToggleColumn = (column: string) => {
-    if (visibleColumns.includes(column)) {
-      if (visibleColumns.length > 1) {
-        setVisibleColumns(visibleColumns.filter((col) => col !== column));
+    if (tempVisibleColumns.includes(column)) {
+      if (tempVisibleColumns.length > 1) {
+        setTempVisibleColumns(tempVisibleColumns.filter((col) => col !== column));
       }
     } else {
-      if (visibleColumns.length < 8) {
-        setVisibleColumns([...visibleColumns, column]);
-      } else {
-        alert('You can select a maximum of 8 fields at a time');
-      }
+      setTempVisibleColumns([...tempVisibleColumns, column]);
     }
+  };
+
+  const handleSaveColumnSettings = () => {
+    setVisibleColumns([...tempVisibleColumns]);
+    setIsColumnSettingsOpen(false);
+  };
+
+  const handleOpenColumnSettings = () => {
+    setTempVisibleColumns([...visibleColumns]);
+    setIsColumnSettingsOpen(true);
   };
 
   const handleOpenAdvanceMapping = (user: any) => {
@@ -761,6 +928,86 @@ export default function UsersPage() {
     }
   };
 
+  const handleExport = () => {
+    // Prepare data for export
+    const exportData = users.map((user: any) => ({
+      [t('name')]: user.name || t('notAvailable'),
+      [t('email')]: user.email || t('notAvailable'),
+      [t('designation')]: user.designation || t('notAvailable'),
+      [t('manager')]: user.manager || t('notAvailable'),
+      [t('entityId')]: user.entityId || t('notAvailable'),
+      [t('storeName')]: user.storeName || t('notAvailable'),
+      [t('createdAt')]: user.createdAt || t('notAvailable'),
+      [t('lastLogin')]: user.lastLogin || t('notAvailable'),
+      [t('validEmail')]: user.validEmail ? 'Yes' : 'No',
+      [t('status')]: user.isActive ? 'Active' : 'Inactive',
+    }));
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
+    
+    // Generate Excel file and download
+    XLSX.writeFile(workbook, 'users_export.xlsx');
+  };
+
+  const handleBulkUpload = async () => {
+    if (!bulkFile) {
+      alert('Please select a file to upload');
+      return;
+    }
+
+    if (!formData.entityId) {
+      alert('Please select an entity');
+      return;
+    }
+
+    try {
+      const data = await bulkFile.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      // Process each user from the Excel file
+      const usersToCreate = jsonData.map((row: any) => ({
+        userId: crypto.randomUUID(),
+        name: row[t('name')] || row['name'] || row['Name'] || '',
+        email: row[t('email')] || row['email'] || row['Email'] || '',
+        employeeId: row[t('employeeId')] || row['employeeId'] || row['Employee ID'] || '',
+        designation: row[t('designation')] || row['designation'] || row['Designation'] || '',
+        manager: row[t('manager')] || row['manager'] || row['Manager'] || '',
+        entityId: formData.entityId,
+        validEmail: true,
+        isActive: true,
+      }));
+
+      // Send users to backend
+      const response = await fetch('http://localhost:3002/users/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ users: usersToCreate }),
+      });
+
+      if (response.ok) {
+        alert('Users uploaded successfully');
+        setIsBulkDialogOpen(false);
+        setBulkFile(null);
+        setFormData({ ...formData, entity: '', entityId: '' });
+        fetchUsers();
+        fetchStats();
+      } else {
+        alert('Failed to upload users');
+      }
+    } catch (err) {
+      console.error('Error uploading users:', err);
+      alert('Error uploading users');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -799,19 +1046,17 @@ export default function UsersPage() {
             <div className="flex flex-wrap gap-6">
               <div className="flex items-center gap-3 bg-card border rounded-lg px-4 py-3">
                 <UsersIcon className="w-5 h-5 text-muted-foreground" />
-                <p className="text-sm font-medium">{t('totalUsers')}</p>
+                <p className="text-sm font-medium">{t('totalUsers')}: {stats.totalUsers}</p>
               </div>
               <div className="flex items-center gap-3 bg-card border rounded-lg px-4 py-3">
-                <Switch checked={showActive} onCheckedChange={setShowActive} />
-                <p className="text-sm font-medium">{t('active')}</p>
+                <p className="text-sm font-medium">{t('active')}: {stats.activeUsers}</p>
               </div>
               <div className="flex items-center gap-3 bg-card border rounded-lg px-4 py-3">
-                <Switch checked={showInactive} onCheckedChange={setShowInactive} />
-                <p className="text-sm font-medium">{t('inactive')}</p>
+                <p className="text-sm font-medium">{t('inactive')}: {stats.inactiveUsers}</p>
               </div>
               <div className="flex items-center gap-3 bg-card border rounded-lg px-4 py-3">
                 <Mail className="w-5 h-5 text-muted-foreground" />
-                <p className="text-sm font-medium">{t('validEmails')}</p>
+                <p className="text-sm font-medium">{t('validEmails')}: {stats.validEmails}</p>
               </div>
             </div>
 
@@ -940,7 +1185,7 @@ export default function UsersPage() {
                     <Button variant="outline" onClick={() => setIsBulkDialogOpen(false)}>
                       {t('cancel')}
                     </Button>
-                    <Button onClick={() => setIsBulkDialogOpen(false)}>
+                    <Button onClick={handleBulkUpload}>
                       {t('uploadUsers')}
                     </Button>
                   </DialogFooter>
@@ -1142,14 +1387,46 @@ export default function UsersPage() {
                         </div>
                       </CollapsibleContent>
                     </Collapsible>
-                    <div className="space-y-2">
-                      <Label htmlFor="tags">{t('tags')}</Label>
-                      <Input
-                        id="tags"
-                        value={formData.tags}
-                        onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                        placeholder={t('enterTagsCommaSeparated')}
-                      />
+                    <div className="space-y-4 pt-4 border-t">
+                      <h3 className="text-lg font-semibold">Tags</h3>
+                      {userTags.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No tags available. Create tags in the User Tags tab first.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {userTags.map((tag: any) => {
+                            const values = Array.isArray(tag.tagValues) ? tag.tagValues : [];
+                            return (
+                              <div key={tag.id} className="space-y-2">
+                                <Label htmlFor={`tag-${tag.id}`}>{tag.tag}</Label>
+                                {values.length > 0 ? (
+                                  <Select
+                                    value={selectedTags[tag.tag] || ''}
+                                    onValueChange={(value) => setSelectedTags({ ...selectedTags, [tag.tag]: value })}
+                                  >
+                                    <SelectTrigger id={`tag-${tag.id}`}>
+                                      <SelectValue placeholder={`Select ${tag.tag}`} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {values.map((value: string, index: number) => (
+                                        <SelectItem key={index} value={value}>
+                                          {value}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <Input
+                                    id={`tag-${tag.id}`}
+                                    placeholder={`Enter ${tag.tag}`}
+                                    value={selectedTags[tag.tag] || ''}
+                                    onChange={(e) => setSelectedTags({ ...selectedTags, [tag.tag]: e.target.value })}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <DialogFooter>
@@ -1298,15 +1575,47 @@ export default function UsersPage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-tags">{t('tags')}</Label>
-                        <Input
-                          id="edit-tags"
-                          value={editFormData.tags}
-                          onChange={(e) => setEditFormData({ ...editFormData, tags: e.target.value })}
-                          placeholder={t('enterTagsCommaSeparated')}
-                        />
-                      </div>
+                    </div>
+                    <div className="space-y-4 pt-4 border-t">
+                      <h3 className="text-lg font-semibold">Tags</h3>
+                      {userTags.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No tags available. Create tags in the User Tags tab first.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {userTags.map((tag: any) => {
+                            const values = Array.isArray(tag.tagValues) ? tag.tagValues : [];
+                            return (
+                              <div key={tag.id} className="space-y-2">
+                                <Label htmlFor={`edit-tag-${tag.id}`}>{tag.tag}</Label>
+                                {values.length > 0 ? (
+                                  <Select
+                                    value={editSelectedTags[tag.tag] || ''}
+                                    onValueChange={(value) => setEditSelectedTags({ ...editSelectedTags, [tag.tag]: value })}
+                                  >
+                                    <SelectTrigger id={`edit-tag-${tag.id}`}>
+                                      <SelectValue placeholder={`Select ${tag.tag}`} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {values.map((value: string, index: number) => (
+                                        <SelectItem key={index} value={value}>
+                                          {value}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <Input
+                                    id={`edit-tag-${tag.id}`}
+                                    placeholder={`Enter ${tag.tag}`}
+                                    value={editSelectedTags[tag.tag] || ''}
+                                    onChange={(e) => setEditSelectedTags({ ...editSelectedTags, [tag.tag]: e.target.value })}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <DialogFooter>
@@ -1323,7 +1632,7 @@ export default function UsersPage() {
               {/* Column Settings & More Actions */}
               <Dialog open={isColumnSettingsOpen} onOpenChange={setIsColumnSettingsOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="icon">
+                  <Button variant="outline" size="icon" onClick={handleOpenColumnSettings}>
                     <Settings className="w-5 h-5" />
                   </Button>
                 </DialogTrigger>
@@ -1331,7 +1640,7 @@ export default function UsersPage() {
                   <DialogHeader>
                     <DialogTitle>{t('customizeTableColumns')}</DialogTitle>
                     <DialogDescription>
-                      {t('selectUpTo8FieldsToDisplayInTheUserTable')}
+                      {t('selectFieldsToDisplayInTheUserTable')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
@@ -1340,7 +1649,7 @@ export default function UsersPage() {
                       { key: 'email', label: t('email') },
                       { key: 'designation', label: t('designation') },
                       { key: 'manager', label: t('manager') },
-                      { key: 'storeId', label: t('storeId') },
+                      { key: 'entityId', label: t('entityId') },
                       { key: 'storeName', label: t('storeName') },
                       { key: 'createdAt', label: t('createdAt') },
                       { key: 'lastLogin', label: t('lastLogin') },
@@ -1352,7 +1661,7 @@ export default function UsersPage() {
                         <input
                           type="checkbox"
                           id={`column-${column.key}`}
-                          checked={visibleColumns.includes(column.key)}
+                          checked={tempVisibleColumns.includes(column.key)}
                           onChange={() => handleToggleColumn(column.key)}
                         />
                         <label htmlFor={`column-${column.key}`} className="text-sm">
@@ -1360,12 +1669,12 @@ export default function UsersPage() {
                         </label>
                       </div>
                     ))}
-                    <p className="text-xs text-muted-foreground">
-                      {visibleColumns.length}/8 {t('fieldsSelected')}
-                    </p>
                   </div>
                   <DialogFooter>
-                    <Button onClick={() => setIsColumnSettingsOpen(false)}>
+                    <Button variant="outline" onClick={() => setIsColumnSettingsOpen(false)}>
+                      {t('cancel')}
+                    </Button>
+                    <Button onClick={handleSaveColumnSettings}>
                       {t('save')}
                     </Button>
                   </DialogFooter>
@@ -1379,9 +1688,7 @@ export default function UsersPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>{t('export')}</DropdownMenuItem>
-                  <DropdownMenuItem>{t('import')}</DropdownMenuItem>
-                  <DropdownMenuItem>{t('refresh')}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExport}>{t('export')}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>{/* END Action Buttons */}
@@ -1392,57 +1699,73 @@ export default function UsersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('name')}</TableHead>
-                      <TableHead>{t('email')}</TableHead>
-                      <TableHead>{t('designation')}</TableHead>
-                      <TableHead>{t('manager')}</TableHead>
-                      <TableHead>{t('storeId')}</TableHead>
-                      <TableHead>{t('storeName')}</TableHead>
-                      <TableHead>{t('createdAt')}</TableHead>
-                      <TableHead>{t('lastLogin')}</TableHead>
-                      <TableHead>{t('validEmail')}</TableHead>
-                      <TableHead>{t('status')}</TableHead>
+                      {visibleColumns.includes('name') && <TableHead>{t('name')}</TableHead>}
+                      {visibleColumns.includes('email') && <TableHead>{t('email')}</TableHead>}
+                      {visibleColumns.includes('designation') && <TableHead>{t('designation')}</TableHead>}
+                      {visibleColumns.includes('manager') && <TableHead>{t('manager')}</TableHead>}
+                      {visibleColumns.includes('entityId') && <TableHead>{t('entityId')}</TableHead>}
+                      {visibleColumns.includes('storeName') && <TableHead>{t('storeName')}</TableHead>}
+                      {visibleColumns.includes('createdAt') && <TableHead>{t('createdAt')}</TableHead>}
+                      {visibleColumns.includes('lastLogin') && <TableHead>{t('lastLogin')}</TableHead>}
+                      {visibleColumns.includes('validEmail') && <TableHead>{t('validEmail')}</TableHead>}
+                      {visibleColumns.includes('status') && <TableHead>{t('status')}</TableHead>}
+                      {userTags.map((tag: any) => (
+                        <TableHead key={tag.id}>{tag.tag}</TableHead>
+                      ))}
                       <TableHead>{t('action')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center py-12">
+                        <TableCell colSpan={visibleColumns.length + userTags.length + 1} className="text-center py-12">
                           {t('loadingUsers')}
                         </TableCell>
                       </TableRow>
                     ) : users.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={visibleColumns.length + userTags.length + 1} className="text-center py-12 text-muted-foreground">
                           {t('noUsersAvailable')}
                         </TableCell>
                       </TableRow>
                     ) : (
                       users.map((user: any) => (
                         <TableRow key={user.id}>
-                          <TableCell className="font-medium">{user.name || t('notAvailable')}</TableCell>
-                          <TableCell>{user.email || t('notAvailable')}</TableCell>
-                          <TableCell>{user.designation || t('notAvailable')}</TableCell>
-                          <TableCell>{user.manager || t('notAvailable')}</TableCell>
-                          <TableCell>{user.storeId || t('notAvailable')}</TableCell>
-                          <TableCell>{user.storeName || t('notAvailable')}</TableCell>
-                          <TableCell>{user.createdAt || t('notAvailable')}</TableCell>
-                          <TableCell>{user.lastLogin || t('notAvailable')}</TableCell>
-                          <TableCell>
-                            <Switch
-                              checked={user.validEmail || false}
-                              onCheckedChange={() => handleToggleValidEmail(user.id)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={user.status === 'Active' ? 'default' : 'destructive'}
-                              className="rounded-full"
-                            >
-                              {user.status || t('active')}
-                            </Badge>
-                          </TableCell>
+                          {visibleColumns.includes('name') && <TableCell className="font-medium">{user.name || t('notAvailable')}</TableCell>}
+                          {visibleColumns.includes('email') && <TableCell>{user.email || t('notAvailable')}</TableCell>}
+                          {visibleColumns.includes('designation') && <TableCell>{user.designation || t('notAvailable')}</TableCell>}
+                          {visibleColumns.includes('manager') && <TableCell>{user.manager || t('notAvailable')}</TableCell>}
+                          {visibleColumns.includes('entityId') && <TableCell>{user.entityId || t('notAvailable')}</TableCell>}
+                          {visibleColumns.includes('storeName') && <TableCell>{user.storeName || t('notAvailable')}</TableCell>}
+                          {visibleColumns.includes('createdAt') && <TableCell>{user.createdAt || t('notAvailable')}</TableCell>}
+                          {visibleColumns.includes('lastLogin') && <TableCell>{user.lastLogin || t('notAvailable')}</TableCell>}
+                          {visibleColumns.includes('validEmail') && (
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={user.validEmail || false}
+                                  onCheckedChange={() => handleToggleValidEmail(user.id)}
+                                />
+                                <span className="text-sm">{user.validEmail ? 'Valid' : 'Invalid'}</span>
+                              </div>
+                            </TableCell>
+                          )}
+                          {visibleColumns.includes('status') && (
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={user.isActive || false}
+                                  onCheckedChange={() => handleToggleUserStatus(user.userId || user.id)}
+                                />
+                                <span className="text-sm">{user.isActive ? 'Active' : 'Inactive'}</span>
+                              </div>
+                            </TableCell>
+                          )}
+                          {userTags.map((tag: any) => (
+                            <TableCell key={tag.id}>
+                              {user.tags && user.tags[tag.tag] ? String(user.tags[tag.tag]) : '-'}
+                            </TableCell>
+                          ))}
                           <TableCell>
                             <div className="flex gap-2">
                               <Button variant="ghost" size="sm" onClick={() => handleEditUser(user)}>
@@ -1646,9 +1969,7 @@ export default function UsersPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>{t('export')}</DropdownMenuItem>
-                    <DropdownMenuItem>{t('import')}</DropdownMenuItem>
-                    <DropdownMenuItem>{t('refresh')}</DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExport}>{t('export')}</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -2039,9 +2360,19 @@ export default function UsersPage() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader>
-                    <DialogTitle>Create User Tag</DialogTitle>
+                    <DialogTitle>{editingUserTag ? 'Edit User Tag' : 'Create User Tag'}</DialogTitle>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="createTagWithValue"
+                        checked={createTagWithValue}
+                        onCheckedChange={(checked) => setCreateTagWithValue(checked as boolean)}
+                      />
+                      <Label htmlFor="createTagWithValue">
+                        Create Tag With Value
+                      </Label>
+                    </div>
                     <div className="grid gap-2">
                       <Label htmlFor="tagName">
                         Tag Name <span className="text-destructive">*</span>
@@ -2053,35 +2384,80 @@ export default function UsersPage() {
                         onChange={(e) => setUserTagData({ ...userTagData, name: e.target.value })}
                       />
                     </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="tagValues">Values</Label>
-                      <Input
-                        id="tagValues"
-                        placeholder="e.g., Yes/No, North/South/East/West"
-                        value={userTagData.values}
-                        onChange={(e) => setUserTagData({ ...userTagData, values: e.target.value })}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="isMandatory">Mandatory During User Creation</Label>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="isMandatory"
-                          checked={userTagData.isMandatory}
-                          onCheckedChange={(checked) => setUserTagData({ ...userTagData, isMandatory: checked })}
-                        />
-                        <span className="text-sm text-muted-foreground">
-                          {userTagData.isMandatory ? "Required" : "Optional"}
-                        </span>
+                    {createTagWithValue && (
+                      <div className="grid gap-2">
+                        <Label htmlFor="tagValue">Tag Values</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="tagValue"
+                            placeholder="Enter value and press Enter or click Add"
+                            value={tagValueInput}
+                            onChange={(e) => setTagValueInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && tagValueInput.trim()) {
+                                setUserTagData({ ...userTagData, tagValues: [...userTagData.tagValues, tagValueInput.trim()] });
+                                setTagValueInput('');
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              if (tagValueInput.trim()) {
+                                setUserTagData({ ...userTagData, tagValues: [...userTagData.tagValues, tagValueInput.trim()] });
+                                setTagValueInput('');
+                              }
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                        {userTagData.tagValues.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {userTagData.tagValues.map((value, index) => (
+                              <div key={index} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
+                                <span className="text-sm">{value}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setUserTagData({
+                                      ...userTagData,
+                                      tagValues: userTagData.tagValues.filter((_, i) => i !== index)
+                                    });
+                                  }}
+                                  className="text-destructive hover:text-destructive/80"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
+                    )}
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="mandatory"
+                        checked={userTagData.mandatory}
+                        onCheckedChange={(checked) => setUserTagData({ ...userTagData, mandatory: checked as boolean })}
+                      />
+                      <Label htmlFor="mandatory">
+                        Mandatory During User Creation
+                      </Label>
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsUserTagDialogOpen(false)}>
+                    <Button variant="outline" onClick={() => {
+                      setIsUserTagDialogOpen(false);
+                      setEditingUserTag(null);
+                      setUserTagData({ name: "", tagValues: [], mandatory: false });
+                      setCreateTagWithValue(false);
+                      setTagValueInput("");
+                    }}>
                       Cancel
                     </Button>
-                    <Button onClick={handleCreateUserTag}>
-                      Create Tag
+                    <Button onClick={editingUserTag ? handleUpdateUserTag : handleCreateUserTag}>
+                      {editingUserTag ? 'Update Tag' : 'Create Tag'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -2108,23 +2484,26 @@ export default function UsersPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      userTags.map((tag: any) => (
-                        <TableRow key={tag.id}>
-                          <TableCell className="font-medium">{tag.name}</TableCell>
-                          <TableCell>{tag.values || 'N/A'}</TableCell>
-                          <TableCell>
-                            <Badge variant={tag.isMandatory ? 'default' : 'secondary'}>
-                              {tag.isMandatory ? 'Yes' : 'No'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm">Edit</Button>
-                              <Button variant="ghost" size="sm">Delete</Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      userTags.map((tag: any) => {
+                        const values = Array.isArray(tag.tagValues) ? tag.tagValues : [];
+                        return (
+                          <TableRow key={tag.id}>
+                            <TableCell className="font-medium">{tag.tag}</TableCell>
+                            <TableCell>{values.length > 0 ? values.join(', ') : 'N/A'}</TableCell>
+                            <TableCell>
+                              <Badge variant={tag.mandatory === 'YES' ? 'default' : 'secondary'}>
+                                {tag.mandatory === 'YES' ? 'Yes' : 'No'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => handleEditUserTag(tag)}>Edit</Button>
+                                <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteUserTag(tag.id)}>Delete</Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -2262,6 +2641,47 @@ export default function UsersPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+          </>
+        ) : activeTab === "Removed User" ? (
+          <>
+            <div className="p-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('name')}</TableHead>
+                    <TableHead>{t('email')}</TableHead>
+                    <TableHead>{t('designation')}</TableHead>
+                    <TableHead>{t('entityId')}</TableHead>
+                    <TableHead>{t('removedAt')}</TableHead>
+                    <TableHead>{t('action')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {removedUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                        {t('noRemovedUsers')}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    removedUsers.map((user: any) => (
+                      <TableRow key={user.user_id}>
+                        <TableCell className="font-medium">{user.name || t('notAvailable')}</TableCell>
+                        <TableCell>{user.email || t('notAvailable')}</TableCell>
+                        <TableCell>{user.designation || t('notAvailable')}</TableCell>
+                        <TableCell>{user.entity_id || t('notAvailable')}</TableCell>
+                        <TableCell>{user.removed_at || t('notAvailable')}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" onClick={() => handleRestoreUser(user.user_id)}>
+                            {t('restore')}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </>
         ) : (
           <div className="text-center py-12 text-muted-foreground">

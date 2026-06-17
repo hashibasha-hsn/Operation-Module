@@ -1,0 +1,13 @@
+Epic	User Story	Task	Completed Items	Status
+User Management	As an admin, I want to view removed users so that I can see which users have been deleted	Implement Removed User Tab	Added "Removed User" tab to navigation tabs array with i18n label	Completed
+User Management	As an admin, I want to view removed users so that I can see which users have been deleted	Implement State Management	Created removedUsers state to store removed users data	Completed
+User Management	As an admin, I want to view removed users so that I can see which users have been deleted	Implement API Integration	Created fetchRemovedUsers function to fetch from /users/removed endpoint	Completed
+User Management	As an admin, I want to view removed users so that I can see which users have been deleted	Implement Error Handling	Added error handling for API failures and empty responses	Completed
+User Management	As an admin, I want to view removed users so that I can see which users have been deleted	Implement Tab Switching	Added useEffect to fetch removed users when tab becomes active	Completed
+User Management	As an admin, I want to view removed users so that I can see which users have been deleted	Implement UI Table	Created table with columns: Name, Email, Designation, Entity ID, Removed At, Action	Completed
+User Management	As an admin, I want to view removed users so that I can see which users have been deleted	Implement Empty State	Added empty state message when no removed users exist	Completed
+User Management	As an admin, I want to restore removed users so that I can reactivate deleted accounts	Implement Restore Functionality	Created handleRestoreUser function to restore users via POST request	Completed
+User Management	As an admin, I want to restore removed users so that I can reactivate deleted accounts	Implement Confirmation Dialog	Added confirmation dialog before restoring user	Completed
+User Management	As an admin, I want to restore removed users so that I can reactivate deleted accounts	Implement Refresh Logic	Refreshes users, stats, and removed users after successful restore	Completed
+User Management	As an admin, I want to restore removed users so that I can reactivate deleted accounts	Implement Restore Button	Added restore button in action column for each user	Completed
+User Management	As an admin, I want to view removed users so that I can see which users have been deleted	Implement i18n Support	Added translation keys for all UI elements (removedUser, name, email, designation, entityId, removedAt, action, restore, noRemovedUsers)	Completed
