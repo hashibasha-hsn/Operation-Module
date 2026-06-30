@@ -21,6 +21,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import {
   Table,
   TableBody,
@@ -42,13 +44,6 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
 export default function AssetTableConfig() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -367,13 +362,15 @@ export default function AssetTableConfig() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveField(field.id)}
-                              >
-                                <Trash2 className="w-4 h-4 text-destructive" />
-                              </Button>
+                              <TableActionsMenu>
+                                <DropdownMenuItem
+                                  onClick={() => handleRemoveField(field.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Remove
+                                </DropdownMenuItem>
+                              </TableActionsMenu>
                             </TableCell>
                           </TableRow>
                         ))}

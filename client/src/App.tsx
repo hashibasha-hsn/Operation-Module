@@ -27,10 +27,16 @@ import ProcessCreation from "./pages/ProcessCreation";
 import TitleSetup from "./pages/TitleSetup";
 import ProcessSettings from "./pages/ProcessSettings";
 import AuditCreation from "./pages/AuditCreation";
+import AuditTitleSetup from "./pages/AuditTitleSetup";
+import AuditSettings from "./pages/AuditSettings";
+import AuditCreateForm from "./pages/AuditCreateForm";
 import CreateForm from "./pages/CreateForm";
 import Security from "./pages/Security";
 import Notifications from "./pages/Notifications";
 import Admin from "./pages/Admin";
+import ProcessFill from "./pages/ProcessFill";
+import AuditFill from "./pages/AuditFill";
+import AssessmentFill from "./pages/AssessmentFill";
 import Tasks from "./pages/Tasks";
 import Login from "./pages/Login";
 import AdminSetup from "./pages/AdminSetup";
@@ -41,6 +47,7 @@ import ActionPoints from "./pages/ActionPoints";
 import Tickets from "./pages/Tickets";
 import StoreHealth from "./pages/StoreHealth";
 import FeatureReports from "./pages/FeatureReports";
+import ReportingInsights from "./pages/ReportingInsights";
 import CustomDashboards from "./pages/CustomDashboards";
 import StandardReports from "./pages/StandardReports";
 import MyReport from "./pages/MyReport";
@@ -55,9 +62,14 @@ import LearningTeamReport from "./pages/LearningTeamReport";
 import LearningOrgReport from "./pages/LearningOrgReport";
 import AssessmentReport from "./pages/AssessmentReport";
 import AssessmentOrgReport from "./pages/AssessmentOrgReport";
+import AssessmentCreateForm from "./pages/AssessmentCreateForm";
+import AssessmentSettings from "./pages/AssessmentSettings";
+import AssessmentCertificateSettings from "./pages/AssessmentCertificateSettings";
+import AssessmentCreation from "./pages/AssessmentCreation";
 import TicketOrgReport from "./pages/TicketOrgReport";
 import TicketAdvanceSearch from "./pages/TicketAdvanceSearch";
 import TicketTagReport from "./pages/TicketTagReport";
+import TicketSetup from "./pages/TicketSetup";
 import ActionPointsOrgReport from "./pages/ActionPointsOrgReport";
 import ActionPointsAdvanceReport from "./pages/ActionPointsAdvanceReport";
 import Assets from "./pages/Assets";
@@ -80,6 +92,8 @@ function Router() {
       <Route path={"/dashboard"} component={() => <Layout><Dashboard /></Layout>} />
       <Route path={"/creator-mode"} component={() => <Layout><CreatorMode /></Layout>} />
       <Route path={"/tasks"} component={() => <Layout><Tasks /></Layout>} />
+      <Route path={"/tasks/process/:id"} component={() => <Layout><ProcessFill /></Layout>} />
+      <Route path={"/tasks/audit/:id"} component={() => <Layout><AuditFill /></Layout>} />
       <Route path={"/process"} component={() => <Layout><Process /></Layout>} />
       <Route path={"/audit"} component={() => <Layout><AuditLogs /></Layout>} />
       <Route path={"/audit-setup"} component={() => <Layout><AuditSetup /></Layout>} />
@@ -87,9 +101,14 @@ function Router() {
       <Route path={"/users"} component={() => <Layout><Users /></Layout>} />
       <Route path={"/attendance"} component={() => <Layout><Attendance /></Layout>} />
       <Route path={"/learning"} component={() => <Layout><Learning /></Layout>} />
+      <Route path={"/learning/assessment/:id"} component={() => <Layout><AssessmentFill /></Layout>} />
       <Route path={"/categories-and-courses"} component={() => <Layout><CategoriesAndCourses /></Layout>} />
       <Route path={"/course-creation"} component={() => <Layout><CourseCreation /></Layout>} />
       <Route path={"/assessments"} component={() => <Layout><Assessments /></Layout>} />
+      <Route path={"/assessment-create-form"} component={() => <Layout><AssessmentCreateForm /></Layout>} />
+      <Route path={"/assessment-settings"} component={() => <Layout><AssessmentSettings /></Layout>} />
+      <Route path={"/assessment-certificate-settings"} component={() => <Layout><AssessmentCertificateSettings /></Layout>} />
+      <Route path={"/assessment-creation"} component={() => <Layout><AssessmentCreation /></Layout>} />
       <Route path={"/entities"} component={() => <Layout><Entities /></Layout>} />
       <Route path={"/tags"} component={() => <Layout><Tags /></Layout>} />
       <Route path={"/settings"} component={() => <Layout><Settings /></Layout>} />
@@ -97,6 +116,9 @@ function Router() {
       <Route path={"/title-setup"} component={() => <Layout><TitleSetup /></Layout>} />
       <Route path={"/process-settings"} component={() => <Layout><ProcessSettings /></Layout>} />
       <Route path={"/audit-creation"} component={() => <Layout><AuditCreation /></Layout>} />
+      <Route path={"/audit-title-setup"} component={() => <Layout><AuditTitleSetup /></Layout>} />
+      <Route path={"/audit-settings"} component={() => <Layout><AuditSettings /></Layout>} />
+      <Route path={"/audit-create-form"} component={() => <Layout><AuditCreateForm /></Layout>} />
       <Route path={"/create-form"} component={() => <Layout><CreateForm /></Layout>} />
       <Route path={"/security"} component={() => <Layout><Security /></Layout>} />
       <Route path={"/notifications"} component={() => <Layout><Notifications /></Layout>} />
@@ -106,7 +128,9 @@ function Router() {
       <Route path={"/approvals"} component={() => <Layout><Approvals /></Layout>} />
       <Route path={"/action-points"} component={() => <Layout><ActionPoints /></Layout>} />
       <Route path={"/tickets"} component={() => <Layout><Tickets /></Layout>} />
+      <Route path={"/ticket-setup"} component={() => <Layout><TicketSetup /></Layout>} />
       <Route path={"/store-health"} component={() => <Layout><StoreHealth /></Layout>} />
+      <Route path={"/reporting"} component={() => <Layout><ReportingInsights /></Layout>} />
       <Route path={"/feature-reports"} component={() => <Layout><FeatureReports /></Layout>} />
       <Route path={"/custom-dashboards"} component={() => <Layout><CustomDashboards /></Layout>} />
       <Route path={"/standard-reports"} component={() => <Layout><StandardReports /></Layout>} />

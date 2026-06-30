@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable } from 'typeorm';
-import { UserProfile } from '../profiles/user-profile.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('user_teams')
 export class UserTeam {
@@ -14,14 +13,6 @@ export class UserTeam {
 
   @Column()
   organizationId: string;
-
-  @ManyToMany(() => UserProfile)
-  @JoinTable({
-    name: 'team_members',
-    joinColumn: { name: 'teamId', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'userId', referencedColumnName: 'userId' },
-  })
-  members: UserProfile[];
 
   @CreateDateColumn()
   createdAt: Date;

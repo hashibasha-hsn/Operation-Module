@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -38,12 +40,54 @@ import {
 } from "@/components/ui/select";
 import { Plus, Search, Building2, Filter, MoreVertical, ChevronDown, ChevronLeft, ChevronRight, Store, Settings, Upload, Trash2, Edit, Download } from "lucide-react";
 import * as XLSX from 'xlsx';
+import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import CreateEntityForm, { CreateEntityFormValues } from "@/components/entities/CreateEntityForm";
+import { buildEntityPayload } from "@/lib/entityPayload";
+import {
+  createEntity,
+  deleteEntity,
+  fetchEntities as fetchEntitiesApi,
+  updateEntity,
+} from "@/lib/entityApi";
+import {
+  DEFAULT_ENTITY_TABLE_COLUMNS,
+  ENTITY_INFO_TABLE_COLUMNS,
+  formatEntityColumnValue,
+  getEntityColumnLabel,
+  MAX_ENTITY_TABLE_COLUMNS,
+  type EntityInfoTableColumnKey,
+} from "@/lib/entityTableColumns";
+
+type EntitySortOption = "storeNameAsc" | "storeNameDesc";
+
+const SORT_LABEL_KEYS: Record<EntitySortOption, string> = {
+  storeNameAsc: "storeNameAsc",
+  storeNameDesc: "storeNameDesc",
+};
+
+const SORT_OPTIONS: EntitySortOption[] = ["storeNameAsc", "storeNameDesc"];
+
+function sortEntities(list: any[], sort: EntitySortOption) {
+  const sorted = [...list];
+  sorted.sort((a, b) => {
+    if (sort === "storeNameDesc") {
+      return String(b.storeName ?? "").localeCompare(String(a.storeName ?? ""));
+    }
+    return String(a.storeName ?? "").localeCompare(String(b.storeName ?? ""));
+  });
+  return sorted;
+}
 
 export default function Entities() {
   const { t } = useLanguage();
   const [showFunctional, setShowFunctional] = useState(true);
   const [showNonFunctional, setShowNonFunctional] = useState(true);
+  const [draftShowFunctional, setDraftShowFunctional] = useState(true);
+  const [draftShowNonFunctional, setDraftShowNonFunctional] = useState(true);
+  const [sortOption, setSortOption] = useState<EntitySortOption>("storeNameAsc");
+  const [draftSortOption, setDraftSortOption] = useState<EntitySortOption>("storeNameAsc");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const tabs = [
     { key: "Entity", label: t('entity') },
     { key: "Tags", label: t('tags') },
@@ -71,9 +115,9 @@ export default function Entities() {
   const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [isColumnSettingsOpen, setIsColumnSettingsOpen] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState([
-    'storeName', 'area', 'entityId', 'createdAt', 'city', 'staff', 'action'
-  ]);
+  const [visibleColumns, setVisibleColumns] = useState<EntityInfoTableColumnKey[]>(
+    DEFAULT_ENTITY_TABLE_COLUMNS,
+  );
   const [tags, setTags] = useState<any[]>([]);
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
   const [isEditTagDialogOpen, setIsEditTagDialogOpen] = useState(false);
@@ -89,30 +133,58 @@ export default function Entities() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedTags, setSelectedTags] = useState<{ [key: string]: string }>({});
   const [removedEntities, setRemovedEntities] = useState<any[]>([]);
+  const [storeNameSearch, setStoreNameSearch] = useState("");
 
   useEffect(() => {
-    fetchEntities();
     fetchTags();
     fetchRemovedEntities();
   }, []);
 
-  const fetchEntities = async () => {
-    try {
-      const response = await fetch('http://localhost:3009/api/org/entities?organizationId=default-org');
-      console.log('Response status:', response.status);
-      const data = await response.json();
-      console.log('Entities data:', data);
-      setEntities(Array.isArray(data) ? data : []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadEntities(storeNameSearch.trim());
+    }, storeNameSearch ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [storeNameSearch]);
 
-      // Calculate counts
-      setTotalEntityCount(Array.isArray(data) ? data.length : 0);
-      setFunctionalEntityCount(Array.isArray(data) ? data.filter((e: any) => e.storeStatus === 'Functional').length : 0);
-      setNonFunctionalEntityCount(Array.isArray(data) ? data.filter((e: any) => e.storeStatus === 'Non-Functional').length : 0);
+  const loadEntities = async (search = storeNameSearch) => {
+    try {
+      const data = await fetchEntitiesApi(search);
+      setEntities(data);
+      setTotalEntityCount(data.length);
+      setFunctionalEntityCount(data.filter((e: any) => e.storeStatus === "Functional").length);
+      setNonFunctionalEntityCount(
+        data.filter((e: any) => e.storeStatus === "Non-Functional").length,
+      );
     } catch (err) {
-      console.error('Failed to fetch entities:', err);
+      console.error("Failed to fetch entities:", err);
       setEntities([]);
+      setTotalEntityCount(0);
+      setFunctionalEntityCount(0);
+      setNonFunctionalEntityCount(0);
     }
   };
+
+  const handleApplyFilters = () => {
+    setShowFunctional(draftShowFunctional);
+    setShowNonFunctional(draftShowNonFunctional);
+    setSortOption(draftSortOption);
+    setIsFilterOpen(false);
+  };
+
+  const displayedEntities = useMemo(() => {
+    let list = entities.filter((entity) => {
+      const isFunctional = entity.storeStatus === "Functional";
+      const isNonFunctional = entity.storeStatus === "Non-Functional";
+      if (isFunctional && !showFunctional) return false;
+      if (isNonFunctional && !showNonFunctional) return false;
+      if (!isFunctional && !isNonFunctional) {
+        if (!showFunctional && !showNonFunctional) return false;
+      }
+      return true;
+    });
+    return sortEntities(list, sortOption);
+  }, [entities, showFunctional, showNonFunctional, sortOption]);
 
   const fetchTags = async () => {
     try {
@@ -143,38 +215,15 @@ export default function Entities() {
     }
   };
 
-  const handleRestoreEntity = async (id: string) => {
-    try {
-      const response = await fetch(`http://localhost:3009/api/org/removed-entities/${id}/restore`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        fetchEntities();
-        fetchRemovedEntities();
-      } else {
-        console.error('Failed to restore entity');
-      }
-    } catch (err) {
-      console.error('Error restoring entity:', err);
-    }
-  };
-
   const exportToExcel = () => {
-    const exportData = entities.map((entity: any) => ({
-      'Store Name': entity.storeName,
-      'Area': entity.area || '',
-      'Entity ID': entity.entityId || '',
-      'Store Status': entity.storeStatus || '',
-      'City': entity.city || '',
-      'Staff': entity.staff || 0,
-      'Status': entity.status ? 'Active' : 'Inactive',
-      'Latitude': entity.latitude || 0,
-      'Longitude': entity.longitude || 0,
-      'Store Radius': entity.storeRadius || 100,
-      'Tags': entity.tags ? JSON.stringify(entity.tags) : '',
-      'Created At': entity.createdAt ? new Date(entity.createdAt).toLocaleDateString() : '',
-    }));
+    const exportData = entities.map((entity: any) => {
+      const row: Record<string, string | number> = {};
+      visibleColumns.forEach((column) => {
+        const config = ENTITY_INFO_TABLE_COLUMNS.find((item) => item.key === column);
+        row[config?.label ?? column] = formatEntityColumnValue(entity, column);
+      });
+      return row;
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
@@ -183,44 +232,15 @@ export default function Entities() {
   };
 
 
-  const handleCreateEntity = async () => {
+  const handleCreateEntity = async (values: CreateEntityFormValues) => {
     try {
-      const response = await fetch('http://localhost:3009/api/org/entities', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...entityFormData,
-          organizationId: 'default-org',
-          staff: parseInt(entityFormData.staff) || 0,
-          latitude: parseFloat(entityFormData.latitude) || 0,
-          longitude: parseFloat(entityFormData.longitude) || 0,
-          storeRadius: parseInt(entityFormData.storeRadius) || 100,
-          tags: selectedTags,
-        }),
-      });
-
-      if (response.ok) {
-        setEntityFormData({
-          storeName: "",
-          area: "",
-          entityId: "",
-          city: "",
-          staff: "",
-          status: true,
-          latitude: "0.00000000",
-          longitude: "0.00000000",
-          storeRadius: "100",
-        });
-        setSelectedTags({});
-        setIsEntityDialogOpen(false);
-        fetchEntities();
-      } else {
-        console.error('Failed to create entity');
-      }
-    } catch (err) {
+      await createEntity(buildEntityPayload(values));
+      setIsEntityDialogOpen(false);
+      toast.success(t('entityCreatedSuccessfully'));
+      loadEntities();
+    } catch (err: any) {
       console.error('Error creating entity:', err);
+      toast.error(err?.message || t('entityCreateFailed'));
     }
   };
 
@@ -245,58 +265,41 @@ export default function Entities() {
     if (!editingEntity) return;
 
     try {
-      const response = await fetch(`http://localhost:3009/api/org/entities/${editingEntity.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...entityFormData,
-          staff: parseInt(entityFormData.staff) || 0,
-          latitude: parseFloat(entityFormData.latitude) || 0,
-          longitude: parseFloat(entityFormData.longitude) || 0,
-          storeRadius: parseInt(entityFormData.storeRadius) || 100,
-          tags: selectedTags,
-        }),
+      await updateEntity(editingEntity.id, {
+        ...entityFormData,
+        staff: parseInt(entityFormData.staff) || 0,
+        latitude: parseFloat(entityFormData.latitude) || 0,
+        longitude: parseFloat(entityFormData.longitude) || 0,
+        storeRadius: parseInt(entityFormData.storeRadius) || 100,
+        tags: selectedTags,
       });
 
-      if (response.ok) {
-        setEntityFormData({
-          storeName: "",
-          area: "",
-          entityId: "",
-          city: "",
-          staff: "",
-          status: true,
-          latitude: "0.00000000",
-          longitude: "0.00000000",
-          storeRadius: "100",
-        });
-        setSelectedTags({});
-        setEditingEntity(null);
-        setIsEditEntityDialogOpen(false);
-        fetchEntities();
-      } else {
-        console.error('Failed to update entity');
-      }
+      setEntityFormData({
+        storeName: "",
+        area: "",
+        entityId: "",
+        city: "",
+        staff: "",
+        status: true,
+        latitude: "0.00000000",
+        longitude: "0.00000000",
+        storeRadius: "100",
+      });
+      setSelectedTags({});
+      setEditingEntity(null);
+      setIsEditEntityDialogOpen(false);
+      loadEntities();
     } catch (err) {
       console.error('Error updating entity:', err);
     }
   };
 
   const handleDeleteEntity = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this entity?')) return;
+    if (!confirm(t('confirmDeleteEntity'))) return;
 
     try {
-      const response = await fetch(`http://localhost:3009/api/org/entities/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        fetchEntities();
-      } else {
-        console.error('Failed to delete entity');
-      }
+      await deleteEntity(id);
+      loadEntities();
     } catch (err) {
       console.error('Error deleting entity:', err);
     }
@@ -316,7 +319,7 @@ export default function Entities() {
       });
 
       if (response.ok) {
-        fetchEntities();
+        loadEntities();
       } else {
         console.error('Failed to update entity status');
       }
@@ -325,23 +328,23 @@ export default function Entities() {
     }
   };
 
-  const handleToggleColumn = (column: string) => {
+  const handleToggleColumn = (column: EntityInfoTableColumnKey) => {
     if (visibleColumns.includes(column)) {
       if (visibleColumns.length > 1) {
         setVisibleColumns(visibleColumns.filter((col) => col !== column));
       }
+    } else if (visibleColumns.length < MAX_ENTITY_TABLE_COLUMNS) {
+      setVisibleColumns([...visibleColumns, column]);
     } else {
-      if (visibleColumns.length < 8) {
-        setVisibleColumns([...visibleColumns, column]);
-      } else {
-        alert('You can select a maximum of 8 fields at a time');
-      }
+      alert(t('maxFieldsSelected').replace('{{count}}', String(MAX_ENTITY_TABLE_COLUMNS)));
     }
   };
 
+  const tableColumnCount = visibleColumns.length + tags.length + 1;
+
   const handleBulkUpload = async () => {
     if (!bulkFile) {
-      alert('Please select a file to upload');
+      alert(t('pleaseSelectFileToUpload'));
       return;
     }
 
@@ -358,11 +361,11 @@ export default function Entities() {
       if (response.ok) {
         setBulkFile(null);
         setIsBulkUploadDialogOpen(false);
-        fetchEntities();
-        alert('Bulk upload successful');
+        loadEntities();
+        alert(t('bulkUploadSuccessful'));
       } else {
         console.error('Failed to bulk upload entities');
-        alert('Bulk upload failed');
+        alert(t('bulkUploadFailed'));
       }
     } catch (err) {
       console.error('Error bulk uploading entities:', err);
@@ -524,39 +527,74 @@ export default function Entities() {
 
           {/* Filter and Search Bar */}
           <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2">
-              <Filter className="w-4 h-4 text-muted-foreground" />
-            </div>
+            <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="icon" aria-label={t("filter")}>
+                  <Filter className="w-4 h-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72" align="start">
+                <div className="space-y-4">
+                  <p className="text-sm font-medium">{t("filter")}</p>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="filter-functional"
+                      checked={draftShowFunctional}
+                      onCheckedChange={(checked) => setDraftShowFunctional(checked === true)}
+                    />
+                    <Label htmlFor="filter-functional">{t("functional")}</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="filter-non-functional"
+                      checked={draftShowNonFunctional}
+                      onCheckedChange={(checked) => setDraftShowNonFunctional(checked === true)}
+                    />
+                    <Label htmlFor="filter-non-functional">{t("nonFunctional")}</Label>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
             <div className="flex-1 min-w-[200px] relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder={t('searchEntity')}
+                placeholder={t("searchEntity")}
                 className="pl-10"
+                value={storeNameSearch}
+                onChange={(e) => setStoreNameSearch(e.target.value)}
               />
             </div>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="gap-2">
-                  {t('storeNameAsc')}
+                  {t(SORT_LABEL_KEYS[draftSortOption])}
                   <ChevronDown className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem>{t('storeNameAsc')}</DropdownMenuItem>
-                <DropdownMenuItem>{t('storeNameDesc')}</DropdownMenuItem>
-                <DropdownMenuItem>{t('areaAsc')}</DropdownMenuItem>
-                <DropdownMenuItem>{t('areaDesc')}</DropdownMenuItem>
+                {SORT_OPTIONS.map((option) => (
+                  <DropdownMenuItem
+                    key={option}
+                    onClick={() => setDraftSortOption(option)}
+                  >
+                    {t(SORT_LABEL_KEYS[option])}
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="outline">{t('apply')}</Button>
-            <Button variant="ghost">{t('reset')}</Button>
+
+            <Button variant="outline" onClick={handleApplyFilters}>
+              {t("apply")}
+            </Button>
           </div>
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
             <Button variant="outline" className="gap-2" onClick={exportToExcel}>
               <Download className="w-4 h-4" />
-              Export
+              {t('export')}
             </Button>
             <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
               <DialogTrigger asChild>
@@ -620,35 +658,41 @@ export default function Entities() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            <Dialog open={isEntityDialogOpen} onOpenChange={setIsEntityDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  {t('newEntity')}
-                </Button>
-              </DialogTrigger>
+            <Button className="gap-2" onClick={() => { fetchTags(); setIsEntityDialogOpen(true); }}>
+              <Plus className="w-4 h-4" />
+              {t('newEntity')}
+            </Button>
+            <CreateEntityForm
+              open={isEntityDialogOpen}
+              onOpenChange={setIsEntityDialogOpen}
+              onSubmit={handleCreateEntity}
+              entityTags={tags}
+            />
+            
+            {/* Edit Entity Dialog */}
+            <Dialog open={isEditEntityDialogOpen} onOpenChange={setIsEditEntityDialogOpen}>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>{t('addNewEntity')}</DialogTitle>
+                  <DialogTitle>{t('editEntity')}</DialogTitle>
                   <DialogDescription>
-                    {t('fillInTheDetailsToCreateANewEntity')}
+                    {t('updateEntityDetails')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="storeName">{t('storeName')}</Label>
+                      <Label htmlFor="edit-storeName">{t('storeName')}</Label>
                       <Input
-                        id="storeName"
+                        id="edit-storeName"
                         value={entityFormData.storeName}
                         onChange={(e) => setEntityFormData({ ...entityFormData, storeName: e.target.value })}
                         placeholder={t('enterStoreName')}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="entityId">{t('entityId')}</Label>
+                      <Label htmlFor="edit-entityId">{t('entityId')}</Label>
                       <Input
-                        id="entityId"
+                        id="edit-entityId"
                         value={entityFormData.entityId}
                         onChange={(e) => setEntityFormData({ ...entityFormData, entityId: e.target.value })}
                         placeholder={t('enterEntityId')}
@@ -657,18 +701,18 @@ export default function Entities() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="area">{t('area')}</Label>
+                      <Label htmlFor="edit-area">{t('area')}</Label>
                       <Input
-                        id="area"
+                        id="edit-area"
                         value={entityFormData.area}
                         onChange={(e) => setEntityFormData({ ...entityFormData, area: e.target.value })}
                         placeholder={t('enterArea')}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="city">{t('city')}</Label>
+                      <Label htmlFor="edit-city">{t('city')}</Label>
                       <Input
-                        id="city"
+                        id="edit-city"
                         value={entityFormData.city}
                         onChange={(e) => setEntityFormData({ ...entityFormData, city: e.target.value })}
                         placeholder={t('enterCity')}
@@ -677,9 +721,9 @@ export default function Entities() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="staff">{t('staff')}</Label>
+                      <Label htmlFor="edit-staff">{t('staff')}</Label>
                       <Input
-                        id="staff"
+                        id="edit-staff"
                         type="number"
                         value={entityFormData.staff}
                         onChange={(e) => setEntityFormData({ ...entityFormData, staff: e.target.value })}
@@ -688,10 +732,10 @@ export default function Entities() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="status">{t('status')}</Label>
+                    <Label htmlFor="edit-status">{t('status')}</Label>
                     <div className="flex items-center gap-2">
                       <Switch
-                        id="status"
+                        id="edit-status"
                         checked={entityFormData.status}
                         onCheckedChange={(checked) => setEntityFormData({ ...entityFormData, status: checked })}
                       />
@@ -706,9 +750,9 @@ export default function Entities() {
                     <h3 className="text-lg font-semibold">{t('geoLocationDetails')}</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="latitude">{t('latitude')}</Label>
+                        <Label htmlFor="edit-latitude">{t('latitude')}</Label>
                         <Input
-                          id="latitude"
+                          id="edit-latitude"
                           type="number"
                           step="0.00000001"
                           value={entityFormData.latitude}
@@ -718,9 +762,9 @@ export default function Entities() {
                         <p className="text-xs text-muted-foreground">{t('latitudeMustBeBetween')}</p>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="longitude">{t('longitude')}</Label>
+                        <Label htmlFor="edit-longitude">{t('longitude')}</Label>
                         <Input
-                          id="longitude"
+                          id="edit-longitude"
                           type="number"
                           step="0.00000001"
                           value={entityFormData.longitude}
@@ -731,9 +775,9 @@ export default function Entities() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="storeRadius">{t('storeRadiusMeters')}</Label>
+                      <Label htmlFor="edit-storeRadius">{t('storeRadiusMeters')}</Label>
                       <Input
-                        id="storeRadius"
+                        id="edit-storeRadius"
                         type="number"
                         value={entityFormData.storeRadius}
                         onChange={(e) => setEntityFormData({ ...entityFormData, storeRadius: e.target.value })}
@@ -746,178 +790,9 @@ export default function Entities() {
 
                 {/* Tags Section */}
                 <div className="space-y-4 pt-4 border-t">
-                  <h3 className="text-lg font-semibold">Tags</h3>
+                  <h3 className="text-lg font-semibold">{t('tags')}</h3>
                   {tags.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No tags available. Create tags in the Tags tab first.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {tags.map((tag: any) => (
-                        <div key={tag.id} className="space-y-2">
-                          <Label htmlFor={`tag-${tag.id}`}>{tag.tag}</Label>
-                          {tag.tagValues && tag.tagValues.length > 0 ? (
-                            <Select
-                              value={selectedTags[tag.tag] || ''}
-                              onValueChange={(value) => setSelectedTags({ ...selectedTags, [tag.tag]: value })}
-                            >
-                              <SelectTrigger id={`tag-${tag.id}`}>
-                                <SelectValue placeholder={`Select ${tag.tag}`} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {tag.tagValues.map((value: string, index: number) => (
-                                  <SelectItem key={index} value={value}>
-                                    {value}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Input
-                              id={`tag-${tag.id}`}
-                              placeholder={`Enter ${tag.tag}`}
-                              value={selectedTags[tag.tag] || ''}
-                              onChange={(e) => setSelectedTags({ ...selectedTags, [tag.tag]: e.target.value })}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsEntityDialogOpen(false)}>
-                    {t('cancel')}
-                  </Button>
-                  <Button onClick={handleCreateEntity}>
-                    {t('createEntity')}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            
-            {/* Edit Entity Dialog */}
-            <Dialog open={isEditEntityDialogOpen} onOpenChange={setIsEditEntityDialogOpen}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Edit Entity</DialogTitle>
-                  <DialogDescription>
-                    Update the entity details.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-storeName">Store Name</Label>
-                      <Input
-                        id="edit-storeName"
-                        value={entityFormData.storeName}
-                        onChange={(e) => setEntityFormData({ ...entityFormData, storeName: e.target.value })}
-                        placeholder="Enter store name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-entityId">Entity Id</Label>
-                      <Input
-                        id="edit-entityId"
-                        value={entityFormData.entityId}
-                        onChange={(e) => setEntityFormData({ ...entityFormData, entityId: e.target.value })}
-                        placeholder="Enter entity ID"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-area">Area</Label>
-                      <Input
-                        id="edit-area"
-                        value={entityFormData.area}
-                        onChange={(e) => setEntityFormData({ ...entityFormData, area: e.target.value })}
-                        placeholder="Enter area"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-city">City</Label>
-                      <Input
-                        id="edit-city"
-                        value={entityFormData.city}
-                        onChange={(e) => setEntityFormData({ ...entityFormData, city: e.target.value })}
-                        placeholder="Enter city"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-staff">Staff</Label>
-                      <Input
-                        id="edit-staff"
-                        type="number"
-                        value={entityFormData.staff}
-                        onChange={(e) => setEntityFormData({ ...entityFormData, staff: e.target.value })}
-                        placeholder="Enter staff count"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-status">Status</Label>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="edit-status"
-                        checked={entityFormData.status}
-                        onCheckedChange={(checked) => setEntityFormData({ ...entityFormData, status: checked })}
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        {entityFormData.status ? "Active" : "Inactive"}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Geo-Location Details Section */}
-                  <div className="space-y-4 pt-4 border-t">
-                    <h3 className="text-lg font-semibold">Geo-Location Details</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-latitude">Latitude</Label>
-                        <Input
-                          id="edit-latitude"
-                          type="number"
-                          step="0.00000001"
-                          value={entityFormData.latitude}
-                          onChange={(e) => setEntityFormData({ ...entityFormData, latitude: e.target.value })}
-                          placeholder="0.00000000"
-                        />
-                        <p className="text-xs text-muted-foreground">latitude must be between -90 and 90</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-longitude">Longitude</Label>
-                        <Input
-                          id="edit-longitude"
-                          type="number"
-                          step="0.00000001"
-                          value={entityFormData.longitude}
-                          onChange={(e) => setEntityFormData({ ...entityFormData, longitude: e.target.value })}
-                          placeholder="0.00000000"
-                        />
-                        <p className="text-xs text-muted-foreground">longitude must be between -180 and 180</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-storeRadius">Store Radius (meters)</Label>
-                      <Input
-                        id="edit-storeRadius"
-                        type="number"
-                        value={entityFormData.storeRadius}
-                        onChange={(e) => setEntityFormData({ ...entityFormData, storeRadius: e.target.value })}
-                        placeholder="100"
-                      />
-                      <p className="text-xs text-muted-foreground">store radius must be between 100 meters and 1000 meters. default : 100m</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tags Section */}
-                <div className="space-y-4 pt-4 border-t">
-                  <h3 className="text-lg font-semibold">Tags</h3>
-                  {tags.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No tags available. Create tags in the Tags tab first.</p>
+                    <p className="text-sm text-muted-foreground">{t('noTagsAvailableCreateInTagsTab')}</p>
                   ) : (
                     <div className="space-y-3">
                       {tags.map((tag: any) => (
@@ -929,7 +804,7 @@ export default function Entities() {
                               onValueChange={(value) => setSelectedTags({ ...selectedTags, [tag.tag]: value })}
                             >
                               <SelectTrigger id={`edit-tag-${tag.id}`}>
-                                <SelectValue placeholder={`Select ${tag.tag}`} />
+                                <SelectValue placeholder={t('selectTag').replace('{{tag}}', tag.tag)} />
                               </SelectTrigger>
                               <SelectContent>
                                 {tag.tagValues.map((value: string, index: number) => (
@@ -942,7 +817,7 @@ export default function Entities() {
                           ) : (
                             <Input
                               id={`edit-tag-${tag.id}`}
-                              placeholder={`Enter ${tag.tag}`}
+                              placeholder={t('enterTag').replace('{{tag}}', tag.tag)}
                               value={selectedTags[tag.tag] || ''}
                               onChange={(e) => setSelectedTags({ ...selectedTags, [tag.tag]: e.target.value })}
                             />
@@ -954,10 +829,10 @@ export default function Entities() {
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsEditEntityDialogOpen(false)}>
-                    Cancel
+                    {t('cancel')}
                   </Button>
                   <Button onClick={handleUpdateEntity}>
-                    Update Entity
+                    {t('updateEntity')}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -970,32 +845,31 @@ export default function Entities() {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>Customize Table Columns</DialogTitle>
+                  <DialogTitle>{t('customizeTableColumns')}</DialogTitle>
                   <DialogDescription>
-                    Select up to 8 fields to display in the entity table.
+                    {t('selectUpTo8FieldsToDisplayInTheEntityTable')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  {['storeName', 'area', 'entityId', 'createdAt', 'city', 'staff', 'action'].map((column) => (
-                    <div key={column} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id={`column-${column}`}
-                        checked={visibleColumns.includes(column)}
-                        onChange={() => handleToggleColumn(column)}
+                  {ENTITY_INFO_TABLE_COLUMNS.map((column) => (
+                    <div key={column.key} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`column-${column.key}`}
+                        checked={visibleColumns.includes(column.key)}
+                        onCheckedChange={() => handleToggleColumn(column.key)}
                       />
-                      <label htmlFor={`column-${column}`} className="text-sm capitalize">
-                        {column}
-                      </label>
+                      <Label htmlFor={`column-${column.key}`} className="text-sm">
+                        {getEntityColumnLabel(column, t)}
+                      </Label>
                     </div>
                   ))}
                   <p className="text-xs text-muted-foreground">
-                    {visibleColumns.length}/8 fields selected
+                    {visibleColumns.length}/{MAX_ENTITY_TABLE_COLUMNS} {t('fieldsSelected')}
                   </p>
                 </div>
                 <DialogFooter>
                   <Button onClick={() => setIsColumnSettingsOpen(false)}>
-                    Save
+                    {t('save')}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1008,54 +882,50 @@ export default function Entities() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {visibleColumns.includes('storeName') && <TableHead>{t('storeName')}</TableHead>}
-                    {visibleColumns.includes('area') && <TableHead>{t('area')}</TableHead>}
-                    {visibleColumns.includes('entityId') && <TableHead>{t('entityId')}</TableHead>}
-                    {visibleColumns.includes('createdAt') && <TableHead>{t('createdAt')}</TableHead>}
-                    {visibleColumns.includes('city') && <TableHead>{t('city')}</TableHead>}
-                    {visibleColumns.includes('staff') && <TableHead>{t('staff')}</TableHead>}
+                    {ENTITY_INFO_TABLE_COLUMNS.filter((column) =>
+                      visibleColumns.includes(column.key),
+                    ).map((column) => (
+                      <TableHead key={column.key}>{getEntityColumnLabel(column, t)}</TableHead>
+                    ))}
                     {tags.map((tag: any) => (
                       <TableHead key={tag.id}>{tag.tag}</TableHead>
                     ))}
-                    {visibleColumns.includes('action') && <TableHead>{t('action')}</TableHead>}
+                    <TableHead>{t('action')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {entities.length === 0 ? (
+                  {displayedEntities.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={visibleColumns.length + tags.length} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={tableColumnCount} className="text-center py-12 text-muted-foreground">
                         {t('noEntitiesAvailable')}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    entities.map((entity, index) => (
+                    displayedEntities.map((entity, index) => (
                       <TableRow key={index}>
-                        {visibleColumns.includes('storeName') && <TableCell className="font-medium">{entity.storeName}</TableCell>}
-                        {visibleColumns.includes('area') && <TableCell>{entity.area}</TableCell>}
-                        {visibleColumns.includes('entityId') && <TableCell>{entity.entityId}</TableCell>}
-                        {visibleColumns.includes('createdAt') && <TableCell>{entity.createdAt}</TableCell>}
-                        {visibleColumns.includes('city') && <TableCell>{entity.city}</TableCell>}
-                        {visibleColumns.includes('staff') && <TableCell>{entity.staff}</TableCell>}
+                        {ENTITY_INFO_TABLE_COLUMNS.filter((column) =>
+                          visibleColumns.includes(column.key),
+                        ).map((column) => (
+                          <TableCell
+                            key={column.key}
+                            className={column.key === 'storeName' ? 'font-medium' : undefined}
+                          >
+                            {formatEntityColumnValue(entity, column.key)}
+                          </TableCell>
+                        ))}
                         {tags.map((tag: any) => (
                           <TableCell key={tag.id}>
                             {entity.tags && entity.tags[tag.tag] ? String(entity.tags[tag.tag]) : '-'}
                           </TableCell>
                         ))}
-                        {visibleColumns.includes('action') && (
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEditEntity(entity)}>Edit</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDeleteEntity(entity.id)}>Delete</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        )}
+                        <TableCell>
+                          <TableActionsMenu>
+                            <DropdownMenuItem onClick={() => handleEditEntity(entity)}>{t('edit')}</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteEntity(entity.id)} className="text-destructive">
+                              {t('delete')}
+                            </DropdownMenuItem>
+                          </TableActionsMenu>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -1312,14 +1182,12 @@ export default function Entities() {
                         </TableCell>
                         <TableCell>{tag.mandatory}</TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => handleEditTag(tag)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDeleteTag(tag.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                          <TableActionsMenu>
+                            <DropdownMenuItem onClick={() => handleEditTag(tag)}>{t('edit')}</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteTag(tag.id)} className="text-destructive">
+                              {t('delete')}
+                            </DropdownMenuItem>
+                          </TableActionsMenu>
                         </TableCell>
                       </TableRow>
                     ))
@@ -1390,13 +1258,12 @@ export default function Entities() {
                     <TableHead>{t('city')}</TableHead>
                     <TableHead>{t('staff')}</TableHead>
                     <TableHead>{t('removedAt')}</TableHead>
-                    <TableHead>{t('action')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {removedEntities.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                         {t('noRemovedEntities')}
                       </TableCell>
                     </TableRow>
@@ -1409,11 +1276,6 @@ export default function Entities() {
                         <TableCell>{entity.city || '-'}</TableCell>
                         <TableCell>{entity.staff || '-'}</TableCell>
                         <TableCell>{new Date(entity.removedAt).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" onClick={() => handleRestoreEntity(entity.id)}>
-                            {t('restore')}
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ))
                   )}

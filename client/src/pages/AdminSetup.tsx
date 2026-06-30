@@ -8,6 +8,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Shield, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 
+const API_BASE = "http://localhost:3009/api/auth";
+
 export default function AdminSetup() {
   const [, navigate] = useLocation();
   const [isLoading, setIsLoading] = useState(true);
@@ -29,7 +31,7 @@ export default function AdminSetup() {
 
   const checkSetupStatus = async () => {
     try {
-      const response = await fetch('/api/auth/check-setup');
+      const response = await fetch(`${API_BASE}/check-setup`);
       const data = await response.json();
       
       if (data.isSetup) {
@@ -67,7 +69,7 @@ export default function AdminSetup() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/auth/setup-admin', {
+      const response = await fetch(`${API_BASE}/setup-admin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,10 +99,10 @@ export default function AdminSetup() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-sky-50/60">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-orange-500 mx-auto mb-4" />
-          <p className="text-gray-600">Checking setup status...</p>
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Checking setup status...</p>
         </div>
       </div>
     );
@@ -108,7 +110,7 @@ export default function AdminSetup() {
 
   if (isSetup) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-sky-50/60">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
@@ -122,7 +124,7 @@ export default function AdminSetup() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-sky-50/60">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center">
             <motion.div
@@ -142,7 +144,7 @@ export default function AdminSetup() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-sky-50/60 p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -157,8 +159,8 @@ export default function AdminSetup() {
               transition={{ delay: 0.2, duration: 0.5 }}
               className="flex justify-center mb-4"
             >
-              <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center">
-                <Shield className="w-8 h-8 text-white" />
+              <div className="w-16 h-16 bg-primary/15 rounded-full flex items-center justify-center border border-primary/10">
+                <Shield className="w-8 h-8 text-primary" />
               </div>
             </motion.div>
             <CardTitle className="text-2xl font-bold text-gray-800">
@@ -261,7 +263,7 @@ export default function AdminSetup() {
                 <TooltipTrigger asChild>
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (

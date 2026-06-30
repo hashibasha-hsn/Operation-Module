@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AdvDropdownTag } from './adv-dropdown-tag.entity';
 import { AdvDropdownValue } from './adv-dropdown-value.entity';
 import { AssigneeProfile } from './assignee-profile.entity';
@@ -71,15 +71,21 @@ export class TagsService {
   }
 
   // Assignee Profile Methods
-  async createAssigneeProfile(profileData: Partial<AssigneeProfile & { userIds?: string[] }>): Promise<AssigneeProfile> {
-    const { userIds, ...restProfileData } = profileData;
-    
-    // Fetch user objects if userIds are provided
-    let users: UserProfile[] = [];
-    if (userIds && userIds.length > 0) {
-      users = await this.userProfileRepository.findByIds(userIds);
+  private async resolveProfileUsers(userIds?: string[]): Promise<UserProfile[]> {
+    if (!userIds?.length) {
+      return [];
     }
-    
+    return this.userProfileRepository.find({
+      where: { id: In(userIds) },
+    });
+  }
+
+  async createAssigneeProfile(
+    profileData: Partial<AssigneeProfile & { userIds?: string[] }>,
+  ): Promise<AssigneeProfile> {
+    const { userIds, users: _users, ...restProfileData } = profileData;
+    const users = await this.resolveProfileUsers(userIds);
+
     const profile = this.assigneeProfileRepository.create({
       ...restProfileData,
       users,
@@ -96,15 +102,30 @@ export class TagsService {
   }
 
   async findOneAssigneeProfile(id: string): Promise<AssigneeProfile> {
-    return await this.assigneeProfileRepository.findOne({
+    const profile = await this.assigneeProfileRepository.findOne({
       where: { id },
       relations: ['users'],
     });
+    if (!profile) {
+      throw new NotFoundException(`Assignee profile ${id} not found`);
+    }
+    return profile;
   }
 
-  async updateAssigneeProfile(id: string, profileData: Partial<AssigneeProfile>): Promise<AssigneeProfile> {
-    await this.assigneeProfileRepository.update(id, profileData);
-    return await this.findOneAssigneeProfile(id);
+  async updateAssigneeProfile(
+    id: string,
+    profileData: Partial<AssigneeProfile & { userIds?: string[] }>,
+  ): Promise<AssigneeProfile> {
+    const profile = await this.findOneAssigneeProfile(id);
+    const { userIds, users: _users, ...restProfileData } = profileData;
+
+    Object.assign(profile, restProfileData);
+
+    if (userIds !== undefined) {
+      profile.users = await this.resolveProfileUsers(userIds);
+    }
+
+    return await this.assigneeProfileRepository.save(profile);
   }
 
   async removeAssigneeProfile(id: string): Promise<void> {

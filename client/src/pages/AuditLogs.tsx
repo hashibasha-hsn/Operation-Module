@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -9,26 +10,148 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Calendar, RefreshCw, Inbox } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Search,
+  Calendar,
+  RefreshCw,
+  Inbox,
+  ArrowUpDown,
+} from "lucide-react";
+import { format, subMonths } from "date-fns";
+import { toast } from "sonner";
+import {
+  fetchAuditLogs,
+  formatAuditLogDetails,
+  type AuditLogRecord,
+} from "@/lib/auditLogApi";
+
+type ColumnFilterKey = "target" | "operation" | "performedBy" | "details";
+
+function defaultStartDate() {
+  return format(subMonths(new Date(), 3), "yyyy-MM-dd");
+}
+
+function defaultEndDate() {
+  return format(new Date(), "yyyy-MM-dd");
+}
+
+function formatCreatedAt(value: string) {
+  try {
+    return format(new Date(value), "d MMMM yyyy h:mm a");
+  } catch {
+    return value;
+  }
+}
+
+function operationBadgeClass(operation: string) {
+  const op = operation.toLowerCase();
+  if (op === "discard" || op === "delete" || op === "reject") {
+    return "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100";
+  }
+  if (op === "update" || op === "submit") {
+    return "bg-amber-100 text-amber-900 border-amber-200 hover:bg-amber-100";
+  }
+  if (op === "create") {
+    return "bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-100";
+  }
+  return "bg-muted text-foreground";
+}
 
 export default function AuditLogs() {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [startDate, setStartDate] = useState(defaultStartDate);
+  const [endDate, setEndDate] = useState(defaultEndDate);
+  const [appliedStartDate, setAppliedStartDate] = useState(defaultStartDate);
+  const [appliedEndDate, setAppliedEndDate] = useState(defaultEndDate);
+  const [auditLogs, setAuditLogs] = useState<AuditLogRecord[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [columnFilters, setColumnFilters] = useState<Record<ColumnFilterKey, string>>({
+    target: "",
+    operation: "",
+    performedBy: "",
+    details: "",
+  });
+  const [appliedColumnFilters, setAppliedColumnFilters] = useState(columnFilters);
+
+  const loadLogs = async (nextPage = 1, append = false) => {
+    setIsLoading(true);
+    try {
+      const result = await fetchAuditLogs({
+        startDate: appliedStartDate,
+        endDate: appliedEndDate,
+        page: nextPage,
+        limit: 20,
+        sort: sortDirection,
+        target: appliedColumnFilters.target || undefined,
+        operation: appliedColumnFilters.operation || undefined,
+        performedBy: appliedColumnFilters.performedBy || undefined,
+        details: appliedColumnFilters.details || undefined,
+      });
+
+      setAuditLogs((prev) => (append ? [...prev, ...result.logs] : result.logs));
+      setPage(result.page);
+      setHasMore(result.hasMore);
+      setTotal(result.total);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load audit logs");
+      if (!append) setAuditLogs([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadLogs(1, false);
+  }, [appliedStartDate, appliedEndDate, appliedColumnFilters, sortDirection]);
 
   const handleSubmit = () => {
-    console.log("Filtering logs from", startDate, "to", endDate);
+    setAppliedStartDate(startDate);
+    setAppliedEndDate(endDate);
+    setAppliedColumnFilters(columnFilters);
+    setPage(1);
   };
 
   const handleLoadMore = () => {
-    console.log("Loading more logs");
+    if (hasMore && !isLoading) {
+      loadLogs(page + 1, true);
+    }
   };
+
+  const toggleSort = () => {
+    setSortDirection((prev) => (prev === "desc" ? "asc" : "desc"));
+  };
+
+  const columnSearch = (key: ColumnFilterKey, label: string) => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" className="inline-flex items-center">
+          <Search className="w-4 h-4 text-gray-400 cursor-pointer" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-3" align="start">
+        <p className="text-xs text-muted-foreground mb-2">Search {label}</p>
+        <Input
+          value={columnFilters[key]}
+          onChange={(e) => setColumnFilters((prev) => ({ ...prev, [key]: e.target.value }))}
+          placeholder={`Filter ${label.toLowerCase()}`}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+
+  const visibleCountLabel = useMemo(
+    () => `${auditLogs.length} of ${total}`,
+    [auditLogs.length, total],
+  );
 
   return (
     <div className="p-6 bg-white min-h-screen">
-      {/* Header with Date Filters and Load More */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
@@ -51,46 +174,53 @@ export default function AuditLogs() {
             Submit
           </Button>
         </div>
-        <Button variant="outline" onClick={handleLoadMore} className="gap-2">
-          <RefreshCw className="w-4 h-4" />
+        <Button
+          variant="outline"
+          onClick={handleLoadMore}
+          className="gap-2"
+          disabled={!hasMore || isLoading}
+        >
+          <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
           Load More
         </Button>
       </div>
 
-      {/* Table */}
+      <p className="text-sm text-muted-foreground mb-3">{visibleCountLabel} logs shown</p>
+
       <div className="bg-white border rounded-lg overflow-hidden">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[200px]">
+              <TableHead className="w-[14%]">
                 <div className="flex items-center gap-2">
                   Target
-                  <Search className="w-4 h-4 text-gray-400 cursor-pointer" />
+                  {columnSearch("target", "Target")}
                 </div>
               </TableHead>
-              <TableHead className="w-[150px]">
+              <TableHead className="w-[12%]">
                 <div className="flex items-center gap-2">
                   Operation
-                  <Search className="w-4 h-4 text-gray-400 cursor-pointer" />
+                  {columnSearch("operation", "Operation")}
                 </div>
               </TableHead>
-              <TableHead className="w-[180px]">
+              <TableHead className="w-[18%]">
                 <div className="flex items-center gap-2">
                   Performed By
-                  <Search className="w-4 h-4 text-gray-400 cursor-pointer" />
+                  {columnSearch("performedBy", "Performed By")}
                 </div>
               </TableHead>
-              <TableHead>
+              <TableHead className="w-[36%]">
                 <div className="flex items-center gap-2">
                   Details
-                  <Search className="w-4 h-4 text-gray-400 cursor-pointer" />
+                  {columnSearch("details", "Details")}
                 </div>
               </TableHead>
-              <TableHead className="w-[200px]">
+              <TableHead className="w-[20%]">
                 <div className="flex items-center gap-2">
                   Created At
-                  <Search className="w-4 h-4 text-gray-400 cursor-pointer" />
-                  <RefreshCw className="w-4 h-4 text-gray-400 cursor-pointer" />
+                  <button type="button" onClick={toggleSort} aria-label="Sort by date">
+                    <ArrowUpDown className="w-4 h-4 text-gray-400 cursor-pointer" />
+                  </button>
                 </div>
               </TableHead>
             </TableRow>
@@ -101,20 +231,38 @@ export default function AuditLogs() {
                 <TableCell colSpan={5} className="h-96">
                   <div className="flex flex-col items-center justify-center h-full text-gray-500">
                     <Inbox className="w-16 h-16 mb-4 text-gray-300" />
-                    <p className="text-lg font-medium">No data</p>
+                    <p className="text-lg font-medium">{isLoading ? "Loading..." : "No data"}</p>
                   </div>
                 </TableCell>
               </TableRow>
             ) : (
-              auditLogs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="font-medium">{log.target}</TableCell>
-                  <TableCell>{log.operation}</TableCell>
-                  <TableCell>{log.performedBy}</TableCell>
-                  <TableCell>{log.details}</TableCell>
-                  <TableCell>{log.createdAt}</TableCell>
-                </TableRow>
-              ))
+              auditLogs.map((log) => {
+                const detailsText = formatAuditLogDetails(log.details);
+                return (
+                  <TableRow key={log.id}>
+                    <TableCell className="font-medium truncate" title={log.target}>
+                      {log.target}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={operationBadgeClass(log.operation)}>
+                        {log.operation}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="truncate" title={log.performedBy}>
+                      {log.performedBy}
+                    </TableCell>
+                    <TableCell
+                      className="text-sm text-muted-foreground whitespace-normal break-words align-top"
+                      title={detailsText}
+                    >
+                      {detailsText}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {formatCreatedAt(log.createdAt)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>

@@ -17,8 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import { Search, Download, Tag } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { fetchTicketTagReport } from "@/lib/ticketApi";
 
 export default function TicketTagReport() {
   const { t } = useLanguage();
@@ -33,13 +36,9 @@ export default function TicketTagReport() {
   const fetchTagReport = async () => {
     setLoading(true);
     try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const organizationId = user.organizationId;
-
-      const response = await fetch(
-        `http://localhost:3001/tickets/reports/tag-report?organizationId=${organizationId}${selectedTag && selectedTag !== "all" ? `&tagId=${selectedTag}` : ''}`
+      const data = await fetchTicketTagReport(
+        selectedTag && selectedTag !== "all" ? selectedTag : undefined,
       );
-      const data = await response.json();
       setTagData(data);
     } catch (error) {
       console.error("Error fetching tag report:", error);
@@ -162,9 +161,9 @@ export default function TicketTagReport() {
                                 {new Date(ticket.createdAt).toLocaleDateString()}
                               </TableCell>
                               <TableCell>
-                                <Button variant="ghost" size="sm">
-                                  View
-                                </Button>
+                                <TableActionsMenu>
+                                  <DropdownMenuItem>View</DropdownMenuItem>
+                                </TableActionsMenu>
                               </TableCell>
                             </TableRow>
                           ))}

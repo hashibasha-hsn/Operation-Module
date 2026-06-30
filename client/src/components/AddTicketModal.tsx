@@ -37,7 +37,7 @@ export default function AddTicketModal({
   onCreateTicket,
 }: AddTicketModalProps) {
   const [activeTab, setActiveTab] = useState<"auto" | "custom">("auto");
-  const [store, setStore] = useState("hashibasha- Head Office");
+  const [store, setStore] = useState("Head Office");
   const [category, setCategory] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -102,9 +102,9 @@ export default function AddTicketModal({
                   <SelectValue placeholder="Select Store" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hashibasha- Head Office">hashibasha- Head Office</SelectItem>
-                  <SelectItem value="hashibasha- Branch 1">hashibasha- Branch 1</SelectItem>
-                  <SelectItem value="hashibasha- Branch 2">hashibasha- Branch 2</SelectItem>
+                  <SelectItem value="Head Office">Head Office</SelectItem>
+                  <SelectItem value="Branch 1">Branch 1</SelectItem>
+                  <SelectItem value="Branch 2">Branch 2</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -308,9 +308,9 @@ export default function AddTicketModal({
                   <SelectValue placeholder="Select Store" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hashibasha- Head Office">hashibasha- Head Office</SelectItem>
-                  <SelectItem value="hashibasha- Branch 1">hashibasha- Branch 1</SelectItem>
-                  <SelectItem value="hashibasha- Branch 2">hashibasha- Branch 2</SelectItem>
+                  <SelectItem value="Head Office">Head Office</SelectItem>
+                  <SelectItem value="Branch 1">Branch 1</SelectItem>
+                  <SelectItem value="Branch 2">Branch 2</SelectItem>
                 </SelectContent>
               </Select>
             </div>

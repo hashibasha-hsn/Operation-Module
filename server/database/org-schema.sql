@@ -78,3 +78,30 @@ CREATE TRIGGER update_regions_updated_at BEFORE UPDATE ON regions
 
 CREATE TRIGGER update_locations_updated_at BEFORE UPDATE ON locations
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Process/Audit submissions
+CREATE TABLE IF NOT EXISTS submissions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "workflowType" varchar NOT NULL,
+    "workflowId" uuid NOT NULL,
+    "storeId" uuid NOT NULL,
+    "submittedBy" varchar NOT NULL,
+    status varchar NOT NULL DEFAULT 'new',
+    answers json,
+    attachments json,
+    score decimal(5,2),
+    passed boolean NOT NULL DEFAULT false,
+    "dueDate" timestamp,
+    "submittedAt" timestamp,
+    "reviewHistory" json,
+    "currentReviewLevel" integer NOT NULL DEFAULT 0,
+    "organizationId" varchar NOT NULL,
+    "createdAt" timestamp NOT NULL DEFAULT now(),
+    "updatedAt" timestamp NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_submissions_user_org
+    ON submissions ("submittedBy", "organizationId", "workflowType");
+
+CREATE INDEX IF NOT EXISTS idx_submissions_draft
+    ON submissions ("workflowId", "submittedBy", "storeId", status);

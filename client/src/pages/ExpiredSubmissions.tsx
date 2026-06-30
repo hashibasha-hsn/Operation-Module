@@ -11,6 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import { Search, AlertTriangle, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -163,9 +165,9 @@ export default function ExpiredSubmissions() {
                         ) : 'N/A'}
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm">
-                          View
-                        </Button>
+                        <TableActionsMenu>
+                          <DropdownMenuItem>View</DropdownMenuItem>
+                        </TableActionsMenu>
                       </TableCell>
                     </TableRow>
                   ))}

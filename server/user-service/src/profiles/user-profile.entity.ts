@@ -5,75 +5,72 @@ export class UserProfile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ name: 'userid', unique: true })
   userId: string;
 
-  @Column({ nullable: true })
-  firstName: string;
-
-  @Column({ nullable: true })
-  lastName: string;
-
-  @Column({ nullable: true })
+  @Column({ name: 'name' })
   name: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'email' })
   email: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'password', nullable: true })
   password: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'employeeid', nullable: true })
   employeeId: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'phone', nullable: true })
   phone: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'countrycode', nullable: true })
   countryCode: string;
 
-  @Column({ nullable: true })
-  avatarUrl: string;
-
-  @Column({ type: 'date', nullable: true })
-  dateOfBirth: Date;
-
-  @Column({ nullable: true, type: 'text' })
-  address: string;
-
-  @Column({ nullable: true })
-  city: string;
-
-  @Column({ nullable: true })
-  country: string;
-
-  @Column({ nullable: true })
-  timezone: string;
-
-  @Column({ default: 'en' })
-  language: string;
-
-  @Column({ nullable: true })
+  @Column({ name: 'entityid', type: 'uuid', nullable: true })
   entityId: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'designation', nullable: true })
   designation: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'manager', nullable: true })
   manager: string;
 
-  @Column({ default: false })
+  @Column({ name: 'validemail', default: false })
   validEmail: boolean;
 
-  @Column({ default: true })
+  @Column({ name: 'isactive', default: true })
   isActive: boolean;
 
-  @Column({ nullable: true, type: 'text' })
-  tags: string;
+  @Column({ name: 'isremoved', default: false })
+  isRemoved: boolean;
 
-  @CreateDateColumn()
+  @Column({ name: 'storename', nullable: true })
+  storeName: string;
+
+  @Column({ name: 'storeid', type: 'uuid', nullable: true })
+  storeId: string;
+
+  @Column({ name: 'additionalstores', type: 'jsonb', nullable: true })
+  additionalStores: string[];
+
+  @Column({ name: 'ishybrid', default: false })
+  isHybrid: boolean;
+
+  @Column({ name: 'hybridstores', type: 'jsonb', nullable: true })
+  hybridStores: string[];
+
+  @Column({ name: 'tags', type: 'jsonb', nullable: true })
+  tags: Record<string, unknown>;
+
+  @Column({ name: 'processassignments', type: 'jsonb', nullable: true })
+  processAssignments: Record<string, unknown>;
+
+  @Column({ name: 'lastlogin', type: 'timestamp', nullable: true })
+  lastLogin: Date;
+
+  @CreateDateColumn({ name: 'createdat' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updatedat' })
   updatedAt: Date;
 }

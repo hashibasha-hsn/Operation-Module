@@ -7,13 +7,13 @@ const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// PostgreSQL configuration
+// PostgreSQL configuration (override via DB_* or PG* env vars)
 const config = {
-  host: 'localhost',
-  port: 5432,
-  user: 'postgres',
-  password: 'Rasika',
-  database: 'postgres' // Connect to default database first
+  host: process.env.DB_HOST || process.env.PGHOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || process.env.PGPORT || '5432', 10),
+  user: process.env.DB_USER || process.env.PGUSER || 'postgres',
+  password: process.env.DB_PASSWORD || process.env.PGPASSWORD || 'Rasika',
+  database: 'postgres',
 };
 
 async function setupDatabases() {

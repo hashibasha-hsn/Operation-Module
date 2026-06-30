@@ -1,31 +1,10 @@
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const cors = require('cors');
-const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.GATEWAY_PORT || 3009;
-
-// PostgreSQL configuration for translations
-const translationsPool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'Rasika',
-  database: 'hashibasha_org',
-});
-
-// In-memory cache for translations
-const translationsCache = {
-  en: null,
-  ar: null,
-  lastUpdated: {
-    en: null,
-    ar: null,
-  },
-  cacheDuration: 5 * 60 * 1000, // 5 minutes
-};
 
 // Middleware
 app.use(cors({
@@ -40,6 +19,8 @@ const SERVICES = {
   AUTH: process.env.AUTH_SERVICE_URL || 'http://localhost:3003',
   ORG: process.env.ORG_SERVICE_URL || 'http://localhost:3012',
   USER: process.env.USER_SERVICE_URL || 'http://localhost:3002',
+  LOCATION: process.env.LOCATION_SERVICE_URL || 'http://localhost:3013',
+  LANGUAGE: process.env.LANGUAGE_SERVICE_URL || 'http://localhost:3014',
   NOTIFICATION: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004',
   PERMISSION: process.env.PERMISSION_SERVICE_URL || 'http://localhost:3005',
 };
@@ -65,11 +46,21 @@ const orgProxy = createProxyMiddleware({
   pathRewrite: {
     '^/api/org': '',
   },
+  proxyTimeout: 60000,
+  timeout: 60000,
   onProxyReq: (proxyReq, req, res) => {
     proxyReq.setHeader('Connection', 'keep-alive');
   },
   onProxyRes: (proxyRes, req, res) => {
     proxyRes.headers['Connection'] = 'keep-alive';
+  },
+  onError: (err, req, res) => {
+    console.error('[org-proxy]', err.message);
+    if (!res.headersSent) {
+      res.status(502).json({
+        message: 'Organization service unavailable. Please retry in a few seconds.',
+      });
+    }
   },
 });
 
@@ -105,61 +96,44 @@ const auditsProxy = createProxyMiddleware({
   },
 });
 
+const locationProxy = createProxyMiddleware({
+  target: SERVICES.LOCATION,
+  changeOrigin: true,
+  pathRewrite: {
+    '^/api/location': '',
+  },
+});
+
+const languageProxy = createProxyMiddleware({
+  target: SERVICES.LANGUAGE,
+  changeOrigin: true,
+  pathRewrite: {
+    '^/api/language': '',
+  },
+});
+
+const translationsProxy = createProxyMiddleware({
+  target: SERVICES.LANGUAGE,
+  changeOrigin: true,
+  pathRewrite: {
+    '^/api/translations': '/translations',
+  },
+});
+
 // Route proxies
 app.use('/api/auth', authProxy);
 app.use('/api/org', orgProxy);
+app.use('/uploads', createProxyMiddleware({
+  target: SERVICES.ORG,
+  changeOrigin: true,
+}));
 app.use('/api/user', userProxy);
+app.use('/api/location', locationProxy);
+app.use('/api/language', languageProxy);
+app.use('/api/translations', translationsProxy);
 app.use('/api/notification', notificationProxy);
 app.use('/api/permission', permissionProxy);
 app.use('/api/audits', auditsProxy);
-
-// Translations endpoint with caching
-app.get('/api/translations/:lang', async (req, res) => {
-  const { lang } = req.params;
-  const validLanguages = ['en', 'ar'];
-  
-  if (!validLanguages.includes(lang)) {
-    return res.status(400).json({ error: 'Invalid language. Use "en" or "ar"' });
-  }
-
-  // Check cache
-  const now = Date.now();
-  if (translationsCache[lang] && 
-      translationsCache.lastUpdated[lang] && 
-      (now - translationsCache.lastUpdated[lang]) < translationsCache.cacheDuration) {
-    return res.json(translationsCache[lang]);
-  }
-
-  try {
-    const result = await translationsPool.query(
-      'SELECT key, CASE WHEN $1 = \'en\' THEN en ELSE ar END as translation FROM translations',
-      [lang]
-    );
-
-    const translations = {};
-    result.rows.forEach(row => {
-      translations[row.key] = row.translation;
-    });
-
-    // Update cache
-    translationsCache[lang] = translations;
-    translationsCache.lastUpdated[lang] = now;
-
-    res.json(translations);
-  } catch (error) {
-    console.error('Error fetching translations:', error);
-    res.status(500).json({ error: 'Failed to fetch translations' });
-  }
-});
-
-// Clear translations cache endpoint (for admin use)
-app.post('/api/translations/cache/clear', (req, res) => {
-  translationsCache.en = null;
-  translationsCache.ar = null;
-  translationsCache.lastUpdated.en = null;
-  translationsCache.lastUpdated.ar = null;
-  res.json({ message: 'Translations cache cleared' });
-});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -208,6 +182,20 @@ app.get('/api/status', async (req, res) => {
     status.permission = permissionHealth.data?.status || 'down';
   } catch (e) {
     status.permission = 'down';
+  }
+
+  try {
+    const locationHealth = await axios.get(`${SERVICES.LOCATION}/health`).catch(() => ({ status: 'down' }));
+    status.location = locationHealth.data?.status || 'down';
+  } catch (e) {
+    status.location = 'down';
+  }
+
+  try {
+    const languageHealth = await axios.get(`${SERVICES.LANGUAGE}/health`).catch(() => ({ status: 'down' }));
+    status.language = languageHealth.data?.status || 'down';
+  } catch (e) {
+    status.language = 'down';
   }
 
   res.json({

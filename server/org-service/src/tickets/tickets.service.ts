@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Ticket } from './ticket.entity';
 import { TicketTag } from './ticket-tag.entity';
 import { AutoTicketCategory } from './auto-ticket-category.entity';
 import { TicketRule } from './ticket-rule.entity';
+import { TicketSettings } from './ticket-settings.entity';
 
 @Injectable()
 export class TicketsService {
@@ -17,19 +18,74 @@ export class TicketsService {
     private autoTicketCategoriesRepository: Repository<AutoTicketCategory>,
     @InjectRepository(TicketRule)
     private ticketRulesRepository: Repository<TicketRule>,
+    @InjectRepository(TicketSettings)
+    private ticketSettingsRepository: Repository<TicketSettings>,
   ) {}
 
   // Ticket methods
   async create(ticketData: Partial<Ticket>): Promise<Ticket> {
-    const ticket = this.ticketsRepository.create(ticketData);
+    const payload: Partial<Ticket> = { ...ticketData };
+
+    if (payload.ticketType === 'auto' && payload.categoryId) {
+      const category = await this.autoTicketCategoriesRepository.findOne({
+        where: { id: payload.categoryId },
+      });
+      if (category) {
+        payload.priority = category.priority ?? payload.priority ?? 'medium';
+        const assigneeIds = category.assigneeIds ?? [];
+        if (!payload.assignedTo && assigneeIds.length > 0) {
+          payload.assignedTo = assigneeIds[0];
+        }
+        const daysFromNow = category.dueDateConfig?.daysFromNow;
+        if (!payload.dueDate && typeof daysFromNow === 'number') {
+          const due = new Date();
+          due.setDate(due.getDate() + daysFromNow);
+          payload.dueDate = due;
+        }
+        if (!payload.title?.trim()) {
+          payload.title = category.categoryName;
+        }
+      }
+    }
+
+    const settings = await this.getSettings(payload.organizationId);
+    if (settings.attachmentMandatory) {
+      const attachments = payload.attachments;
+      const hasAttachments = Array.isArray(attachments)
+        ? attachments.length > 0
+        : attachments && typeof attachments === 'object' && Object.keys(attachments).length > 0;
+      if (!hasAttachments) {
+        throw new BadRequestException('Attachment is mandatory for ticket creation');
+      }
+    }
+
+    payload.actionHistory = [
+      {
+        action: 'created',
+        userId: payload.createdBy,
+        timestamp: new Date(),
+      },
+    ];
+
+    const ticket = this.ticketsRepository.create(payload);
     return await this.ticketsRepository.save(ticket);
   }
 
-  async findAll(organizationId: string): Promise<Ticket[]> {
-    return await this.ticketsRepository.find({
-      where: { organizationId },
-      order: { createdAt: 'DESC' },
-    });
+  async findAll(organizationId: string, startDate?: Date, endDate?: Date): Promise<Ticket[]> {
+    const query = this.ticketsRepository
+      .createQueryBuilder('ticket')
+      .where('ticket.organizationId = :organizationId', { organizationId });
+
+    if (startDate) {
+      query.andWhere('ticket.createdAt >= :startDate', { startDate });
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      query.andWhere('ticket.createdAt <= :endDate', { endDate: end });
+    }
+
+    return query.orderBy('ticket.createdAt', 'DESC').getMany();
   }
 
   async findAssignedToMe(userId: string, organizationId: string): Promise<Ticket[]> {
@@ -93,8 +149,45 @@ export class TicketsService {
     return await this.update(id, { comments });
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, userId?: string): Promise<void> {
+    const ticket = await this.findOne(id);
+    if (!ticket) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    const settings = await this.getSettings(ticket.organizationId);
+    if (settings.disableTicketDelete) {
+      throw new BadRequestException('Ticket deletion is disabled by organization settings');
+    }
+
     await this.ticketsRepository.delete(id);
+  }
+
+  async getSettings(organizationId: string): Promise<TicketSettings> {
+    let settings = await this.ticketSettingsRepository.findOne({
+      where: { organizationId },
+    });
+
+    if (!settings) {
+      settings = await this.ticketSettingsRepository.save(
+        this.ticketSettingsRepository.create({ organizationId }),
+      );
+    }
+
+    return settings;
+  }
+
+  async updateSettings(
+    organizationId: string,
+    data: Partial<TicketSettings>,
+  ): Promise<TicketSettings> {
+    const settings = await this.getSettings(organizationId);
+    await this.ticketSettingsRepository.update(settings.id, {
+      attachmentMandatory: data.attachmentMandatory ?? settings.attachmentMandatory,
+      disableTicketDelete: data.disableTicketDelete ?? settings.disableTicketDelete,
+      hidePriorities: data.hidePriorities ?? settings.hidePriorities,
+    });
+    return this.getSettings(organizationId);
   }
 
   // Ticket Tag methods

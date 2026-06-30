@@ -14,6 +14,51 @@ export class UsersController {
     return this.usersService.findAll(page, limit, search);
   }
 
+  @Get('stats/overview')
+  async getStats() {
+    return this.usersService.getStats();
+  }
+
+  @Post('bulk')
+  async bulkCreate(@Body() body: { users?: any[] }) {
+    return this.usersService.bulkCreate(body.users || []);
+  }
+
+  @Get('removed')
+  async findRemoved() {
+    return this.usersService.findRemoved();
+  }
+
+  @Post('removed/:id/restore')
+  async restore(@Param('id') id: string) {
+    return this.usersService.restore(id);
+  }
+
+  @Put(':id/advance-mapping')
+  async updateAdvanceMapping(
+    @Param('id') id: string,
+    @Body() body: { additionalStores: string[] },
+  ) {
+    return this.usersService.updateAdvanceMapping(id, body.additionalStores || []);
+  }
+
+  @Put(':id/hybrid')
+  async updateHybrid(
+    @Param('id') id: string,
+    @Body() body: { isHybrid: boolean; hybridStores: string[] },
+  ) {
+    return this.usersService.updateHybrid(id, body);
+  }
+
+  @Put(':id/last-login')
+  async updateLastLogin(
+    @Param('id') id: string,
+    @Body() body: { lastLogin?: string },
+  ) {
+    const lastLogin = body.lastLogin ? new Date(body.lastLogin) : new Date();
+    return this.usersService.updateLastLogin(id, lastLogin);
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
@@ -32,10 +77,5 @@ export class UsersController {
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return this.usersService.remove(id);
-  }
-
-  @Get('stats/overview')
-  async getStats() {
-    return this.usersService.getStats();
   }
 }

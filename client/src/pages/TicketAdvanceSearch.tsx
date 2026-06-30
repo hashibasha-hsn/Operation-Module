@@ -17,8 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import { Search, Download, Filter } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { fetchTicketAdvanceSearch } from "@/lib/ticketApi";
 
 export default function TicketAdvanceSearch() {
   const { t } = useLanguage();
@@ -36,10 +39,7 @@ export default function TicketAdvanceSearch() {
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const organizationId = user.organizationId;
-
-      const filters: any = {};
+      const filters: Record<string, string> = {};
       if (searchTerm) filters.ticketId = searchTerm;
       if (statusFilter !== "all") filters.status = statusFilter;
       if (priorityFilter !== "all") filters.priority = priorityFilter;
@@ -49,15 +49,7 @@ export default function TicketAdvanceSearch() {
       if (startDate) filters.startDate = startDate;
       if (endDate) filters.endDate = endDate;
 
-      const response = await fetch(
-        `http://localhost:3001/tickets/reports/advance-search?organizationId=${organizationId}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(filters),
-        }
-      );
-      const data = await response.json();
+      const data = await fetchTicketAdvanceSearch(filters);
       setTickets(data);
     } catch (error) {
       console.error("Error searching tickets:", error);
@@ -279,9 +271,9 @@ export default function TicketAdvanceSearch() {
                         {ticket.dueDate ? new Date(ticket.dueDate).toLocaleDateString() : 'N/A'}
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm">
-                          View
-                        </Button>
+                        <TableActionsMenu>
+                          <DropdownMenuItem>View</DropdownMenuItem>
+                        </TableActionsMenu>
                       </TableCell>
                     </TableRow>
                   ))}

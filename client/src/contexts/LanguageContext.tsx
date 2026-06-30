@@ -13,42 +13,51 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+function applyDocumentLanguage(lang: Language) {
+  const dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.documentElement.lang = lang;
+  document.documentElement.dir = dir;
+  document.body.dir = dir;
+  return dir;
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation();
-  const [language, setLanguage] = useState<Language>(i18n.language as Language || 'en');
-
+  const initialLanguage = (localStorage.getItem('i18nextLng') as Language) || 'en';
+  const [language, setLanguage] = useState<Language>(initialLanguage);
   const dir = language === 'ar' ? 'rtl' : 'ltr';
 
   useEffect(() => {
-    // Update document language when language changes
-    document.documentElement.lang = language;
+    applyDocumentLanguage(language);
   }, [language]);
 
-  // Sync local state with i18n language changes
   useEffect(() => {
     const handleLanguageChange = (lng: string) => {
-      setLanguage(lng as Language);
+      const next = (lng === 'ar' ? 'ar' : 'en') as Language;
+      setLanguage(next);
+      applyDocumentLanguage(next);
     };
 
     i18n.on('languageChanged', handleLanguageChange);
-
     return () => {
       i18n.off('languageChanged', handleLanguageChange);
     };
   }, [i18n]);
 
-  const handleSetLanguage = (lang: Language) => {
-    console.log('Changing language to:', lang);
+  const handleSetLanguage = async (lang: Language) => {
     setLanguage(lang);
-    i18n.changeLanguage(lang).then(() => {
-      console.log('Language changed to:', i18n.language);
-      console.log('Current translations:', i18n.store.data[i18n.language]);
-    });
+    applyDocumentLanguage(lang);
+    localStorage.removeItem(`translations_${lang}`);
+    localStorage.removeItem(`translations_${lang}_timestamp`);
+    await i18n.changeLanguage(lang);
+    await i18n.reloadResources(lang);
   };
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t, dir }}>
-      {children}
+      <div dir={dir} className="min-h-full">
+        {children}
+      </div>
     </LanguageContext.Provider>
   );
 }

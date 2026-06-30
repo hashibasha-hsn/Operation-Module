@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,339 +30,331 @@ import {
   BookOpen,
   CheckCircle,
   TrendingUp,
-  Calendar,
-  User,
+  ArrowLeft,
 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  type DateFilter,
+  exportRowsToCsv,
+  fetchActionPoints,
+  fetchAssessmentResultsReport,
+  fetchAssets,
+  fetchEntities,
+  fetchLearningOrgReport,
+  fetchOrganizationReport,
+  fetchTickets,
+} from "@/lib/reportApi";
+
+type ReportType =
+  | "process"
+  | "actionPoints"
+  | "tickets"
+  | "assets"
+  | "learning"
+  | "assessments";
+
+const REPORT_CONFIG: {
+  id: ReportType;
+  labelKey: string;
+  descKey: string;
+  icon: typeof FileText;
+}[] = [
+  { id: "process", labelKey: "processReports", descKey: "processReportsDesc", icon: FileText },
+  { id: "actionPoints", labelKey: "actionPointsReports", descKey: "actionPointsReportsDesc", icon: AlertCircle },
+  { id: "tickets", labelKey: "ticketReports", descKey: "ticketReportsDesc", icon: Ticket },
+  { id: "assets", labelKey: "assetReports", descKey: "assetReportsDesc", icon: Package },
+  { id: "learning", labelKey: "learningReports", descKey: "learningReportsDesc", icon: BookOpen },
+  { id: "assessments", labelKey: "assessmentReports", descKey: "assessmentReportsDesc", icon: CheckCircle },
+];
 
 export default function FeatureReports() {
-  const [activeReport, setActiveReport] = useState("Process Reports");
+  const { t } = useLanguage();
+  const [activeReport, setActiveReport] = useState<ReportType>("process");
   const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [storeNames, setStoreNames] = useState<Record<string, string>>({});
 
-  const reportTypes = [
-    { name: "Process Reports", icon: FileText, description: "View process completion and compliance data" },
-    { name: "Action Points Reports", icon: AlertCircle, description: "Track action point status and resolution" },
-    { name: "Ticket Reports", icon: Ticket, description: "Analyze ticket trends and performance" },
-    { name: "Asset Reports", icon: Package, description: "Monitor asset management and status" },
-    { name: "Learning Reports", icon: BookOpen, description: "Review course completion and progress" },
-    { name: "Assessment Reports", icon: CheckCircle, description: "View assessment scores and results" },
-  ];
+  useEffect(() => {
+    fetchEntities()
+      .then((entities) => {
+        const map: Record<string, string> = {};
+        entities.forEach((entity: any) => {
+          map[entity.id] = entity.storeName || entity.entityName || entity.name || entity.id;
+        });
+        setStoreNames(map);
+      })
+      .catch(() => setStoreNames({}));
+  }, []);
 
-  const mockReportData: Record<string, any[]> = {
-    "Process Reports": [],
-    "Action Points Reports": [],
-    "Ticket Reports": [],
-    "Asset Reports": [],
-    "Learning Reports": [],
-    "Assessment Reports": [],
+  const loadReportData = async () => {
+    setLoading(true);
+    try {
+      if (activeReport === "process") {
+        const submissions = await fetchOrganizationReport(dateFilter);
+        setRows(
+          submissions.map((s: any) => ({
+            id: s.id,
+            name: s.process?.title || s.audit?.title || "—",
+            store: storeNames[s.storeId] || s.storeId,
+            status: formatStatus(s.status),
+            completion: s.status === "completed" ? 100 : s.status === "draft" ? 25 : 50,
+            date: s.submittedAt
+              ? new Date(s.submittedAt).toLocaleDateString()
+              : new Date(s.createdAt).toLocaleDateString(),
+          })),
+        );
+      } else if (activeReport === "actionPoints") {
+        const items = await fetchActionPoints();
+        setRows(
+          items.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            store: storeNames[item.storeId] || item.storeId || "—",
+            priority: capitalize(item.priority),
+            status: capitalize(String(item.status).replace(/_/g, " ")),
+            assignee: item.assignedTo || "—",
+            dueDate: item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—",
+          })),
+        );
+      } else if (activeReport === "tickets") {
+        const items = await fetchTickets();
+        setRows(
+          items.map((item: any) => ({
+            id: item.id,
+            title: item.title || item.subject,
+            store: storeNames[item.storeId] || item.storeId || "—",
+            priority: capitalize(item.priority),
+            status: capitalize(String(item.status).replace(/_/g, " ")),
+            assignedTo: item.assignedTo || "—",
+            createdAt: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "—",
+          })),
+        );
+      } else if (activeReport === "assets") {
+        const items = await fetchAssets();
+        setRows(
+          items.map((item: any) => ({
+            id: item.id,
+            name: item.name || item.assetName,
+            store: storeNames[item.storeId] || item.storeId || "—",
+            status: capitalize(item.status),
+            condition: item.condition || item.assetCondition || "—",
+            lastMaintenance: item.lastMaintenanceDate
+              ? new Date(item.lastMaintenanceDate).toLocaleDateString()
+              : "—",
+          })),
+        );
+      } else if (activeReport === "learning") {
+        const data = await fetchLearningOrgReport(dateFilter, "courses");
+        const courses = data?.courses ?? [];
+        setRows(
+          courses.map((item: any) => ({
+            id: item.courseId,
+            name: item.courseTitle,
+            category: item.category,
+            status: item.status,
+            files: item.files ?? 0,
+            date: item.launchDate ? new Date(item.launchDate).toLocaleDateString() : "—",
+          })),
+        );
+      } else if (activeReport === "assessments") {
+        const items = await fetchAssessmentResultsReport(dateFilter);
+        setRows(
+          (items || []).map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            user: item.user,
+            score: item.score ?? 0,
+            status: item.status,
+            date: item.date ? new Date(item.date).toLocaleDateString() : "—",
+          })),
+        );
+      } else {
+        setRows([]);
+      }
+    } catch {
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const currentData = mockReportData[activeReport as keyof typeof mockReportData] || [];
+  useEffect(() => {
+    loadReportData();
+  }, [activeReport, dateFilter, storeNames]);
 
-  const filteredData = currentData.filter((item: any) => {
-    const matchesSearch = Object.values(item).some((value: any) =>
-      String(value).toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredData = useMemo(
+    () =>
+      rows.filter((item) => {
+        const matchesSearch = Object.values(item).some((value) =>
+          String(value).toLowerCase().includes(searchTerm.toLowerCase()),
+        );
+        const matchesStatus =
+          statusFilter === "all" ||
+          String(item.status).toLowerCase().includes(statusFilter.toLowerCase());
+        return matchesSearch && matchesStatus;
+      }),
+    [rows, searchTerm, statusFilter],
+  );
+
+  const activeConfig = REPORT_CONFIG.find((r) => r.id === activeReport)!;
+
+  const handleExport = () => {
+    if (!filteredData.length) return;
+    exportRowsToCsv(
+      `${activeReport}-report.csv`,
+      Object.keys(filteredData[0]),
+      filteredData.map((item) => Object.values(item).map(String)),
     );
-    const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const getStatusBadge = (status: string) => {
-    const statusColors: Record<string, string> = {
-      Completed: "default",
-      "In Progress": "secondary",
-      Pending: "outline",
-      Open: "destructive",
-      Closed: "default",
-      Active: "default",
-      Maintenance: "secondary",
-      Passed: "default",
-      Failed: "destructive",
-      "On Hold": "secondary",
-    };
-    return <Badge variant={statusColors[status] as any || "outline"}>{status}</Badge>;
-  };
-
-  const getPriorityBadge = (priority: string) => {
-    const priorityColors: Record<string, string> = {
-      Highest: "destructive",
-      High: "destructive",
-      Medium: "default",
-      Low: "secondary",
-    };
-    return <Badge variant={priorityColors[priority] as any || "outline"}>{priority}</Badge>;
   };
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link href="/reporting">
+            <Button variant="ghost" size="sm" className="gap-1">
+              <ArrowLeft className="w-4 h-4" />
+              {t("reportingAndInsights")}
+            </Button>
+          </Link>
           <TrendingUp className="w-8 h-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">Feature Reports</h1>
-            <p className="text-muted-foreground mt-1">Module-specific analytics and detailed records</p>
+            <h1 className="text-3xl font-bold">{t("featureReports")}</h1>
+            <p className="text-muted-foreground mt-1">{t("featureReportsPageDesc")}</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
-            <Download className="w-4 h-4" />
-            Export
-          </Button>
-        </div>
+        <Button variant="outline" className="gap-2" onClick={handleExport} disabled={!filteredData.length}>
+          <Download className="w-4 h-4" />
+          {t("export")}
+        </Button>
       </div>
 
-      {/* Report Type Selection */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {reportTypes.map((report) => {
+        {REPORT_CONFIG.map((report) => {
           const Icon = report.icon;
           return (
             <Card
-              key={report.name}
+              key={report.id}
               className={`cursor-pointer transition-all hover:shadow-md ${
-                activeReport === report.name ? "border-primary border-2" : ""
+                activeReport === report.id ? "border-primary border-2" : ""
               }`}
-              onClick={() => setActiveReport(report.name)}
+              onClick={() => setActiveReport(report.id)}
             >
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 rounded-lg">
                     <Icon className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">{report.name}</CardTitle>
+                  <CardTitle className="text-base">{t(report.labelKey)}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{report.description}</p>
+                <p className="text-sm text-muted-foreground">{t(report.descKey)}</p>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 relative">
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex-1 relative min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search reports..."
+            placeholder={t("searchReports")}
             className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Select value={dateFilter} onValueChange={setDateFilter}>
+        <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DateFilter)}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Date Range" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Time</SelectItem>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="week">This Week</SelectItem>
-            <SelectItem value="month">This Month</SelectItem>
-            <SelectItem value="quarter">This Quarter</SelectItem>
+            <SelectItem value="all">{t("allTime")}</SelectItem>
+            <SelectItem value="today">{t("today")}</SelectItem>
+            <SelectItem value="week">{t("thisWeek")}</SelectItem>
+            <SelectItem value="month">{t("thisMonth")}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Status" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="Completed">Completed</SelectItem>
-            <SelectItem value="In Progress">In Progress</SelectItem>
-            <SelectItem value="Pending">Pending</SelectItem>
-            <SelectItem value="Open">Open</SelectItem>
-            <SelectItem value="Closed">Closed</SelectItem>
+            <SelectItem value="all">{t("allStatus")}</SelectItem>
+            <SelectItem value="completed">{t("completed")}</SelectItem>
+            <SelectItem value="open">{t("open")}</SelectItem>
+            <SelectItem value="draft">{t("draft")}</SelectItem>
+            <SelectItem value="passed">{t("passed")}</SelectItem>
+            <SelectItem value="failed">{t("failed")}</SelectItem>
           </SelectContent>
         </Select>
         <Button variant="outline" className="gap-2">
           <Filter className="w-4 h-4" />
-          More Filters
+          {t("moreFilters")}
         </Button>
       </div>
 
-      {/* Report Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>{activeReport}</span>
-            <Badge variant="outline">{filteredData.length} records</Badge>
+            <span>{t(activeConfig.labelKey)}</span>
+            <Badge variant="outline">
+              {filteredData.length} {t("records")}
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  {activeReport === "Process Reports" && (
-                    <>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Store</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Completion</TableHead>
-                      <TableHead>Date</TableHead>
-                    </>
-                  )}
-                  {activeReport === "Action Points Reports" && (
-                    <>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Store</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Assignee</TableHead>
-                      <TableHead>Due Date</TableHead>
-                    </>
-                  )}
-                  {activeReport === "Ticket Reports" && (
-                    <>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Store</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Assigned To</TableHead>
-                      <TableHead>Created At</TableHead>
-                    </>
-                  )}
-                  {activeReport === "Asset Reports" && (
-                    <>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Store</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Condition</TableHead>
-                      <TableHead>Last Maintenance</TableHead>
-                    </>
-                  )}
-                  {activeReport === "Learning Reports" && (
-                    <>
-                      <TableHead>Course</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Progress</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Completed Date</TableHead>
-                    </>
-                  )}
-                  {activeReport === "Assessment Reports" && (
-                    <>
-                      <TableHead>Name</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Score</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                    </>
-                  )}
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredData.length === 0 ? (
+          {loading ? (
+            <p className="text-center py-12 text-muted-foreground">{t("loading")}</p>
+          ) : filteredData.length === 0 ? (
+            <p className="text-center py-12 text-muted-foreground">{t("noData")}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
-                      No records found
-                    </TableCell>
+                    {Object.keys(filteredData[0]).map((key) => (
+                      <TableHead key={key} className="capitalize">
+                        {key}
+                      </TableHead>
+                    ))}
                   </TableRow>
-                ) : (
-                  filteredData.map((item: any) => (
+                </TableHeader>
+                <TableBody>
+                  {filteredData.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell className="font-mono text-sm">{item.id}</TableCell>
-                      {activeReport === "Process Reports" && (
-                        <>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.store}</TableCell>
-                          <TableCell>{getStatusBadge(item.status)}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-muted rounded-full h-2 w-24">
-                                <div
-                                  className={`h-2 rounded-full ${
-                                    item.completion >= 80 ? 'bg-green-500' :
-                                    item.completion >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                                  }`}
-                                  style={{ width: `${item.completion}%` }}
-                                />
-                              </div>
-                              <span className="text-sm">{item.completion}%</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{item.date}</TableCell>
-                        </>
-                      )}
-                      {activeReport === "Action Points Reports" && (
-                        <>
-                          <TableCell className="font-medium">{item.title}</TableCell>
-                          <TableCell>{item.store}</TableCell>
-                          <TableCell>{getPriorityBadge(item.priority)}</TableCell>
-                          <TableCell>{getStatusBadge(item.status)}</TableCell>
-                          <TableCell>{item.assignee}</TableCell>
-                          <TableCell>{item.dueDate}</TableCell>
-                        </>
-                      )}
-                      {activeReport === "Ticket Reports" && (
-                        <>
-                          <TableCell className="font-medium">{item.title}</TableCell>
-                          <TableCell>{item.store}</TableCell>
-                          <TableCell>{getPriorityBadge(item.priority)}</TableCell>
-                          <TableCell>{getStatusBadge(item.status)}</TableCell>
-                          <TableCell>{item.assignedTo}</TableCell>
-                          <TableCell>{item.createdAt}</TableCell>
-                        </>
-                      )}
-                      {activeReport === "Asset Reports" && (
-                        <>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.store}</TableCell>
-                          <TableCell>{getStatusBadge(item.status)}</TableCell>
-                          <TableCell>{item.condition}</TableCell>
-                          <TableCell>{item.lastMaintenance}</TableCell>
-                        </>
-                      )}
-                      {activeReport === "Learning Reports" && (
-                        <>
-                          <TableCell className="font-medium">{item.course}</TableCell>
-                          <TableCell>{item.user}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-muted rounded-full h-2 w-24">
-                                <div
-                                  className="h-2 rounded-full bg-primary"
-                                  style={{ width: `${item.progress}%` }}
-                                />
-                              </div>
-                              <span className="text-sm">{item.progress}%</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(item.status)}</TableCell>
-                          <TableCell>{item.completedDate || "N/A"}</TableCell>
-                        </>
-                      )}
-                      {activeReport === "Assessment Reports" && (
-                        <>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.user}</TableCell>
-                          <TableCell>
-                            <Badge variant={item.score >= 70 ? "default" : "destructive"}>
-                              {item.score}%
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(item.status)}</TableCell>
-                          <TableCell>{item.date}</TableCell>
-                        </>
-                      )}
-                      <TableCell>
-                        <Button variant="ghost" size="sm">
-                          View
-                        </Button>
-                      </TableCell>
+                      {Object.entries(item).map(([key, value]) => (
+                        <TableCell key={key}>
+                          {key === "status" ? (
+                            <Badge variant="outline">{String(value)}</Badge>
+                          ) : (
+                            String(value)
+                          )}
+                        </TableCell>
+                      ))}
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
+}
+
+function formatStatus(status: string) {
+  if (!status) return "—";
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function capitalize(value: string) {
+  if (!value) return "—";
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

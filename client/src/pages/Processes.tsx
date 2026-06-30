@@ -31,6 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Search, FileText, Settings, Users, Building2, Edit, Trash2, Play, Archive } from "lucide-react";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 
 export default function Processes() {
   const [processes, setProcesses] = useState<any[]>([]);
@@ -494,19 +496,25 @@ export default function Processes() {
                       <Badge variant="outline">{process.storeIds?.length || 0} stores</Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <TableActionsMenu>
                         {process.status === 'draft' && (
-                          <Button variant="ghost" size="sm" onClick={() => handlePublishProcess(process.id)}>
-                            <Play className="w-4 h-4" />
-                          </Button>
+                          <DropdownMenuItem onClick={() => handlePublishProcess(process.id)}>
+                            <Play className="w-4 h-4 mr-2" />
+                            Publish
+                          </DropdownMenuItem>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => handleArchiveProcess(process.id)}>
-                          <Archive className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteProcess(process.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                        <DropdownMenuItem onClick={() => handleArchiveProcess(process.id)}>
+                          <Archive className="w-4 h-4 mr-2" />
+                          Archive
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteProcess(process.id)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </TableActionsMenu>
                     </TableCell>
                   </TableRow>
                 ))

@@ -27,6 +27,36 @@ export class Assessment {
   @Column({ type: 'json', nullable: true })
   assigneeProfiles: any; // Store, designation, etc.
 
+  @Column({ name: 'assigneeids', type: 'json', nullable: true })
+  assigneeIds: string[];
+
+  @Column({ name: 'storeids', type: 'json', nullable: true })
+  storeIds: string[];
+
+  @Column({ type: 'json', nullable: true })
+  properties: Record<string, unknown>;
+
+  @Column({ name: 'certificatesettings', type: 'json', nullable: true })
+  certificateSettings: Record<string, unknown>;
+
+  @Column({ name: 'startdate', type: 'timestamp', nullable: true })
+  startDate: Date;
+
+  @Column({ default: true })
+  visible: boolean;
+
+  @Column({ name: 'showresult', default: false })
+  showResult: boolean;
+
+  @Column({ name: 'showcorrectanswer', default: false })
+  showCorrectAnswer: boolean;
+
+  @Column({ name: 'dynamicassignment', default: false })
+  dynamicAssignment: boolean;
+
+  @Column({ name: 'generatecertificate', default: false })
+  generateCertificate: boolean;
+
   @Column({ type: 'timestamp', nullable: true })
   publishedAt: Date;
 

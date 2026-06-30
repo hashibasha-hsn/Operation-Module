@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -20,30 +21,84 @@ import {
   BarChart3,
   Info,
   Flame,
-  Eye,
   MessageCircle,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  addNoticeboardComment,
+  fetchNoticeboardComments,
+  fetchNoticeboardPosts,
+  toggleNoticeboardLike,
+  type NoticeboardComment,
+} from "@/lib/noticeboardApi";
+import { getCurrentUser, getCurrentUserId } from "@/lib/processSubmission";
+import NoticeboardMedia from "@/components/NoticeboardMedia";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const { t } = useLanguage();
   const [dateOffset, setDateOffset] = useState(0);
   const [noticeboardPosts, setNoticeboardPosts] = useState<any[]>([]);
+  const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [postComments, setPostComments] = useState<Record<string, NoticeboardComment[]>>({});
+  const currentUser = getCurrentUser();
+  const currentUserId = getCurrentUserId();
   const currentDate = new Date();
   const daysOfWeek = [];
 
   useEffect(() => {
-    fetchNoticeboardPosts();
+    fetchNoticeboardPostsFromApi();
   }, []);
 
-  const fetchNoticeboardPosts = async () => {
+  const fetchNoticeboardPostsFromApi = async () => {
     try {
-      const response = await fetch('http://localhost:3012/noticeboard?organizationId=default-org');
-      const data = await response.json();
-      setNoticeboardPosts(Array.isArray(data) ? data : []);
+      const data = await fetchNoticeboardPosts('default-org', true);
+      setNoticeboardPosts(data);
     } catch (err) {
       console.error('Failed to fetch noticeboard posts:', err);
     }
+  };
+
+  const handleLikePost = async (postId: string) => {
+    if (!currentUserId) {
+      toast.error(t('pleaseLoginToLike'));
+      return;
+    }
+    const updated = await toggleNoticeboardLike(postId, currentUserId);
+    if (updated) {
+      setNoticeboardPosts((prev) => prev.map((post) => (post.id === postId ? updated : post)));
+    }
+  };
+
+  const handleToggleComments = async (postId: string) => {
+    const nextOpen = !openComments[postId];
+    setOpenComments((prev) => ({ ...prev, [postId]: nextOpen }));
+    if (nextOpen && !postComments[postId]) {
+      const comments = await fetchNoticeboardComments(postId);
+      setPostComments((prev) => ({ ...prev, [postId]: comments }));
+    }
+  };
+
+  const handleSubmitComment = async (postId: string) => {
+    const comment = commentDrafts[postId]?.trim();
+    if (!comment) return;
+    if (!currentUserId) {
+      toast.error(t('pleaseLoginToComment'));
+      return;
+    }
+    const result = await addNoticeboardComment(postId, {
+      userId: currentUserId,
+      userName: currentUser.fullName || currentUser.name || currentUser.email || "User",
+      comment,
+    });
+    if (!result) {
+      toast.error(t('failedToAddComment'));
+      return;
+    }
+    setNoticeboardPosts((prev) => prev.map((post) => (post.id === postId ? result.post : post)));
+    setPostComments((prev) => ({ ...prev, [postId]: result.comments }));
+    setCommentDrafts((prev) => ({ ...prev, [postId]: "" }));
   };
 
   // Generate calendar days based on offset
@@ -62,15 +117,15 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-100 min-h-screen">
+    <div className="p-6 space-y-6 bg-muted/30 min-h-screen">
       {/* Tabs */}
       <Tabs defaultValue="activity" className="w-full">
-        <TabsList className="bg-white p-1 rounded-lg shadow-sm flex items-center">
+        <TabsList className="bg-card p-1 rounded-lg shadow-sm border border-border/60 flex items-center">
           <Tooltip>
             <TooltipTrigger asChild>
               <TabsTrigger
                 value="activity"
-                className="flex-1 text-center py-2 px-4 rounded-md transition-all duration-300 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:text-gray-700 hover:bg-orange-100 hover:text-orange-600"
+                className="flex-1 text-center py-2 px-4 rounded-md transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               >
                 {t('activityOverview')}
               </TabsTrigger>
@@ -83,7 +138,7 @@ export default function Dashboard() {
             <TooltipTrigger asChild>
               <TabsTrigger
                 value="analytics"
-                className="flex-1 text-center py-2 px-4 rounded-md transition-all duration-300 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:text-gray-700 hover:bg-orange-100 hover:text-orange-600"
+                className="flex-1 text-center py-2 px-4 rounded-md transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               >
                 {t('summaryAnalytics')}
               </TabsTrigger>
@@ -96,7 +151,7 @@ export default function Dashboard() {
             <TooltipTrigger asChild>
               <TabsTrigger
                 value="reports"
-                className="flex-1 text-center py-2 px-4 rounded-md transition-all duration-300 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:text-gray-700 hover:bg-orange-100 hover:text-orange-600"
+                className="flex-1 text-center py-2 px-4 rounded-md transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               >
                 {t('customReports')}
               </TabsTrigger>
@@ -169,7 +224,7 @@ export default function Dashboard() {
                         <motion.div
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
-                          className="text-3xl font-bold text-orange-500"
+                          className="text-3xl font-bold text-primary"
                         >
                           0
                         </motion.div>
@@ -232,7 +287,7 @@ export default function Dashboard() {
                               whileTap={{ scale: 0.95 }}
                               className={`text-center p-2 rounded-lg cursor-pointer transition-all duration-300 min-w-[60px] ${
                                 idx === 0
-                                  ? "bg-orange-500 text-white shadow-md"
+                                  ? "bg-primary text-primary-foreground shadow-sm"
                                   : "bg-white text-gray-700 hover:bg-gray-50 shadow-sm border border-gray-200"
                               }`}
                             >
@@ -334,19 +389,18 @@ export default function Dashboard() {
                         transition={{ delay: 0.5 }}
                         className="space-y-3"
                       >
-                        {post.fileUrl && (
-                          <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="rounded-lg aspect-video overflow-hidden cursor-pointer shadow-md hover:shadow-lg transition-all duration-300 relative"
-                          >
-                            <img
-                              src={post.fileUrl}
-                              alt={post.title}
-                              className="w-full h-full object-cover"
+                        {post.fileUrl ? (
+                          <div className="relative aspect-video w-full overflow-hidden rounded-lg shadow-md bg-gray-100">
+                            <NoticeboardMedia
+                              post={post}
+                              className="absolute inset-0 h-full w-full object-cover"
                             />
-                          </motion.div>
-                        )}
+                          </div>
+                        ) : post.fileName ? (
+                          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                            Media missing — edit this post in Notice Board and re-upload the image or video.
+                          </p>
+                        ) : null}
                         <div>
                           <h3 className="font-semibold text-sm text-gray-800">{post.title}</h3>
                           <p className="text-xs text-gray-600 mt-1 line-clamp-2">{post.description}</p>
@@ -354,14 +408,16 @@ export default function Dashboard() {
                         <div className="flex gap-4 mt-3 text-xs">
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <motion.div
+                              <motion.button
+                                type="button"
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
-                                className="flex items-center gap-1 cursor-pointer text-gray-600 hover:text-gray-800 transition-all duration-300"
+                                onClick={() => handleLikePost(post.id)}
+                                className="flex items-center gap-1 cursor-pointer text-gray-600 hover:text-orange-600 transition-all duration-300"
                               >
-                                <Flame className="w-4 h-4 text-orange-500" />
+                                <Flame className="w-4 h-4 text-primary/80" />
                                 <span>{post.likesCount || 0}</span>
-                              </motion.div>
+                              </motion.button>
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>{t('likes')}</p>
@@ -369,35 +425,61 @@ export default function Dashboard() {
                           </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <motion.div
+                              <motion.button
+                                type="button"
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
-                                className="flex items-center gap-1 cursor-pointer text-gray-600 hover:text-gray-800 transition-all duration-300"
-                              >
-                                <Eye className="w-4 h-4 text-blue-500" />
-                                <span>{post.viewsCount || 0}</span>
-                              </motion.div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{t('views')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <motion.div
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                className="flex items-center gap-1 cursor-pointer text-gray-600 hover:text-gray-800 transition-all duration-300"
+                                onClick={() => handleToggleComments(post.id)}
+                                className="flex items-center gap-1 cursor-pointer text-gray-600 hover:text-green-600 transition-all duration-300"
                               >
                                 <MessageCircle className="w-4 h-4 text-green-500" />
                                 <span>{post.commentsCount || 0}</span>
-                              </motion.div>
+                              </motion.button>
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>{t('comments')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
+                        {openComments[post.id] && (
+                          <div className="space-y-2 rounded-lg border bg-gray-50 p-3">
+                            {(postComments[post.id] ?? []).length === 0 ? (
+                              <p className="text-xs text-muted-foreground">{t('noCommentsYet')}</p>
+                            ) : (
+                              (postComments[post.id] ?? []).map((item) => (
+                                <div key={item.id} className="text-xs">
+                                  <span className="font-medium text-gray-800">
+                                    {item.userName || "User"}:
+                                  </span>{" "}
+                                  <span className="text-gray-600">{item.comment}</span>
+                                </div>
+                              ))
+                            )}
+                            <div className="flex gap-2">
+                              <Input
+                                value={commentDrafts[post.id] ?? ""}
+                                onChange={(e) =>
+                                  setCommentDrafts((prev) => ({ ...prev, [post.id]: e.target.value }))
+                                }
+                                placeholder={t('writeAComment')}
+                                className="h-8 text-xs"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleSubmitComment(post.id);
+                                  }
+                                }}
+                              />
+                              <Button
+                                size="sm"
+                                className="h-8 px-3"
+                                onClick={() => handleSubmitComment(post.id)}
+                              >
+                                {t('postComment')}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </motion.div>
                     ))
                   )}

@@ -2,9 +2,11 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
-// Fallback translations for immediate use
+// Fallback translations used when API is unavailable or keys are missing from cache
 const fallbackTranslations = {
   en: {
+    manageProcessesAndAudits: "Manage and monitor your processes and audits",
+    assessments: "Assessments",
     activityOverview: "Activity Overview",
     viewActivityOverview: "View Activity Overview",
     summaryAnalytics: "Summary Analytics",
@@ -32,8 +34,65 @@ const fallbackTranslations = {
     noData: "No data",
     summaryAnalyticsContentComingSoon: "Summary Analytics Content Coming Soon",
     customReportsContentComingSoon: "Custom Reports Content Coming Soon",
+    createNewTeam: "Create New Team",
+    editUserTeam: "Edit User Team",
+    createUserTeam: "Create User Team",
+    teamName: "Team Name",
+    teamNamePlaceholder: "e.g., East Zonal Team, Store Ops Leads",
+    updateTeam: "Update Team",
+    createTeam: "Create Team",
+    members: "Members",
+    member: "member",
+    membersPlural: "members",
+    noUserTeamsAvailable: "No user teams available",
+    searchByName: "Search by name",
+    filterByEmail: "Filter by email",
+    region: "Region",
+    district: "District",
+    city: "City",
+    selectRegion: "Select region",
+    selectCity: "Select city",
+    selectDistrict: "Select district",
+    selectRegionFirst: "Select region first",
+    selectCityFirst: "Select city first",
+    loadingRegions: "Loading regions...",
+    loadingCities: "Loading cities...",
+    loadingDistricts: "Loading districts...",
+    reportingAndInsights: "Reporting & Insights",
+    storeReportDesc: "Store-level process and audit submissions",
+    organizationReportDesc: "Organization-wide process and audit submissions",
+    visualReportDesc: "Visual analytics and insights",
+    totalSubmissions: "Total Submissions",
+    completionRate: "Completion Rate",
+    workflowTypeDistribution: "Workflow Type Distribution",
+    statusDistribution: "Status Distribution",
+    submissionsByStore: "Submissions by Store",
+    submissionsByDate: "Submissions by Date",
+    noDataAvailable: "No data available",
+    correction: "Correction",
+    rejected: "Rejected",
+    selectStore: "Select store...",
+    searchSubmissions: "Search submissions...",
+    thisWeek: "This Week",
+    thisMonth: "This Month",
+    allStatus: "All Status",
+    passed: "Passed",
+    failed: "Failed",
+    raiseActionPoint: "Raise Action Point",
+    view: "View",
+    audits: "Audits",
+    searchAudit: "Search Audit",
+    reset: "Reset",
+    locationOptionalHint: "Optional — you can add region, city, and district later.",
+    locationDataUnavailable: "Location list is unavailable. You can still create the entity without it.",
+    entityCreatedSuccessfully: "Entity created successfully",
+    entityCreateFailed: "Failed to create entity",
+    streetName: "Street name",
+    address: "Address",
   },
   ar: {
+    manageProcessesAndAudits: "إدارة ومتابعة العمليات والتدقيق",
+    assessments: "التقييمات",
     activityOverview: "نظرة عامة على النشاط",
     viewActivityOverview: "عرض نظرة عامة على النشاط",
     summaryAnalytics: "التحليلات الملخصة",
@@ -61,37 +120,102 @@ const fallbackTranslations = {
     noData: "لا توجد بيانات",
     summaryAnalyticsContentComingSoon: "محتوى التحليلات الملخصة قادم قريباً",
     customReportsContentComingSoon: "محتوى التقارير المخصصة قادم قريباً",
+    createNewTeam: "إنشاء فريق جديد",
+    editUserTeam: "تعديل فريق المستخدمين",
+    createUserTeam: "إنشاء فريق مستخدمين",
+    teamName: "اسم الفريق",
+    teamNamePlaceholder: "مثال: فريق المنطقة الشرقية، قادة عمليات المتجر",
+    updateTeam: "تحديث الفريق",
+    createTeam: "إنشاء الفريق",
+    members: "الأعضاء",
+    member: "عضو",
+    membersPlural: "أعضاء",
+    noUserTeamsAvailable: "لا توجد فرق مستخدمين",
+    searchByName: "البحث بالاسم",
+    filterByEmail: "تصفية حسب البريد الإلكتروني",
+    region: "المنطقة",
+    district: "الحي",
+    city: "المدينة",
+    selectRegion: "اختر المنطقة",
+    selectCity: "اختر المدينة",
+    selectDistrict: "اختر الحي",
+    selectRegionFirst: "اختر المنطقة أولاً",
+    selectCityFirst: "اختر المدينة أولاً",
+    loadingRegions: "جاري تحميل المناطق...",
+    loadingCities: "جاري تحميل المدن...",
+    loadingDistricts: "جاري تحميل الأحياء...",
+    reportingAndInsights: "التقارير والرؤى",
+    storeReportDesc: "إرسالات العمليات والتدقيق على مستوى المتجر",
+    organizationReportDesc: "إرسالات العمليات والتدقيق على مستوى المنظمة",
+    visualReportDesc: "تحليلات ورؤى مرئية",
+    totalSubmissions: "إجمالي الإرسالات",
+    completionRate: "معدل الإكمال",
+    workflowTypeDistribution: "توزيع نوع سير العمل",
+    statusDistribution: "توزيع الحالة",
+    submissionsByStore: "الإرسالات حسب المتجر",
+    submissionsByDate: "الإرسالات حسب التاريخ",
+    noDataAvailable: "لا توجد بيانات متاحة",
+    correction: "تصحيح",
+    rejected: "مرفوض",
+    selectStore: "اختر المتجر...",
+    searchSubmissions: "بحث في الإرسالات...",
+    thisWeek: "هذا الأسبوع",
+    thisMonth: "هذا الشهر",
+    allStatus: "كل الحالات",
+    passed: "ناجح",
+    failed: "راسب",
+    raiseActionPoint: "رفع نقطة عمل",
+    view: "عرض",
+    audits: "عمليات التدقيق",
+    searchAudit: "بحث التدقيق",
+    reset: "إعادة تعيين",
+    locationOptionalHint: "اختياري — يمكنك إضافة المنطقة والمدينة والحي لاحقاً.",
+    locationDataUnavailable: "قائمة المواقع غير متاحة. يمكنك إنشاء الكيان بدونها.",
+    entityCreatedSuccessfully: "تم إنشاء الكيان بنجاح",
+    entityCreateFailed: "فشل إنشاء الكيان",
+    streetName: "اسم الشارع",
+    address: "العنوان",
   },
 };
 
-// Custom backend to fetch translations from API
+const LANGUAGE_API = import.meta.env.VITE_LANGUAGE_API || 'http://localhost:3009/api/language';
+const TRANSLATIONS_API = import.meta.env.VITE_TRANSLATIONS_API || 'http://localhost:3009/api/translations';
+
+// Custom backend to fetch translations from language service
 const CustomBackend = {
   type: 'backend' as const,
   read: async (language: string, namespace: string, callback: any) => {
     try {
-      console.log(`Loading translations for language: ${language}`);
-      
-      // Skip cache for now to force API fetch
-      console.log(`Fetching translations from API for ${language}`);
-      const response = await fetch(`http://localhost:3009/api/translations/${language}`);
-      if (!response.ok) {
-        console.log(`API request failed with status: ${response.status}, using fallback`);
-        throw new Error(`Failed to fetch translations: ${response.status}`);
+      const urls = [
+        `${LANGUAGE_API}/locale/${language}`,
+        `${TRANSLATIONS_API}/${language}`,
+      ];
+
+      let translations: Record<string, string> | null = null;
+      for (const url of urls) {
+        const response = await fetch(url);
+        if (response.ok) {
+          translations = await response.json();
+          break;
+        }
       }
-      
-      const translations = await response.json();
-      console.log(`Received ${Object.keys(translations).length} translations for ${language}`);
-      
-      // Cache in localStorage
+
+      if (!translations) {
+        throw new Error('Failed to fetch translations from language service');
+      }
+
+      const fallback =
+        fallbackTranslations[language as keyof typeof fallbackTranslations] ||
+        fallbackTranslations.en;
+      const merged = { ...fallback, ...translations };
+
       const cacheKey = `translations_${language}`;
-      localStorage.setItem(cacheKey, JSON.stringify(translations));
+      localStorage.setItem(cacheKey, JSON.stringify(merged));
       localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
-      
-      callback(null, translations);
+
+      callback(null, merged);
     } catch (error) {
       console.error('Error loading translations:', error);
-      // Use fallback translations on error
-      console.log(`Using fallback translations for ${language}`);
       callback(null, fallbackTranslations[language as keyof typeof fallbackTranslations] || fallbackTranslations.en);
     }
   },
@@ -104,7 +228,7 @@ i18n
   .init({
     fallbackLng: 'en',
     lng: 'en',
-    debug: true,
+    debug: false,
     
     interpolation: {
       escapeValue: false,

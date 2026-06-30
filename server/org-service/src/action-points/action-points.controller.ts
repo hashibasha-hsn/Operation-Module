@@ -31,35 +31,7 @@ export class ActionPointsController {
     return this.actionPointsService.findClosureAssignedToMe(userId, organizationId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.actionPointsService.findOne(id);
-  }
-
-  @Put(':id')
-  update(@Param('id') id: string, @Body() updateActionPointDto: Partial<ActionPoint>) {
-    return this.actionPointsService.update(id, updateActionPointDto);
-  }
-
-  @Put(':id/status')
-  updateStatus(
-    @Param('id') id: string,
-    @Body() body: { status: string; userId: string }
-  ) {
-    return this.actionPointsService.updateStatus(id, body.status, body.userId);
-  }
-
-  @Put(':id/comments')
-  addComment(@Param('id') id: string, @Body() comment: any) {
-    return this.actionPointsService.addComment(id, comment);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.actionPointsService.remove(id);
-  }
-
-  // Action Point Report endpoints
+  // Report routes must be declared before :id
   @Get('reports/org-report')
   getActionPointsOrgReport(
     @Query('organizationId') organizationId: string,
@@ -116,5 +88,38 @@ export class ActionPointsController {
     if (workflowId) filters.workflowId = workflowId;
     if (actionPointId) filters.actionPointId = actionPointId;
     return this.actionPointsService.getActionPointsAdvanceReport(organizationId, filters);
+  }
+
+  @Post('from-submission')
+  createFromSubmission(@Body() body: any) {
+    return this.actionPointsService.createFromSubmission(body);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.actionPointsService.findOne(id);
+  }
+
+  @Put(':id')
+  update(@Param('id') id: string, @Body() updateActionPointDto: Partial<ActionPoint>) {
+    return this.actionPointsService.update(id, updateActionPointDto);
+  }
+
+  @Put(':id/status')
+  updateStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string; userId: string }
+  ) {
+    return this.actionPointsService.updateStatus(id, body.status, body.userId);
+  }
+
+  @Put(':id/comments')
+  addComment(@Param('id') id: string, @Body() comment: any) {
+    return this.actionPointsService.addComment(id, comment);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.actionPointsService.remove(id);
   }
 }

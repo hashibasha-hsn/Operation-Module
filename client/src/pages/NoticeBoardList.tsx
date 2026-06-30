@@ -28,14 +28,37 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, LayoutGrid, Edit, Trash2, Download, ChevronLeft, ChevronRight, Flame, Eye, CheckCircle, Upload, X } from "lucide-react";
+import { Plus, LayoutGrid, Edit, Trash2, Download, ChevronLeft, ChevronRight, Heart, MessageSquare, X, ArrowUp, ArrowDown } from "lucide-react";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
+import NoticeboardMedia from "@/components/NoticeboardMedia";
+import { toast } from "sonner";
+import {
+  createNoticeboardPost,
+  deleteNoticeboardPost,
+  downloadNoticeboardPost,
+  fetchNoticeboardComments,
+  fetchNoticeboardPosts,
+  NOTICEboard_API,
+  reorderNoticeboardPosts,
+  updateNoticeboardPost,
+  type NoticeboardComment,
+  type NoticeboardPost,
+} from "@/lib/noticeboardApi";
 
 export default function NoticeBoardList() {
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<NoticeboardPost[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isArrangeOpen, setIsArrangeOpen] = useState(false);
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [arrangePosts, setArrangePosts] = useState<NoticeboardPost[]>([]);
+  const [commentsPost, setCommentsPost] = useState<NoticeboardPost | null>(null);
+  const [comments, setComments] = useState<NoticeboardComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [postData, setPostData] = useState({
     title: "",
@@ -52,9 +75,8 @@ export default function NoticeBoardList() {
 
   const fetchPosts = async () => {
     try {
-      const response = await fetch('http://localhost:3012/noticeboard?organizationId=default-org');
-      const data = await response.json();
-      setPosts(Array.isArray(data) ? data : []);
+      const data = await fetchNoticeboardPosts('default-org', false);
+      setPosts(data);
     } catch (err) {
       console.error('Failed to fetch posts:', err);
       setPosts([]);
@@ -73,12 +95,9 @@ export default function NoticeBoardList() {
         formData.append('file', postData.file);
       }
 
-      const response = await fetch('http://localhost:3012/noticeboard', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await createNoticeboardPost(formData);
 
-      if (response.ok) {
+      if (response) {
         setPostData({
           title: "",
           description: "",
@@ -98,7 +117,49 @@ export default function NoticeBoardList() {
   };
 
   const handleArrangeBoards = () => {
-    console.log("Arrange boards clicked");
+    setArrangePosts([...posts]);
+    setIsArrangeOpen(true);
+  };
+
+  const moveArrangePost = (index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= arrangePosts.length) return;
+    const next = [...arrangePosts];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    setArrangePosts(next);
+  };
+
+  const handleSaveArrangement = async () => {
+    setIsSavingOrder(true);
+    try {
+      const postOrders = arrangePosts.map((post, index) => ({
+        id: post.id,
+        displayOrder: index + 1,
+      }));
+      const updated = await reorderNoticeboardPosts(postOrders);
+      setPosts(updated.length ? updated : arrangePosts);
+      setIsArrangeOpen(false);
+      toast.success("Post order updated");
+    } catch {
+      toast.error("Failed to save post order");
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
+  const openComments = async (post: NoticeboardPost) => {
+    setCommentsPost(post);
+    setIsCommentsOpen(true);
+    setCommentsLoading(true);
+    try {
+      const rows = await fetchNoticeboardComments(post.id);
+      setComments(rows);
+    } catch {
+      setComments([]);
+      toast.error("Failed to load comments");
+    } finally {
+      setCommentsLoading(false);
+    }
   };
 
   const handleEdit = (id: string) => {
@@ -117,36 +178,41 @@ export default function NoticeBoardList() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm("Delete this post? This cannot be undone.")) return;
     try {
-      const response = await fetch(`http://localhost:3012/noticeboard/${id}`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
+      const ok = await deleteNoticeboardPost(id);
+      if (ok) {
+        toast.success("Post deleted");
         fetchPosts();
       } else {
-        console.error('Failed to delete post');
+        toast.error("Failed to delete post");
       }
-    } catch (err) {
-      console.error('Error deleting post:', err);
+    } catch {
+      toast.error("Failed to delete post");
     }
   };
 
-  const handleDownload = (id: string) => {
-    console.log("Download post", id);
+  const handleDownload = async (post: NoticeboardPost) => {
+    try {
+      await downloadNoticeboardPost(post);
+      toast.success("Download started");
+    } catch {
+      toast.error("Failed to download post");
+    }
   };
 
   const handleToggleStatus = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:3012/noticeboard/${id}/toggle-status`, {
+      const response = await fetch(`${NOTICEboard_API}/${id}/toggle-status`, {
         method: 'PUT',
       });
       if (response.ok) {
         fetchPosts();
       } else {
-        console.error('Failed to toggle status');
+        toast.error("Failed to update status");
       }
-    } catch (err) {
-      console.error('Error toggling status:', err);
+    } catch {
+      toast.error("Failed to update status");
     }
   };
 
@@ -163,12 +229,9 @@ export default function NoticeBoardList() {
         formData.append('file', postData.file);
       }
 
-      const response = await fetch(`http://localhost:3012/noticeboard/${editingPostId}`, {
-        method: 'PUT',
-        body: formData,
-      });
+      const response = await updateNoticeboardPost(editingPostId, formData);
 
-      if (response.ok) {
+      if (response) {
         setPostData({
           title: "",
           description: "",
@@ -205,7 +268,11 @@ export default function NoticeBoardList() {
     });
   };
 
-  const totalPages = Math.ceil(posts.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(posts.length / itemsPerPage));
+  const paginatedPosts = posts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
 
   return (
     <div className="p-6 bg-white min-h-screen">
@@ -252,7 +319,7 @@ export default function NoticeBoardList() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="file">File Upload</Label>
+                  <Label htmlFor="file">Image or Video Upload</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="file"
@@ -375,7 +442,7 @@ export default function NoticeBoardList() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-file">File Upload</Label>
+                  <Label htmlFor="edit-file">Image or Video Upload</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="edit-file"
@@ -476,6 +543,7 @@ export default function NoticeBoardList() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[120px]">Media</TableHead>
               <TableHead className="w-[250px]">Title</TableHead>
               <TableHead className="w-[300px]">Description</TableHead>
               <TableHead className="w-[200px]">Stats</TableHead>
@@ -486,43 +554,58 @@ export default function NoticeBoardList() {
           <TableBody>
             {!Array.isArray(posts) || posts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-64 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-64 text-center text-muted-foreground">
                   No data available
                 </TableCell>
               </TableRow>
             ) : (
-              posts.map((post) => (
+              paginatedPosts.map((post) => (
                 <TableRow key={post.id}>
+                  <TableCell>
+                    <div className="h-16 w-24 overflow-hidden rounded-md bg-muted">
+                      {post.fileUrl ? (
+                        <NoticeboardMedia post={post} />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                          No media
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="font-medium">{post.title}</TableCell>
                   <TableCell className="max-w-xs truncate">{post.description}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1">
-                        <Flame className="w-4 h-4 text-orange-500" />
-                        <span>{post.likesCount || 0}</span>
+                      <div className="flex items-center gap-1" title="Likes">
+                        <Heart className="w-4 h-4 text-red-500" />
+                        <span>{post.likesCount ?? 0}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Eye className="w-4 h-4 text-blue-500" />
-                        <span>{post.viewsCount || 0}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span>{post.completedCount || 0}</span>
-                      </div>
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 hover:text-sky-600"
+                        title="View comments"
+                        onClick={() => openComments(post)}
+                      >
+                        <MessageSquare className="w-4 h-4 text-sky-500" />
+                        <span>{post.commentsCount ?? 0}</span>
+                      </button>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(post.id)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(post.id)}>
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDownload(post.id)}>
-                        <Download className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <TableActionsMenu>
+                      <DropdownMenuItem onClick={() => handleEdit(post.id)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDelete(post.id)} className="text-destructive">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload(post)}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </DropdownMenuItem>
+                    </TableActionsMenu>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -577,6 +660,88 @@ export default function NoticeBoardList() {
           </Select>
         </div>
       </div>
+
+      {/* Comments Dialog */}
+      <Dialog open={isCommentsOpen} onOpenChange={setIsCommentsOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Comments</DialogTitle>
+            <DialogDescription>
+              {commentsPost?.title ? `All comments on "${commentsPost.title}"` : "Post comments"}
+            </DialogDescription>
+          </DialogHeader>
+          {commentsLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Loading comments...</p>
+          ) : comments.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">No comments yet</p>
+          ) : (
+            <div className="space-y-3">
+              {comments.map((item) => (
+                <div key={item.id} className="rounded-md border p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">{item.userName || "User"}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-700">{item.comment}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Arrange Boards Dialog */}
+      <Dialog open={isArrangeOpen} onOpenChange={setIsArrangeOpen}>
+        <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Arrange Boards</DialogTitle>
+            <DialogDescription>
+              Change the display order of notice board posts. Top posts appear first.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            {arrangePosts.map((post, index) => (
+              <div
+                key={post.id}
+                className="flex items-center gap-2 rounded-md border bg-white px-3 py-2"
+              >
+                <span className="w-6 text-sm font-medium text-muted-foreground">{index + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{post.title}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={index === 0}
+                  onClick={() => moveArrangePost(index, -1)}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={index === arrangePosts.length - 1}
+                  onClick={() => moveArrangePost(index, 1)}
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsArrangeOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveArrangement} disabled={isSavingOrder}>
+              Save Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

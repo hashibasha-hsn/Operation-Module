@@ -16,25 +16,43 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
+      return null;
+    }
+
     // First check auth service database
-    let user = await this.usersService.findByEmail(email);
+    let user = await this.usersService.findByEmail(normalizedEmail);
     
     // If not found in auth database, check user service and create in auth database
     if (!user) {
       try {
         const axios = require('axios');
-        const response = await axios.get(`http://localhost:3002/users?email=${email}`);
-        if (response.data && response.data.users && response.data.users.length > 0) {
-          const userProfile = response.data.users[0];
-          
-          // Create the user in auth-service database with plain text password
-          // The create method will hash it automatically
-          user = await this.usersService.create({
-            id: userProfile.userId,
-            email: userProfile.email,
-            password: userProfile.password, // Pass plain text password
-            verificationStatus: 'VERIFIED',
-          });
+        const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3002';
+        const response = await axios.get(
+          `${userServiceUrl}/users?search=${encodeURIComponent(normalizedEmail)}&limit=50`,
+          { timeout: 5000 },
+        );
+        const profiles = response.data?.users ?? [];
+        const userProfile = profiles.find(
+          (profile: { email?: string }) =>
+            profile.email?.trim().toLowerCase() === normalizedEmail,
+        );
+
+        if (userProfile) {
+          try {
+            user = await this.usersService.create({
+              id: userProfile.userId,
+              email: userProfile.email?.trim().toLowerCase() ?? normalizedEmail,
+              password: userProfile.password,
+              verificationStatus: 'VERIFIED',
+            });
+          } catch {
+            user = await this.usersService.findOne(userProfile.userId);
+            if (!user) {
+              user = await this.usersService.findByEmail(normalizedEmail);
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching user from user-service:', error.message);
@@ -66,11 +84,16 @@ export class AuthService {
   }
 
   async login(user: any, ipAddress?: string, userAgent?: string) {
+    const loginTime = new Date();
     await this.usersService.updateLastLogin(user.id);
+    await this.syncLastLoginToUserService(user.id, loginTime);
 
     const payload = { email: user.email, sub: user.id };
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.generateRefreshToken();
+
+    await this.sessionsService.deleteSessionsForUser(user.id);
+    await this.sessionsService.revokeRefreshTokensForUser(user.id);
 
     // Create session
     const sessionExpiresAt = new Date();
@@ -116,6 +139,26 @@ export class AuthService {
         verificationStatus: user.verificationStatus,
       },
     };
+  }
+
+  async getLastLogins() {
+    const logins = await this.usersService.getAllLastLogins();
+    return { logins };
+  }
+
+  private async syncLastLoginToUserService(userId: string, lastLogin: Date) {
+    try {
+      const axios = require('axios');
+      const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3002';
+      await axios.put(`${userServiceUrl}/users/${userId}/last-login`, {
+        lastLogin: lastLogin.toISOString(),
+      });
+    } catch (error: any) {
+      console.error(
+        'Failed to sync last login to user-service:',
+        error?.response?.data?.message || error?.message,
+      );
+    }
   }
 
   async checkEmail(email: string) {

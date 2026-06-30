@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS noticeboard_posts (
     views_count INTEGER DEFAULT 0,
     completed_count INTEGER DEFAULT 0,
     comments_count INTEGER DEFAULT 0,
+    display_order INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

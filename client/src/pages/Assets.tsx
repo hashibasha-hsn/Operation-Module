@@ -44,12 +44,8 @@ import {
   Filter,
   Settings,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Assets() {
@@ -317,35 +313,28 @@ export default function Assets() {
                         {asset.createdAt ? new Date(asset.createdAt).toLocaleDateString() : "N/A"}
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Settings className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {activeTab === "Active" ? (
-                              <>
-                                <DropdownMenuItem onClick={() => {
-                                  setSelectedAsset(asset);
-                                  setShowEditDialog(true);
-                                }}>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  {t('edit')}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDeleteAsset(asset.id)} className="text-destructive">
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  {t('delete')}
-                                </DropdownMenuItem>
-                              </>
-                            ) : (
-                              <DropdownMenuItem onClick={() => handleRestoreAsset(asset.id)}>
-                                <RotateCcw className="w-4 h-4 mr-2" />
-                                {t('restore')}
+                        <TableActionsMenu>
+                          {activeTab === "Active" ? (
+                            <>
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedAsset(asset);
+                                setShowEditDialog(true);
+                              }}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                {t('edit')}
                               </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <DropdownMenuItem onClick={() => handleDeleteAsset(asset.id)} className="text-destructive">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                {t('delete')}
+                              </DropdownMenuItem>
+                            </>
+                          ) : (
+                            <DropdownMenuItem onClick={() => handleRestoreAsset(asset.id)}>
+                              <RotateCcw className="w-4 h-4 mr-2" />
+                              {t('restore')}
+                            </DropdownMenuItem>
+                          )}
+                        </TableActionsMenu>
                       </TableCell>
                     </TableRow>
                   ))

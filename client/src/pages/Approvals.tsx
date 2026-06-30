@@ -30,6 +30,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Check, X, Clock, AlertCircle, Search, Filter, MoreVertical, FileText, ClipboardCheck } from "lucide-react";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
+import {
+  approveSubmission,
+  fetchPendingApprovals,
+  rejectSubmission,
+  sendSubmissionForCorrection,
+} from "@/lib/submissionApi";
 
 export default function Approvals() {
   const [activeTab, setActiveTab] = useState("Approvals");
@@ -42,30 +50,19 @@ export default function Approvals() {
   const [levelFilter, setLevelFilter] = useState("all");
 
   useEffect(() => {
-    fetchSubmissions();
+    fetchPendingApprovals()
+      .then(setSubmissions)
+      .catch(() => setSubmissions([]));
   }, []);
-
-  const fetchSubmissions = async () => {
-    try {
-      const response = await fetch('http://localhost:3000/api/org/submissions?organizationId=default-org');
-      const data = await response.json();
-      setSubmissions(data || []);
-    } catch (err) {
-      console.error('Failed to fetch submissions:', err);
-    }
-  };
 
   const handleApprove = async (id: string) => {
     try {
-      await fetch(`http://localhost:3000/api/org/submissions/${id}/approve`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reviewerId: 'current-user-id' }),
-      });
-      fetchSubmissions();
+      await approveSubmission(id);
+      fetchPendingApprovals().then(setSubmissions);
       setIsDetailDialogOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error approving submission:', err);
+      alert(err.message || 'Approve failed');
     }
   };
 
@@ -73,18 +70,11 @@ export default function Approvals() {
     if (!selectedSubmission) return;
 
     try {
-      await fetch(`http://localhost:3000/api/org/submissions/${selectedSubmission.id}/correction`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reviewerId: 'current-user-id',
-          correctionNotes,
-        }),
-      });
+      await sendSubmissionForCorrection(selectedSubmission.id, correctionNotes);
       setCorrectionNotes("");
       setIsCorrectionDialogOpen(false);
       setIsDetailDialogOpen(false);
-      fetchSubmissions();
+      fetchPendingApprovals().then(setSubmissions);
     } catch (err) {
       console.error('Error sending correction:', err);
     }
@@ -95,15 +85,8 @@ export default function Approvals() {
     if (!reason) return;
 
     try {
-      await fetch(`http://localhost:3000/api/org/submissions/${id}/reject`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reviewerId: 'current-user-id',
-          rejectionReason: reason,
-        }),
-      });
-      fetchSubmissions();
+      await rejectSubmission(id, reason);
+      fetchPendingApprovals().then(setSubmissions);
       setIsDetailDialogOpen(false);
     } catch (err) {
       console.error('Error rejecting submission:', err);
@@ -124,11 +107,13 @@ export default function Approvals() {
   };
 
   const filteredSubmissions = submissions.filter((s: any) => {
-    const matchesStatus = statusFilter === 'all' ||
-                          (statusFilter === 'pending' && s.status === 'new') ||
-                          (statusFilter === 'completed' && s.status === 'completed') ||
-                          (statusFilter === 'correction' && s.status === 'correction');
-    return matchesStatus;
+    const matchesLevel =
+      levelFilter === "all" || String(s.currentReviewLevel || 1) === levelFilter;
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "pending" && s.status === "pending_review") ||
+      s.status === statusFilter;
+    return matchesLevel && matchesStatus;
   });
 
   return (
@@ -215,7 +200,7 @@ export default function Approvals() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {submissions.filter((s: any) => s.status === 'new').length}
+              {submissions.filter((s: any) => s.status === "pending_review").length}
             </div>
           </CardContent>
         </Card>
@@ -293,7 +278,7 @@ export default function Approvals() {
                             submission.status === 'rejected' ? 'secondary' : 'outline'
                           }
                         >
-                          {submission.status}
+                          {submission.status === "pending_review" ? "Pending review" : submission.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -308,16 +293,16 @@ export default function Approvals() {
                         <Badge variant="outline">L{submission.currentReviewLevel || 1}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedSubmission(submission);
-                            setIsDetailDialogOpen(true);
-                          }}
-                        >
-                          Review
-                        </Button>
+                        <TableActionsMenu>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedSubmission(submission);
+                              setIsDetailDialogOpen(true);
+                            }}
+                          >
+                            Review
+                          </DropdownMenuItem>
+                        </TableActionsMenu>
                       </TableCell>
                     </TableRow>
                   ))
@@ -369,7 +354,7 @@ export default function Approvals() {
                             submission.status === 'rejected' ? 'secondary' : 'outline'
                           }
                         >
-                          {submission.status}
+                          {submission.status === "pending_review" ? "Pending review" : submission.status}
                         </Badge>
                       </TableCell>
                       <TableCell>

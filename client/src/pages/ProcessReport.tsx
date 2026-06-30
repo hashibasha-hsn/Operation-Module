@@ -18,52 +18,45 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Download, Filter } from "lucide-react";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
+import { Search, Download, Filter, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  type DateFilter,
+  exportRowsToCsv,
+  fetchProcessReport,
+  fetchPublishedProcesses,
+} from "@/lib/reportApi";
 
 export default function ProcessReport() {
   const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [processId, setProcessId] = useState("");
+  const [processes, setProcesses] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchProcessReport();
+    fetchPublishedProcesses().then(setProcesses).catch(() => setProcesses([]));
+  }, []);
+
+  useEffect(() => {
+    if (processId) fetchProcessReportData();
   }, [processId, dateFilter, statusFilter]);
 
-  const fetchProcessReport = async () => {
+  const fetchProcessReportData = async () => {
     if (!processId) return;
     setLoading(true);
     try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const organizationId = user.organizationId;
-
-      let startDate, endDate;
-      if (dateFilter === "today") {
-        startDate = new Date().toISOString().split('T')[0];
-        endDate = new Date().toISOString().split('T')[0];
-      } else if (dateFilter === "week") {
-        const now = new Date();
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        startDate = weekAgo.toISOString().split('T')[0];
-        endDate = now.toISOString().split('T')[0];
-      } else if (dateFilter === "month") {
-        const now = new Date();
-        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        startDate = monthAgo.toISOString().split('T')[0];
-        endDate = now.toISOString().split('T')[0];
-      }
-
-      const response = await fetch(
-        `http://localhost:3001/submissions/reports/process-report?processId=${processId}&organizationId=${organizationId}${startDate ? `&startDate=${startDate}` : ''}${endDate ? `&endDate=${endDate}` : ''}`
-      );
-      const data = await response.json();
+      const data = await fetchProcessReport(processId, dateFilter);
       setSubmissions(data);
     } catch (error) {
       console.error("Error fetching process report:", error);
+      setSubmissions([]);
     } finally {
       setLoading(false);
     }
@@ -91,12 +84,37 @@ export default function ProcessReport() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{t('processReport')}</h1>
-          <p className="text-muted-foreground mt-1">Process-specific submission data</p>
+        <div className="flex items-center gap-3">
+          <Link href="/reporting">
+            <Button variant="ghost" size="sm" className="gap-1">
+              <ArrowLeft className="w-4 h-4" />
+              {t("reportingAndInsights")}
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold">{t("processReport")}</h1>
+            <p className="text-muted-foreground mt-1">{t("processReportsDesc")}</p>
+          </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() =>
+              exportRowsToCsv(
+                "process-report.csv",
+                ["ID", "Store ID", "Submitted By", "Status", "Submitted At"],
+                filteredSubmissions.map((s) => [
+                  s.id,
+                  s.storeId,
+                  s.submittedBy,
+                  s.status,
+                  s.submittedAt || "",
+                ]),
+              )
+            }
+            disabled={!filteredSubmissions.length}
+          >
             <Download className="w-4 h-4" />
             Export
           </Button>
@@ -104,48 +122,54 @@ export default function ProcessReport() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <Input
-          placeholder="Enter Process ID"
-          value={processId}
-          onChange={(e) => setProcessId(e.target.value)}
-          className="w-48"
-        />
+      <div className="flex items-center gap-4 flex-wrap">
+        <Select value={processId} onValueChange={setProcessId}>
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder={t("selectProcess")} />
+          </SelectTrigger>
+          <SelectContent>
+            {processes.map((process) => (
+              <SelectItem key={process.id} value={process.id}>
+                {process.title || process.name || process.id}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search submissions..."
+            placeholder={t("searchSubmissions")}
             className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Select value={dateFilter} onValueChange={setDateFilter}>
+        <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DateFilter)}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Date Range" />
+            <SelectValue placeholder={t("dateRange")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Time</SelectItem>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="week">This Week</SelectItem>
-            <SelectItem value="month">This Month</SelectItem>
+            <SelectItem value="all">{t("allTime")}</SelectItem>
+            <SelectItem value="today">{t("today")}</SelectItem>
+            <SelectItem value="week">{t("thisWeek")}</SelectItem>
+            <SelectItem value="month">{t("thisMonth")}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={t("status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="new">New</SelectItem>
-            <SelectItem value="correction">Correction</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="all">{t("allStatus")}</SelectItem>
+            <SelectItem value="completed">{t("completed")}</SelectItem>
+            <SelectItem value="new">{t("new")}</SelectItem>
+            <SelectItem value="correction">{t("correction")}</SelectItem>
+            <SelectItem value="rejected">{t("rejected")}</SelectItem>
           </SelectContent>
         </Select>
         <Button variant="outline" className="gap-2">
           <Filter className="w-4 h-4" />
-          More Filters
+          {t("moreFilters")}
         </Button>
       </div>
 
@@ -160,7 +184,7 @@ export default function ProcessReport() {
         <CardContent>
           {!processId ? (
             <div className="flex items-center justify-center h-48">
-              <p className="text-muted-foreground">Please enter a Process ID to view reports</p>
+              <p className="text-muted-foreground">{t("selectProcess")}</p>
             </div>
           ) : loading ? (
             <div className="flex items-center justify-center h-48">
@@ -196,9 +220,9 @@ export default function ProcessReport() {
                           : 'N/A'}
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm">
-                          View
-                        </Button>
+                        <TableActionsMenu>
+                          <DropdownMenuItem>View</DropdownMenuItem>
+                        </TableActionsMenu>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -16,9 +16,29 @@ export class SystemRolesService {
   }
 
   async findAll(): Promise<SystemRole[]> {
-    return await this.systemRolesRepository.find({
+    const roles = await this.systemRolesRepository.find({
       where: { isActive: true },
-      order: { scopeLevel: 'ASC' },
+    });
+
+    const hierarchyOrder = [
+      'company_admin',
+      'non_creator_company_admin',
+      'area_manager',
+      'non_creator_area_manager',
+      'process_manager',
+      'user_manager',
+      'store_manager',
+      'non_creator_store_manager',
+      'store_employee',
+    ];
+
+    return roles.sort((a, b) => {
+      const aIndex = hierarchyOrder.indexOf(a.name);
+      const bIndex = hierarchyOrder.indexOf(b.name);
+      const aRank = aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex;
+      const bRank = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex;
+      if (aRank !== bRank) return aRank - bRank;
+      return a.displayName.localeCompare(b.displayName);
     });
   }
 

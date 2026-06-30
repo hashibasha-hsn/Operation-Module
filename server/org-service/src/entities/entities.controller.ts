@@ -12,13 +12,11 @@ export class EntitiesController {
   }
 
   @Get()
-  findAll(@Query('organizationId') organizationId: string) {
-    return this.entitiesService.findAll(organizationId);
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.entitiesService.findOne(id);
+  findAll(
+    @Query('organizationId') organizationId: string,
+    @Query('search') search?: string,
+  ) {
+    return this.entitiesService.findAll(organizationId, search);
   }
 
   @Get('entity-id/:entityId')
@@ -27,8 +25,16 @@ export class EntitiesController {
   }
 
   @Get('status/:storeStatus')
-  findByStoreStatus(@Param('storeStatus') storeStatus: string, @Query('organizationId') organizationId: string) {
+  findByStoreStatus(
+    @Param('storeStatus') storeStatus: string,
+    @Query('organizationId') organizationId: string,
+  ) {
     return this.entitiesService.findByStoreStatus(storeStatus, organizationId);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.entitiesService.findOne(id);
   }
 
   @Put(':id')

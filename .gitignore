@@ -111,3 +111,22 @@ temp/
 # Manus version file (auto-generated, not part of source)
 client/public/__manus__/version.json
 .project-config.json
+
+# Visual Studio workspace
+.vs/
+
+# Manus debug/session logs (may contain network data)
+.manus-logs/
+
+# User-uploaded media
+server/org-service/uploads/
+**/uploads/
+
+# Local data import spreadsheets
+*.xlsx
+
+# Local test credentials
+test-admin-setup.json
+
+# Loose local screenshots
+/image.png

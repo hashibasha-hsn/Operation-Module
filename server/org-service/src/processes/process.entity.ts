@@ -15,6 +15,9 @@ export class Process {
   @Column({ length: 50, nullable: true })
   processTag: string;
 
+  @Column({ type: 'json', nullable: true })
+  processTags: string[];
+
   @Column({ default: 'draft' })
   status: string; // 'draft', 'published', 'archived'
 
@@ -35,6 +38,9 @@ export class Process {
 
   @Column({ type: 'json', nullable: true })
   reminderConfig: any;
+
+  @Column({ type: 'json', nullable: true })
+  properties: any;
 
   @Column()
   organizationId: string;

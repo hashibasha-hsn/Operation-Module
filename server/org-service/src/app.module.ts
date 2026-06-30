@@ -16,6 +16,7 @@ import { AssessmentsModule } from './assessments/assessments.module';
 import { ExecutiveDashboardModule } from './executive-dashboard/executive-dashboard.module';
 import { BIDashboardModule } from './bi-dashboard/bi-dashboard.module';
 import { NoticeboardModule } from './noticeboard/noticeboard.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { NoticeboardModule } from './noticeboard/noticeboard.module';
     BIDashboardModule,
     ExecutiveDashboardModule,
     NoticeboardModule,
+    AuditLogsModule,
   ],
 })
 export class AppModule {}

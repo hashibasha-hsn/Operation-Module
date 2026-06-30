@@ -33,7 +33,10 @@ export class AuthController {
     @Request() req?: any,
   ) {
     const ipAddress = req?.ip || req?.connection?.remoteAddress;
-    const user = await this.authService.validateUser(body.email, body.password);
+    const user = await this.authService.validateUser(
+      body.email?.trim().toLowerCase() ?? '',
+      body.password?.trim() ?? '',
+    );
     
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -66,6 +69,11 @@ export class AuthController {
   @Get('check-setup')
   async checkSetup() {
     return this.authService.checkSetup();
+  }
+
+  @Get('users/last-logins')
+  async getLastLogins() {
+    return this.authService.getLastLogins();
   }
 
   @Delete('users/:id')

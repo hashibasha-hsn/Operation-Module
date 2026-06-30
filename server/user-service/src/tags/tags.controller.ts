@@ -54,7 +54,7 @@ export class TagsController {
 
   // Assignee Profile Endpoints
   @Post('assignee-profile')
-  createAssigneeProfile(@Body() createProfileDto: Partial<AssigneeProfile>) {
+  createAssigneeProfile(@Body() createProfileDto: Partial<AssigneeProfile & { userIds?: string[] }>) {
     return this.tagsService.createAssigneeProfile(createProfileDto);
   }
 
@@ -69,7 +69,10 @@ export class TagsController {
   }
 
   @Put('assignee-profile/:id')
-  updateAssigneeProfile(@Param('id') id: string, @Body() updateProfileDto: Partial<AssigneeProfile>) {
+  updateAssigneeProfile(
+    @Param('id') id: string,
+    @Body() updateProfileDto: Partial<AssigneeProfile & { userIds?: string[] }>,
+  ) {
     return this.tagsService.updateAssigneeProfile(id, updateProfileDto);
   }
 

@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Audit } from './audit.entity';
 import { AuditSection } from './audit-section.entity';
 import { AuditQuestion } from './audit-question.entity';
+import { SaveAuditDraftDto } from './save-audit-draft.dto';
 
 @Injectable()
 export class AuditsService {
@@ -14,7 +15,124 @@ export class AuditsService {
     private sectionsRepository: Repository<AuditSection>,
     @InjectRepository(AuditQuestion)
     private questionsRepository: Repository<AuditQuestion>,
+    private readonly dataSource: DataSource,
   ) {}
+
+  async saveDraft(dto: SaveAuditDraftDto): Promise<Audit> {
+    if (!dto.title?.trim()) {
+      throw new Error('Audit title is required');
+    }
+
+    const auditId = await this.dataSource.transaction(async (manager) => {
+      const auditRepo = manager.getRepository(Audit);
+      const sectionRepo = manager.getRepository(AuditSection);
+      const questionRepo = manager.getRepository(AuditQuestion);
+
+      const auditPayload: Partial<Audit> = {
+        title: dto.title.trim(),
+        description: dto.description?.trim() ?? '',
+        processTags: dto.processTags ?? [],
+        processTag: dto.processTags?.[0] ?? dto.processTag ?? null,
+        organizationId: dto.organizationId,
+        createdBy: dto.createdBy ?? null,
+        status: 'draft',
+        properties: dto.properties ?? null,
+        frequency: dto.frequency ?? null,
+        frequencyConfig: dto.frequencyConfig ?? null,
+        reminderConfig: dto.reminderConfig ?? null,
+        scoringConfig: dto.scoringConfig ?? null,
+        passThreshold: dto.passThreshold ?? null,
+        reviewLevels: dto.reviewLevels ?? 1,
+        requiresApproval: dto.requiresApproval ?? true,
+        assigneeIds: dto.assigneeIds ?? [],
+        storeIds: dto.storeIds ?? [],
+      };
+
+      let audit: Audit;
+      if (dto.id) {
+        const existing = await auditRepo.findOne({ where: { id: dto.id } });
+        if (!existing) {
+          throw new NotFoundException(`Audit ${dto.id} not found`);
+        }
+        await auditRepo.update(dto.id, auditPayload);
+        await sectionRepo.delete({ auditId: dto.id });
+        audit = await auditRepo.findOne({ where: { id: dto.id } });
+      } else {
+        audit = await auditRepo.save(auditRepo.create(auditPayload));
+      }
+
+      const criticalQuestionIds: string[] = [];
+
+      for (const [sectionIndex, sectionDto] of (dto.sections ?? []).entries()) {
+        const section = await sectionRepo.save(
+          sectionRepo.create({
+            title: sectionDto.title?.trim() || `Section ${sectionIndex + 1}`,
+            description: sectionDto.description?.trim() ?? '',
+            displayOrder: sectionDto.displayOrder ?? sectionIndex,
+            maxScore: sectionDto.maxScore ?? null,
+            weight: sectionDto.weight ?? null,
+            auditId: audit.id,
+          }),
+        );
+
+        for (const [questionIndex, questionDto] of (sectionDto.questions ?? []).entries()) {
+          const question = await questionRepo.save(
+            questionRepo.create({
+              questionText: questionDto.questionText?.trim() || 'Untitled question',
+              questionType: questionDto.questionType,
+              options: questionDto.options ?? null,
+              isRequired: questionDto.isRequired ?? false,
+              validationRules: questionDto.validationRules ?? null,
+              displayOrder: questionDto.displayOrder ?? questionIndex,
+              isCritical: questionDto.isCritical ?? false,
+              maxScore: questionDto.maxScore ?? null,
+              weight: questionDto.weight ?? null,
+              sectionId: section.id,
+            }),
+          );
+          if (question.isCritical) {
+            criticalQuestionIds.push(question.id);
+          }
+        }
+      }
+
+      if (criticalQuestionIds.length > 0) {
+        await auditRepo.update(audit.id, { criticalQuestionIds });
+      }
+
+      return audit.id;
+    });
+
+    return this.findOneWithSections(auditId);
+  }
+
+  async findPublished(organizationId: string): Promise<Audit[]> {
+    return this.auditsRepository.find({
+      where: { organizationId, status: 'published', isActive: true },
+      order: { title: 'ASC' },
+    });
+  }
+
+  async findAssignedToUser(
+    userId: string,
+    storeId: string | undefined,
+    organizationId: string,
+  ): Promise<Audit[]> {
+    const published = await this.findPublished(organizationId);
+    return published.filter(
+      (audit) =>
+        audit.assigneeIds?.includes(userId) ||
+        (storeId && audit.storeIds?.includes(storeId)),
+    );
+  }
+
+  async assignUserToAudits(userId: string, auditIds: string[]): Promise<void> {
+    for (const auditId of auditIds) {
+      const audit = await this.findOne(auditId);
+      const assigneeIds = [...new Set([...(audit.assigneeIds ?? []), userId])];
+      await this.auditsRepository.update(auditId, { assigneeIds });
+    }
+  }
 
   async createAuditSetup(data: {
     title: string;
@@ -53,13 +171,25 @@ export class AuditsService {
     scoringConfig?: any;
     passThreshold?: number;
     reviewLevels?: number;
-    occurrence?: 'one-time' | 'recurring';
-    responsesAfterEndTime?: 'accept' | 'reject';
-    numberOfResponses?: 'one' | 'multiple';
-    submissionBy?: 'anyone' | 'everyone';
-    dateRangeSelection?: 'allowed' | 'restricted';
+    properties?: Record<string, unknown>;
+    requiresApproval?: boolean;
   }): Promise<Audit> {
-    await this.auditsRepository.update(id, data);
+    const existing = await this.findOne(id);
+    const mergedProperties = {
+      ...(existing.properties ?? {}),
+      ...(data.properties ?? {}),
+    };
+    await this.auditsRepository.update(id, {
+      frequency: data.frequency ?? existing.frequency,
+      frequencyConfig: data.frequencyConfig ?? existing.frequencyConfig,
+      visibilityRules: data.visibilityRules ?? existing.visibilityRules,
+      reminderConfig: data.reminderConfig ?? existing.reminderConfig,
+      scoringConfig: data.scoringConfig ?? existing.scoringConfig,
+      passThreshold: data.passThreshold ?? existing.passThreshold,
+      reviewLevels: data.reviewLevels ?? existing.reviewLevels,
+      requiresApproval: data.requiresApproval ?? existing.requiresApproval,
+      properties: Object.keys(mergedProperties).length ? mergedProperties : existing.properties,
+    });
     return await this.findOne(id);
   }
 
@@ -84,9 +214,11 @@ export class AuditsService {
   }
 
   async findOne(id: string): Promise<Audit> {
-    return await this.auditsRepository.findOne({
-      where: { id },
-    });
+    const audit = await this.auditsRepository.findOne({ where: { id } });
+    if (!audit) {
+      throw new NotFoundException(`Audit ${id} not found`);
+    }
+    return audit;
   }
 
   async findOneWithSections(id: string): Promise<Audit> {

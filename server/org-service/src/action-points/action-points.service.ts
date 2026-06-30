@@ -85,6 +85,64 @@ export class ActionPointsService {
     await this.actionPointsRepository.delete(id);
   }
 
+  async createFromSubmission(payload: {
+    submissionId: string;
+    workflowType: 'process' | 'audit';
+    workflowId: string;
+    storeId: string;
+    organizationId: string;
+    createdBy: string;
+    responses: Record<string, string>;
+    questions: Array<{ id: string; questionText: string; options?: Record<string, unknown> }>;
+  }): Promise<ActionPoint[]> {
+    const created: ActionPoint[] = [];
+
+    for (const question of payload.questions ?? []) {
+      const opts = question.options ?? {};
+      const mode = opts.actionPoint;
+      if (mode !== 'auto') continue;
+
+      const triggers = (opts.actionPointAutoTriggers as string[]) ?? [];
+      const answer = payload.responses?.[question.id];
+      if (!answer || !triggers.includes(answer)) continue;
+
+      const existing = await this.actionPointsRepository.findOne({
+        where: {
+          submissionId: payload.submissionId,
+          questionId: question.id,
+        },
+      });
+      if (existing) continue;
+
+      const autoConfig = (opts.actionPointAutoConfig as Record<string, unknown>) ?? {};
+      const dueDays = Number(autoConfig.dueDays ?? 3);
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + dueDays);
+
+      const ap = await this.create({
+        title: String(autoConfig.title ?? `${question.questionText} — ${answer}`),
+        description: String(autoConfig.description ?? `Auto action point for answer: ${answer}`),
+        priority: String(autoConfig.priority ?? 'medium'),
+        assignedTo: String(autoConfig.assignedTo ?? payload.createdBy),
+        closureAssignedTo: String(autoConfig.closureAssignedTo ?? payload.createdBy),
+        dueDate,
+        triggerType: 'auto',
+        submissionId: payload.submissionId,
+        questionId: question.id,
+        workflowType: payload.workflowType,
+        workflowId: payload.workflowId,
+        storeId: payload.storeId,
+        organizationId: payload.organizationId,
+        createdBy: payload.createdBy,
+        autoTriggerConfig: { answer, triggers, ...autoConfig },
+        status: 'open',
+      });
+      created.push(ap);
+    }
+
+    return created;
+  }
+
   // Action Point Report methods
   async getActionPointsOrgReport(organizationId: string, filters: any = {}): Promise<any> {
     const query = this.actionPointsRepository.createQueryBuilder('actionPoint')

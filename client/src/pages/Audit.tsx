@@ -42,25 +42,25 @@ export default function Audit() {
           <TabsList className="bg-white border border-gray-200 rounded-lg p-1">
             <TabsTrigger
               value="process"
-              className="data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:border-orange-500 border border-transparent rounded-md px-6 py-2"
+              className="data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:border-sky-600 border border-transparent rounded-md px-6 py-2"
             >
               Process
             </TabsTrigger>
             <TabsTrigger
               value="audit"
-              className="data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:border-orange-500 border border-transparent rounded-md px-6 py-2"
+              className="data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:border-sky-600 border border-transparent rounded-md px-6 py-2"
             >
               Audit
             </TabsTrigger>
             <TabsTrigger
               value="draft"
-              className="data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:border-orange-500 border border-transparent rounded-md px-6 py-2"
+              className="data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:border-sky-600 border border-transparent rounded-md px-6 py-2"
             >
               Draft
             </TabsTrigger>
             <TabsTrigger
               value="template"
-              className="data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:border-orange-500 border border-transparent rounded-md px-6 py-2"
+              className="data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:border-sky-600 border border-transparent rounded-md px-6 py-2"
             >
               Template Library
             </TabsTrigger>
@@ -80,7 +80,7 @@ export default function Audit() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                       placeholder="Search..."
-                      className="pl-10 border-gray-300 focus:border-orange-500"
+                      className="pl-10 border-gray-300 focus:border-sky-500"
                     />
                   </div>
                 </TooltipTrigger>
@@ -195,7 +195,7 @@ export default function Audit() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                       placeholder="Search..."
-                      className="pl-10 border-gray-300 focus:border-orange-500"
+                      className="pl-10 border-gray-300 focus:border-sky-500"
                     />
                   </div>
                 </TooltipTrigger>
@@ -309,7 +309,7 @@ export default function Audit() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                       placeholder="Search..."
-                      className="pl-10 border-gray-300 focus:border-orange-500"
+                      className="pl-10 border-gray-300 focus:border-sky-500"
                     />
                   </div>
                 </TooltipTrigger>
@@ -423,7 +423,7 @@ export default function Audit() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                       placeholder="Search..."
-                      className="pl-10 border-gray-300 focus:border-orange-500"
+                      className="pl-10 border-gray-300 focus:border-sky-500"
                     />
                   </div>
                 </TooltipTrigger>

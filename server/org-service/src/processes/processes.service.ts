@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Process } from './process.entity';
 import { ProcessSection } from './process-section.entity';
 import { ProcessQuestion } from './process-question.entity';
+import { SaveProcessDraftDto } from './save-process-draft.dto';
 
 @Injectable()
 export class ProcessesService {
@@ -14,11 +15,90 @@ export class ProcessesService {
     private sectionsRepository: Repository<ProcessSection>,
     @InjectRepository(ProcessQuestion)
     private questionsRepository: Repository<ProcessQuestion>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(processData: Partial<Process>): Promise<Process> {
-    const process = this.processesRepository.create(processData);
+    const process = this.processesRepository.create({
+      status: 'draft',
+      ...processData,
+    });
     return await this.processesRepository.save(process);
+  }
+
+  async saveDraft(dto: SaveProcessDraftDto): Promise<Process> {
+    if (!dto.title?.trim()) {
+      throw new Error('Process title is required');
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const processRepo = manager.getRepository(Process);
+      const sectionRepo = manager.getRepository(ProcessSection);
+      const questionRepo = manager.getRepository(ProcessQuestion);
+
+      const processPayload: Partial<Process> = {
+        title: dto.title.trim(),
+        description: dto.description?.trim() ?? '',
+        processTags: dto.processTags ?? [],
+        processTag: dto.processTags?.[0] ?? null,
+        organizationId: dto.organizationId,
+        status: 'draft',
+        properties: dto.properties ?? null,
+        frequency: dto.frequency ?? null,
+        frequencyConfig: dto.frequencyConfig ?? null,
+        reminderConfig: dto.reminderConfig ?? null,
+        requiresApproval: dto.requiresApproval ?? false,
+        assigneeIds: dto.assigneeIds ?? [],
+        storeIds: dto.storeIds ?? [],
+      };
+
+      let process: Process;
+      if (dto.id) {
+        const existing = await processRepo.findOne({ where: { id: dto.id } });
+        if (!existing) {
+          throw new NotFoundException(`Process ${dto.id} not found`);
+        }
+        if (!existing.createdBy && dto.createdBy) {
+          processPayload.createdBy = dto.createdBy;
+        }
+        await processRepo.update(dto.id, processPayload);
+        await sectionRepo.delete({ processId: dto.id });
+        process = await processRepo.findOne({ where: { id: dto.id } });
+      } else {
+        processPayload.createdBy = dto.createdBy ?? null;
+        process = await processRepo.save(processRepo.create(processPayload));
+      }
+
+      for (const [sectionIndex, sectionDto] of (dto.sections ?? []).entries()) {
+        const section = await sectionRepo.save(
+          sectionRepo.create({
+            title: sectionDto.title?.trim() || `Section ${sectionIndex + 1}`,
+            description: sectionDto.description?.trim() ?? '',
+            displayOrder: sectionDto.displayOrder ?? sectionIndex,
+            processId: process.id,
+          }),
+        );
+
+        for (const [questionIndex, questionDto] of (sectionDto.questions ?? []).entries()) {
+          await questionRepo.save(
+            questionRepo.create({
+              questionText: questionDto.questionText?.trim() || 'Untitled question',
+              questionType: questionDto.questionType,
+              options: questionDto.options ?? null,
+              isRequired: questionDto.isRequired ?? false,
+              validationRules: questionDto.validationRules ?? null,
+              displayOrder: questionDto.displayOrder ?? questionIndex,
+              sectionId: section.id,
+            }),
+          );
+        }
+      }
+
+      return manager.getRepository(Process).findOne({
+        where: { id: process.id },
+        relations: ['sections', 'sections.questions'],
+      });
+    });
   }
 
   async findAll(organizationId: string): Promise<Process[]> {
@@ -29,11 +109,44 @@ export class ProcessesService {
     });
   }
 
+  async findPublished(organizationId: string): Promise<Process[]> {
+    return await this.processesRepository.find({
+      where: { organizationId, status: 'published', isActive: true },
+      relations: ['sections', 'sections.questions'],
+      order: { title: 'ASC' },
+    });
+  }
+
+  async findAssignedToUser(
+    userId: string,
+    storeId: string | undefined,
+    organizationId: string,
+  ): Promise<Process[]> {
+    const published = await this.findPublished(organizationId);
+    return published.filter(
+      (process) =>
+        process.assigneeIds?.includes(userId) ||
+        (storeId && process.storeIds?.includes(storeId)),
+    );
+  }
+
+  async assignUserToProcesses(userId: string, processIds: string[]): Promise<void> {
+    for (const processId of processIds) {
+      const process = await this.findOne(processId);
+      const assigneeIds = [...new Set([...(process.assigneeIds ?? []), userId])];
+      await this.processesRepository.update(processId, { assigneeIds });
+    }
+  }
+
   async findOne(id: string): Promise<Process> {
-    return await this.processesRepository.findOne({
+    const process = await this.processesRepository.findOne({
       where: { id },
       relations: ['sections', 'sections.questions'],
     });
+    if (!process) {
+      throw new NotFoundException(`Process ${id} not found`);
+    }
+    return process;
   }
 
   async update(id: string, processData: Partial<Process>): Promise<Process> {
@@ -45,15 +158,30 @@ export class ProcessesService {
     await this.processesRepository.delete(id);
   }
 
+  async saveAssignment(
+    id: string,
+    assignment: { assigneeIds?: string[]; storeIds?: string[] },
+  ): Promise<Process> {
+    const process = await this.findOne(id);
+    await this.processesRepository.update(id, {
+      assigneeIds: assignment.assigneeIds ?? process.assigneeIds ?? [],
+      storeIds: assignment.storeIds ?? process.storeIds ?? [],
+    });
+    return this.findOne(id);
+  }
+
   async publish(id: string): Promise<Process> {
-    return await this.update(id, { status: 'published' });
+    const process = await this.findOne(id);
+    if (!process.title?.trim()) {
+      throw new Error('Process title is required before publish');
+    }
+    return await this.update(id, { status: 'published', isActive: true });
   }
 
   async archive(id: string): Promise<Process> {
     return await this.update(id, { status: 'archived' });
   }
 
-  // Section methods
   async createSection(sectionData: Partial<ProcessSection>): Promise<ProcessSection> {
     const section = this.sectionsRepository.create(sectionData);
     return await this.sectionsRepository.save(section);
@@ -68,7 +196,6 @@ export class ProcessesService {
     await this.sectionsRepository.delete(id);
   }
 
-  // Question methods
   async createQuestion(questionData: Partial<ProcessQuestion>): Promise<ProcessQuestion> {
     const question = this.questionsRepository.create(questionData);
     return await this.questionsRepository.save(question);

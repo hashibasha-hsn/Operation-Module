@@ -350,7 +350,7 @@ export default function AuditSetup() {
               <span className="font-medium">Saved</span>
             </div>
           )}
-          <Button onClick={handlePublish} className="bg-orange-500 hover:bg-orange-600">
+          <Button onClick={handlePublish} className="bg-sky-600 hover:bg-sky-700">
             Publish Audit
           </Button>
         </div>
@@ -361,28 +361,28 @@ export default function AuditSetup() {
         <TabsList className="grid w-full grid-cols-4 bg-transparent border-b rounded-none h-auto p-0">
           <TabsTrigger
             value="basic"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 data-[state=active]:bg-transparent rounded-none px-5 py-4 text-base font-semibold transition-all duration-300 ease-in-out hover:bg-gray-50"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-sky-500 data-[state=active]:text-sky-600 data-[state=active]:bg-transparent rounded-none px-5 py-4 text-base font-semibold transition-all duration-300 ease-in-out hover:bg-gray-50"
           >
             <FileText className="w-4 h-4 mr-2" />
             Basic Info
           </TabsTrigger>
           <TabsTrigger
             value="build"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 data-[state=active]:bg-transparent rounded-none px-5 py-4 text-base font-semibold transition-all duration-300 ease-in-out hover:bg-gray-50"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-sky-500 data-[state=active]:text-sky-600 data-[state=active]:bg-transparent rounded-none px-5 py-4 text-base font-semibold transition-all duration-300 ease-in-out hover:bg-gray-50"
           >
             <FileText className="w-4 h-4 mr-2" />
             Build
           </TabsTrigger>
           <TabsTrigger
             value="properties"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 data-[state=active]:bg-transparent rounded-none px-5 py-4 text-base font-semibold transition-all duration-300 ease-in-out hover:bg-gray-50"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-sky-500 data-[state=active]:text-sky-600 data-[state=active]:bg-transparent rounded-none px-5 py-4 text-base font-semibold transition-all duration-300 ease-in-out hover:bg-gray-50"
           >
             <Settings className="w-4 h-4 mr-2" />
             Properties
           </TabsTrigger>
           <TabsTrigger
             value="assign"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 data-[state=active]:bg-transparent rounded-none px-5 py-4 text-base font-semibold transition-all duration-300 ease-in-out hover:bg-gray-50"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-sky-500 data-[state=active]:text-sky-600 data-[state=active]:bg-transparent rounded-none px-5 py-4 text-base font-semibold transition-all duration-300 ease-in-out hover:bg-gray-50"
           >
             <Users className="w-4 h-4 mr-2" />
             Assign
@@ -405,7 +405,7 @@ export default function AuditSetup() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Enter audit title"
-                  className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500 text-base"
+                  className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500 text-base"
                 />
               </div>
 
@@ -419,7 +419,7 @@ export default function AuditSetup() {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Enter audit description"
                   rows={4}
-                  className="border-gray-300 focus:border-orange-500 focus:ring-orange-500 text-base"
+                  className="border-gray-300 focus:border-sky-500 focus:ring-sky-500 text-base"
                 />
               </div>
 
@@ -432,7 +432,7 @@ export default function AuditSetup() {
                   value={processTag}
                   onChange={(e) => setProcessTag(e.target.value)}
                   placeholder="Enter process tag for categorization"
-                  className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500 text-base"
+                  className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500 text-base"
                 />
               </div>
 
@@ -559,7 +559,7 @@ export default function AuditSetup() {
                       value={newSectionTitle}
                       onChange={(e) => setNewSectionTitle(e.target.value)}
                       placeholder="Enter section title"
-                      className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500 text-base"
+                      className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500 text-base"
                     />
                   </div>
                   <div className="space-y-2">
@@ -569,7 +569,7 @@ export default function AuditSetup() {
                       onChange={(e) => setNewSectionDescription(e.target.value)}
                       placeholder="Enter section description"
                       rows={3}
-                      className="border-gray-300 focus:border-orange-500 focus:ring-orange-500 text-base"
+                      className="border-gray-300 focus:border-sky-500 focus:ring-sky-500 text-base"
                     />
                   </div>
                   <div className="flex justify-end gap-2">
@@ -600,13 +600,13 @@ export default function AuditSetup() {
                       onChange={(e) => setNewQuestionText(e.target.value)}
                       placeholder="Enter your question"
                       rows={3}
-                      className="border-gray-300 focus:border-orange-500 focus:ring-orange-500 text-base"
+                      className="border-gray-300 focus:border-sky-500 focus:ring-sky-500 text-base"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-gray-700 font-semibold text-sm">Question Type</Label>
                     <Select value={newQuestionType} onValueChange={setNewQuestionType}>
-                      <SelectTrigger className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                      <SelectTrigger className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -630,7 +630,7 @@ export default function AuditSetup() {
                         value={newQuestionOptions}
                         onChange={(e) => setNewQuestionOptions(e.target.value)}
                         placeholder="Option 1, Option 2, Option 3"
-                        className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500 text-base"
+                        className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500 text-base"
                       />
                     </div>
                   )}
@@ -673,7 +673,7 @@ export default function AuditSetup() {
                   <div className="space-y-2">
                     <Label className="text-gray-700 font-semibold text-sm">Status</Label>
                     <Select value={status} onValueChange={setStatus}>
-                      <SelectTrigger className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                      <SelectTrigger className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -687,7 +687,7 @@ export default function AuditSetup() {
                   <div className="space-y-2">
                     <Label className="text-gray-700 font-semibold text-sm">Frequency</Label>
                     <Select value={frequency} onValueChange={setFrequency}>
-                      <SelectTrigger className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                      <SelectTrigger className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -703,7 +703,7 @@ export default function AuditSetup() {
                   <div className="space-y-2">
                     <Label className="text-gray-700 font-semibold text-sm">Occurrence</Label>
                     <Select value={occurrence} onValueChange={(value: any) => setOccurrence(value)}>
-                      <SelectTrigger className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                      <SelectTrigger className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -716,7 +716,7 @@ export default function AuditSetup() {
                   <div className="space-y-2">
                     <Label className="text-gray-700 font-semibold text-sm">Responses After End-Time</Label>
                     <Select value={responsesAfterEndTime} onValueChange={(value: any) => setResponsesAfterEndTime(value)}>
-                      <SelectTrigger className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                      <SelectTrigger className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -729,7 +729,7 @@ export default function AuditSetup() {
                   <div className="space-y-2">
                     <Label className="text-gray-700 font-semibold text-sm">Number of Responses</Label>
                     <Select value={numberOfResponses} onValueChange={(value: any) => setNumberOfResponses(value)}>
-                      <SelectTrigger className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                      <SelectTrigger className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -742,7 +742,7 @@ export default function AuditSetup() {
                   <div className="space-y-2">
                     <Label className="text-gray-700 font-semibold text-sm">Submission By</Label>
                     <Select value={submissionBy} onValueChange={(value: any) => setSubmissionBy(value)}>
-                      <SelectTrigger className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                      <SelectTrigger className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -755,7 +755,7 @@ export default function AuditSetup() {
                   <div className="space-y-2">
                     <Label className="text-gray-700 font-semibold text-sm">Date Range Selection</Label>
                     <Select value={dateRangeSelection} onValueChange={(value: any) => setDateRangeSelection(value)}>
-                      <SelectTrigger className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                      <SelectTrigger className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -780,7 +780,7 @@ export default function AuditSetup() {
                       onChange={(e) => setPassThreshold(Number(e.target.value))}
                       min="0"
                       max="100"
-                      className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500 text-base"
+                      className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500 text-base"
                     />
                   </div>
 
@@ -792,7 +792,7 @@ export default function AuditSetup() {
                       onChange={(e) => setReviewLevels(Number(e.target.value))}
                       min="1"
                       max="5"
-                      className="h-12 border-gray-300 focus:border-orange-500 focus:ring-orange-500 text-base"
+                      className="h-12 border-gray-300 focus:border-sky-500 focus:ring-sky-500 text-base"
                     />
                   </div>
                 </div>

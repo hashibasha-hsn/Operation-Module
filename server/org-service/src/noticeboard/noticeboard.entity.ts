@@ -47,6 +47,9 @@ export class NoticeboardPost {
   @Column({ name: 'comments_count', default: 0 })
   commentsCount: number;
 
+  @Column({ name: 'display_order', default: 0 })
+  displayOrder: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

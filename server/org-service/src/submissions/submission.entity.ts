@@ -46,6 +46,9 @@ export class Submission {
   @Column({ default: 0 })
   currentReviewLevel: number;
 
+  @Column({ nullable: true })
+  currentReviewerId: string;
+
   @Column()
   organizationId: string;
 

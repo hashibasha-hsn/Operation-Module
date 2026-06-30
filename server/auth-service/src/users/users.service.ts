@@ -22,7 +22,11 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User> {
-    return await this.userRepository.findOne({ where: { email } });
+    const normalized = email.trim().toLowerCase();
+    return await this.userRepository
+      .createQueryBuilder('user')
+      .where('LOWER(user.email) = :email', { email: normalized })
+      .getOne();
   }
 
   async findAll(): Promise<User[]> {
@@ -35,6 +39,20 @@ export class UsersService {
 
   async updateLastLogin(id: string): Promise<void> {
     await this.userRepository.update(id, { lastLoginAt: new Date() });
+  }
+
+  async getAllLastLogins(): Promise<
+    { userId: string; email: string; lastLoginAt: Date | null }[]
+  > {
+    const users = await this.userRepository.find({
+      select: ['id', 'email', 'lastLoginAt'],
+    });
+
+    return users.map((user) => ({
+      userId: user.id,
+      email: user.email,
+      lastLoginAt: user.lastLoginAt ?? null,
+    }));
   }
 
   async setVerificationToken(email: string, token: string, expiresAt: Date): Promise<void> {

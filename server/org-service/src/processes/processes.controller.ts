@@ -3,10 +3,16 @@ import { ProcessesService } from './processes.service';
 import { Process } from './process.entity';
 import { ProcessSection } from './process-section.entity';
 import { ProcessQuestion } from './process-question.entity';
+import { SaveProcessDraftDto } from './save-process-draft.dto';
 
 @Controller('processes')
 export class ProcessesController {
   constructor(private readonly processesService: ProcessesService) {}
+
+  @Post('draft')
+  saveDraft(@Body() dto: SaveProcessDraftDto) {
+    return this.processesService.saveDraft(dto);
+  }
 
   @Post()
   create(@Body() createProcessDto: Partial<Process>) {
@@ -16,6 +22,31 @@ export class ProcessesController {
   @Get()
   findAll(@Query('organizationId') organizationId: string) {
     return this.processesService.findAll(organizationId);
+  }
+
+  @Get('published/list')
+  findPublished(@Query('organizationId') organizationId: string) {
+    return this.processesService.findPublished(organizationId ?? 'default-org');
+  }
+
+  @Get('assigned/list')
+  findAssigned(
+    @Query('userId') userId: string,
+    @Query('storeId') storeId: string,
+    @Query('organizationId') organizationId: string,
+  ) {
+    return this.processesService.findAssignedToUser(
+      userId,
+      storeId || undefined,
+      organizationId ?? 'default-org',
+    );
+  }
+
+  @Post('assign-user')
+  assignUserToProcesses(
+    @Body() body: { userId: string; processIds: string[] },
+  ) {
+    return this.processesService.assignUserToProcesses(body.userId, body.processIds ?? []);
   }
 
   @Get(':id')
@@ -36,6 +67,14 @@ export class ProcessesController {
   @Put(':id/publish')
   publish(@Param('id') id: string) {
     return this.processesService.publish(id);
+  }
+
+  @Put(':id/assignment')
+  saveAssignment(
+    @Param('id') id: string,
+    @Body() body: { assigneeIds?: string[]; storeIds?: string[] },
+  ) {
+    return this.processesService.saveAssignment(id, body);
   }
 
   @Put(':id/archive')

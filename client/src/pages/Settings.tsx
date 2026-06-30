@@ -60,7 +60,7 @@ export default function Settings() {
                       <>
                         <div className="space-y-2">
                           <Label htmlFor="platform-name" className="text-white">{t('platformName')}</Label>
-                          <Input id="platform-name" defaultValue="Hashibasha" />
+                          <Input id="platform-name" defaultValue="Operation Management Platform" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="timezone" className="text-white">{t('timezone')}</Label>
@@ -84,7 +84,7 @@ export default function Settings() {
                       <>
                         <div className="space-y-2">
                           <Label htmlFor="email-from" className="text-white">{t('fromEmail')}</Label>
-                          <Input id="email-from" type="email" placeholder="noreply@hashibasha.com" />
+                          <Input id="email-from" type="email" placeholder="noreply@omp.com" />
                         </div>
                         <div className="flex items-center justify-between">
                           <Label htmlFor="email-notifications" className="text-white">{t('emailNotifications')}</Label>

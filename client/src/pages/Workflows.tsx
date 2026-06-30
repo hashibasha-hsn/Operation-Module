@@ -36,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Plus, Search, FileText, ClipboardCheck, MoreVertical, Edit, Trash2, Copy, Download, QrCode, Link, Filter, Upload } from "lucide-react";
+import { reviewLevelSummary } from "@/lib/reviewConfig";
 
 export default function Workflows() {
   const [activeTab, setActiveTab] = useState("Processes");
@@ -67,6 +68,12 @@ export default function Workflows() {
     } catch (err) {
       console.error('Failed to fetch audits:', err);
     }
+  };
+
+  const getReviewSummary = (item: any) => {
+    const enabled = item.properties?.processWithReview || item.requiresApproval;
+    if (!enabled) return "No review";
+    return reviewLevelSummary(item.properties?.reviewConfig ?? { levels: item.reviewLevels ?? 1, assignees: {} });
   };
 
   const handleToggleStatus = async (id: string, type: 'process' | 'audit', currentStatus: boolean) => {
@@ -285,6 +292,7 @@ export default function Workflows() {
                   <TableHead>Status</TableHead>
                   <TableHead>Active</TableHead>
                   <TableHead>Assignees</TableHead>
+                  <TableHead>Review</TableHead>
                   <TableHead>Stores</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -292,7 +300,7 @@ export default function Workflows() {
               <TableBody>
                 {filteredProcesses.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                       No processes available
                     </TableCell>
                   </TableRow>
@@ -320,6 +328,9 @@ export default function Workflows() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{process.assigneeIds?.length || 0} users</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground">{getReviewSummary(process)}</span>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{process.storeIds?.length || 0} stores</Badge>
@@ -418,7 +429,7 @@ export default function Workflows() {
                         <Badge variant="outline">{audit.passThreshold || 'N/A'}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">L{audit.reviewLevels || 1}</Badge>
+                        <span className="text-xs text-muted-foreground">{getReviewSummary(audit)}</span>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>

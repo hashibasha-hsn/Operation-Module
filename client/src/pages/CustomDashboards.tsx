@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,15 +36,23 @@ import {
   FileText,
   Ticket,
   AlertCircle,
+  ArrowLeft,
 } from "lucide-react";
+import { Link } from "wouter";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  createDashboard,
+  deleteDashboard,
+  fetchDashboardData,
+  fetchDashboards,
+  tabToDashboardType,
+  updateDashboard,
+} from "@/lib/dashboardApi";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 
 export default function CustomDashboards() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("Process & Workflow");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -56,12 +64,43 @@ export default function CustomDashboards() {
     chartType: "bar",
   });
 
+  const [dashboards, setDashboards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [viewData, setViewData] = useState<Record<string, any>>({});
+
   const tabs = ["Process & Workflow", "Ticket & Action Point"];
 
-  const mockDashboards: Record<string, any[]> = {
-    "Process & Workflow": [],
-    "Ticket & Action Point": [],
+  const loadDashboards = async () => {
+    setLoading(true);
+    try {
+      const type = tabToDashboardType(activeTab);
+      const data = await fetchDashboards(type);
+      setDashboards(data || []);
+    } catch {
+      setDashboards([]);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadDashboards();
+  }, [activeTab]);
+
+  const loadDashboardKpis = async (id: string) => {
+    try {
+      const data = await fetchDashboardData(id);
+      setViewData((prev) => ({ ...prev, [id]: data }));
+    } catch {
+      setViewData((prev) => ({ ...prev, [id]: null }));
+    }
+  };
+
+  useEffect(() => {
+    dashboards.forEach((d) => {
+      if (!viewData[d.id]) loadDashboardKpis(d.id);
+    });
+  }, [dashboards]);
 
   const chartTypes = [
     { value: "bar", label: "Bar Chart", icon: BarChart3 },
@@ -74,30 +113,84 @@ export default function CustomDashboards() {
     return <ChartIcon className="w-5 h-5" />;
   };
 
-  const handleCreateDashboard = () => {
-    console.log("Creating dashboard:", newDashboard);
-    setShowCreateDialog(false);
-    setNewDashboard({ name: "", type: "process", chartType: "bar" });
+  const handleCreateDashboard = async () => {
+    if (!newDashboard.name.trim()) return;
+    try {
+      const type =
+        newDashboard.type === "actionPoint" || newDashboard.type === "ticket"
+          ? "action-point"
+          : "process-workflow";
+      await createDashboard({
+        title: newDashboard.name.trim(),
+        type: type as any,
+        chartType: newDashboard.chartType,
+        includeActionPoints: type === "process-workflow",
+      });
+      setShowCreateDialog(false);
+      setNewDashboard({ name: "", type: "process", chartType: "bar" });
+      loadDashboards();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleEditDashboard = () => {
-    console.log("Editing dashboard:", selectedDashboard);
-    setShowEditDialog(false);
+  const handleEditDashboard = async () => {
+    if (!selectedDashboard?.id) return;
+    try {
+      await updateDashboard(selectedDashboard.id, { title: selectedDashboard.name });
+      setShowEditDialog(false);
+      loadDashboards();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleDeleteDashboard = (id: string) => {
-    console.log("Deleting dashboard:", id);
+  const handleDeleteDashboard = async (id: string) => {
+    try {
+      await deleteDashboard(id);
+      loadDashboards();
+    } catch (err) {
+      console.error(err);
+    }
   };
+
+  const mapDashboard = (dashboard: any) => {
+    const data = viewData[dashboard.id];
+    const kpis = data?.kpis ?? data?.metrics ?? {};
+    const firstChart = dashboard.charts?.[0];
+    return {
+      id: dashboard.id,
+      name: dashboard.title,
+      type: dashboard.type,
+      chartType: firstChart?.chartType ?? "bar",
+      lastUpdated: dashboard.updatedAt
+        ? new Date(dashboard.updatedAt).toLocaleDateString()
+        : "—",
+      kpis: {
+        total: kpis.total ?? kpis.totalSubmissions ?? "—",
+        open: kpis.open ?? kpis.openActionPoints ?? "—",
+        done: kpis.completed ?? kpis.completionRate ?? "—",
+      },
+    };
+  };
+
+  const visibleDashboards = dashboards.map(mapDashboard);
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3">
+          <Link href="/reporting">
+            <Button variant="ghost" size="sm" className="gap-1">
+              <ArrowLeft className="w-4 h-4" />
+              {t("reportingAndInsights")}
+            </Button>
+          </Link>
           <LayoutGrid className="w-8 h-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">Custom Dashboards</h1>
-            <p className="text-muted-foreground mt-1">Build your own visualizations and KPIs</p>
+            <h1 className="text-3xl font-bold">{t("customDashboards")}</h1>
+            <p className="text-muted-foreground mt-1">{t("customDashboardsDesc")}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -140,7 +233,10 @@ export default function CustomDashboards() {
 
       {/* Dashboard Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mockDashboards[activeTab as keyof typeof mockDashboards]?.map((dashboard) => (
+        {loading ? (
+          <p className="text-muted-foreground col-span-full text-center py-12">{t("loading")}</p>
+        ) : (
+          visibleDashboards.map((dashboard) => (
           <Card key={dashboard.id} className="hover:shadow-md transition-shadow">
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -160,26 +256,19 @@ export default function CustomDashboards() {
                     </div>
                   </div>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Settings className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => {
-                      setSelectedDashboard(dashboard);
-                      setShowEditDialog(true);
-                    }}>
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDeleteDashboard(dashboard.id)} className="text-destructive">
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <TableActionsMenu>
+                  <DropdownMenuItem onClick={() => {
+                    setSelectedDashboard(dashboard);
+                    setShowEditDialog(true);
+                  }}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDeleteDashboard(dashboard.id)} className="text-destructive">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </TableActionsMenu>
               </div>
             </CardHeader>
             <CardContent>
@@ -210,9 +299,10 @@ export default function CustomDashboards() {
               </div>
             </CardContent>
           </Card>
-        ))}
+        ))
+        )}
 
-        {/* Add New Dashboard Card */}
+        {!loading && (
         <Card
           className="border-dashed hover:border-primary cursor-pointer transition-colors"
           onClick={() => setShowCreateDialog(true)}
@@ -227,6 +317,7 @@ export default function CustomDashboards() {
             </p>
           </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Create Dashboard Dialog */}

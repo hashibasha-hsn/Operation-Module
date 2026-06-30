@@ -16,6 +16,7 @@ import { UserTeamsModule } from './user-teams/user-teams.module';
 import { NoticeboardModule } from './noticeboard/noticeboard.module';
 import { TagsModule } from './tags/tags.module';
 import { SeedModule } from './seed/seed.module';
+import { HybridAssigneeModule } from './hybrid-assignee/hybrid-assignee.module';
 
 @Module({
   imports: [
@@ -30,7 +31,7 @@ import { SeedModule } from './seed/seed.module';
       password: process.env.DB_PASSWORD || 'Rasika',
       database: process.env.DB_NAME || 'hashibasha_user',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true,
+      synchronize: false,
     }),
     ProfilesModule,
     RolesModule,
@@ -47,6 +48,7 @@ import { SeedModule } from './seed/seed.module';
     NoticeboardModule,
     TagsModule,
     SeedModule,
+    HybridAssigneeModule,
   ],
 })
 export class AppModule {}

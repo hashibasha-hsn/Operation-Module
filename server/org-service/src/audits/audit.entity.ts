@@ -14,11 +14,17 @@ export class Audit {
   @Column({ length: 50, nullable: true })
   processTag: string;
 
+  @Column({ type: 'json', nullable: true })
+  processTags: string[];
+
   @Column({ default: 'draft' })
   status: string; // 'draft', 'published', 'archived'
 
   @Column({ nullable: true, length: 50 })
-  frequency: string; // 'daily', 'weekly', 'monthly', 'custom', 'one-time'
+  frequency: string;
+
+  @Column({ type: 'json', nullable: true })
+  properties: Record<string, unknown>;
 
   @Column({ type: 'json', nullable: true })
   frequencyConfig: any;

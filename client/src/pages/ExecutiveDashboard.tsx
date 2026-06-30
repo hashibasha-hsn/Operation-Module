@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, BarChart3, Store, Map, Grid, Tag } from "lucide-react";
+import { Download, BarChart3, Store, Map, Grid, Tag, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { fetchExecutiveDashboard } from "@/lib/reportApi";
 
 export default function ExecutiveDashboard() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("org-summary");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -21,60 +25,80 @@ export default function ExecutiveDashboard() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setData(null);
     fetchData();
   }, [activeTab, startDate, endDate, tagFilter, metricType]);
 
   const fetchData = async () => {
     setLoading(true);
+    setData(null);
     try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const organizationId = user.organizationId;
-
-      let endpoint = "";
-      const params = new URLSearchParams({ organizationId });
-      if (startDate) params.append("startDate", startDate);
-      if (endDate) params.append("endDate", endDate);
-      if (tagFilter) params.append("tagFilter", tagFilter);
-
-      switch (activeTab) {
-        case "org-summary":
-          endpoint = "http://localhost:3001/executive-dashboard/org-summary";
-          params.append("metricType", metricType);
-          break;
-        case "all-stores":
-          endpoint = "http://localhost:3001/executive-dashboard/all-stores";
-          params.append("periodicity", "daily");
-          break;
-        case "heat-map":
-          endpoint = "http://localhost:3001/executive-dashboard/heat-map";
-          params.append("periodicity", "daily");
-          break;
-        case "snapshot":
-          endpoint = "http://localhost:3001/executive-dashboard/snapshot";
-          break;
-        case "process-tag-insights":
-          endpoint = "http://localhost:3001/executive-dashboard/process-tag-insights";
-          params.append("viewType", "completion");
-          break;
-      }
-
-      const response = await fetch(`${endpoint}?${params.toString()}`);
-      const result = await response.json();
+      const result = await fetchExecutiveDashboard(activeTab, {
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        tagFilter: tagFilter || undefined,
+        metricType,
+        periodicity: "daily",
+        viewType: "completion",
+      });
       setData(result);
     } catch (error) {
       console.error("Error fetching data:", error);
+      setData(null);
     } finally {
       setLoading(false);
     }
   };
 
+  const orgSummaryItems = useMemo(
+    () => (Array.isArray(data) ? data : []),
+    [data],
+  );
+
+  const allStoresItems = useMemo(
+    () => (Array.isArray(data) ? data : []),
+    [data],
+  );
+
+  const processTagItems = useMemo(
+    () => (Array.isArray(data) ? data : []),
+    [data],
+  );
+
+  const heatMapData = useMemo(
+    () => ({
+      processes: Array.isArray(data?.processes) ? data.processes : [],
+      stores: Array.isArray(data?.stores) ? data.stores : [],
+      matrix: data?.matrix ?? {},
+    }),
+    [data],
+  );
+
+  const snapshotData = useMemo(
+    () => ({
+      processes: Array.isArray(data?.processes) ? data.processes : [],
+      stores: Array.isArray(data?.stores) ? data.stores : [],
+      snapshot: data?.snapshot ?? {},
+    }),
+    [data],
+  );
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
+          <Link href="/reporting">
+            <Button variant="ghost" size="sm" className="gap-1">
+              <ArrowLeft className="w-4 h-4" />
+              {t("reportingAndInsights")}
+            </Button>
+          </Link>
           <BarChart3 className="w-8 h-8 text-primary" />
-          <h1 className="text-2xl font-bold">Executive Dashboard</h1>
+          <div>
+            <h1 className="text-2xl font-bold">{t("storeHealthCompliance")}</h1>
+            <p className="text-sm text-muted-foreground">{t("storeHealthComplianceDesc")}</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="gap-2">
@@ -183,14 +207,17 @@ export default function ExecutiveDashboard() {
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Loading...</p>
         </div>
-      ) : data ? (
+      ) : data !== null ? (
         <Card>
           <CardContent className="p-6">
             {activeTab === "org-summary" && (
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Organization Summary</h3>
+                {orgSummaryItems.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No summary data for the selected filters.</p>
+                ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {data.map((item: any) => (
+                  {orgSummaryItems.map((item: any) => (
                     <div key={item.tag} className="border rounded-lg p-4">
                       <h4 className="font-medium mb-2">{item.tag}</h4>
                       <div className="space-y-2">
@@ -212,12 +239,16 @@ export default function ExecutiveDashboard() {
                     </div>
                   ))}
                 </div>
+                )}
               </div>
             )}
 
             {activeTab === "all-stores" && (
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">All Stores Performance</h3>
+                {allStoresItems.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No store performance data for the selected filters.</p>
+                ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b">
@@ -230,7 +261,7 @@ export default function ExecutiveDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {data.map((store: any) => (
+                      {allStoresItems.map((store: any) => (
                         <tr key={store.storeId} className="hover:bg-gray-50">
                           <td className="px-4 py-3 font-medium">{store.storeId}</td>
                           <td className="px-4 py-3">{store.completionPercentage}%</td>
@@ -242,18 +273,22 @@ export default function ExecutiveDashboard() {
                     </tbody>
                   </table>
                 </div>
+                )}
               </div>
             )}
 
             {activeTab === "heat-map" && (
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Heat Map</h3>
+                {heatMapData.stores.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No heat map data for the selected filters.</p>
+                ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Store</th>
-                        {data.processes.map((proc: string) => (
+                        {heatMapData.processes.map((proc: string) => (
                           <th key={proc} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                             {proc.slice(0, 8)}...
                           </th>
@@ -261,11 +296,11 @@ export default function ExecutiveDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {data.stores.map((storeId: string) => (
+                      {heatMapData.stores.map((storeId: string) => (
                         <tr key={storeId}>
                           <td className="px-4 py-3 font-medium">{storeId}</td>
-                          {data.processes.map((procId: string) => {
-                            const cell = data.matrix[storeId]?.[procId];
+                          {heatMapData.processes.map((procId: string) => {
+                            const cell = heatMapData.matrix[storeId]?.[procId];
                             const bgColor = cell?.color === 'green' ? 'bg-green-100 text-green-800' 
                               : cell?.color === 'yellow' ? 'bg-yellow-100 text-yellow-800'
                               : 'bg-red-100 text-red-800';
@@ -280,19 +315,23 @@ export default function ExecutiveDashboard() {
                     </tbody>
                   </table>
                 </div>
+                )}
               </div>
             )}
 
             {activeTab === "snapshot" && (
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Snapshot (Process - Store)</h3>
+                {snapshotData.stores.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No snapshot data for the selected filters.</p>
+                ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Store</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Average</th>
-                        {data.processes.map((proc: string) => (
+                        {snapshotData.processes.map((proc: string) => (
                           <th key={proc} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                             {proc.slice(0, 8)}...
                           </th>
@@ -300,12 +339,12 @@ export default function ExecutiveDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {data.stores.map((storeId: string) => (
+                      {snapshotData.stores.map((storeId: string) => (
                         <tr key={storeId}>
                           <td className="px-4 py-3 font-medium">{storeId}</td>
-                          <td className="px-4 py-3 font-semibold">{data.snapshot[storeId]?.average || 0}%</td>
-                          {data.processes.map((procId: string) => {
-                            const cell = data.snapshot[storeId]?.processes[procId];
+                          <td className="px-4 py-3 font-semibold">{snapshotData.snapshot[storeId]?.average || 0}%</td>
+                          {snapshotData.processes.map((procId: string) => {
+                            const cell = snapshotData.snapshot[storeId]?.processes[procId];
                             const bgColor = cell?.color === 'green' ? 'bg-green-100 text-green-800' 
                               : 'bg-red-100 text-red-800';
                             return (
@@ -319,14 +358,18 @@ export default function ExecutiveDashboard() {
                     </tbody>
                   </table>
                 </div>
+                )}
               </div>
             )}
 
             {activeTab === "process-tag-insights" && (
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Process Tag Insights</h3>
+                {processTagItems.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No process tag insights for the selected filters.</p>
+                ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {data.map((item: any) => (
+                  {processTagItems.map((item: any) => (
                     <div key={item.tag} className="border rounded-lg p-4">
                       <h4 className="font-medium mb-2">{item.tag}</h4>
                       <div className="space-y-2">
@@ -352,6 +395,7 @@ export default function ExecutiveDashboard() {
                     </div>
                   ))}
                 </div>
+                )}
               </div>
             )}
           </CardContent>

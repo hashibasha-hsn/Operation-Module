@@ -5,25 +5,57 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit2, Type, Settings, Grid2x2, Calculator, Calendar, Clock, Timer, Calculator as CalculatorIcon, Pen, MapPin, Users, Building2, FolderOpen, Folder, ChevronDown, Trash2, Copy, FileText, Check, Paperclip, MessageSquareMore, MessageSquarePlus, Clipboard, FilePlus, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Zap, Scan, AlertCircle } from "lucide-react";
-import { useState, useRef } from "react";
+import { Edit2, Type, Settings, Grid2x2, Calculator, Calendar, Clock, Timer, Calculator as CalculatorIcon, Pen, MapPin, Users, Building2, FolderOpen, Folder, ChevronDown, Trash2, Copy, FileText, Check, Paperclip, MessageSquareMore, MessageSquarePlus, Clipboard, FilePlus, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Zap, Scan, AlertCircle, Plus } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
 import AssignTabContent from "@/components/AssignTabContent";
 import ProcessHeader from "@/components/ProcessHeader";
+import AuditHeader from "@/components/AuditHeader";
+import AssessmentHeader from "@/components/AssessmentHeader";
+import AssessmentQuestionCard from "@/components/assessment/AssessmentQuestionCard";
+import QuestionAddonsToolbar from "@/components/process/QuestionAddonsToolbar";
+import { toast } from "sonner";
+import {
+  formElementsToQuestions,
+  loadProcessDraft,
+  questionsToFormElements,
+  saveProcessDraftLocal,
+  type ProcessDraftState,
+  type ProcessSectionDraft,
+} from "@/lib/processDraft";
+import { fetchQuestionTags, saveProcessDraft } from "@/lib/processApi";
+import {
+  auditQuestionsToFormElements,
+  formElementsToAuditQuestions,
+  loadAuditDraft,
+  saveAuditDraftLocal as saveAuditDraftLocalOnly,
+  type AuditDraftState,
+  type AuditSectionDraft,
+} from "@/lib/auditDraft";
+import { saveAuditDraft } from "@/lib/auditApi";
+import {
+  assessmentQuestionsToFormElements,
+  formElementsToAssessmentQuestions,
+  loadAssessmentDraft,
+  saveAssessmentDraftLocal as saveAssessmentDraftLocalOnly,
+  type AssessmentDraftState,
+  type AssessmentSectionDraft,
+} from "@/lib/assessmentDraft";
+import { saveAssessmentDraft } from "@/lib/assessmentApi";
 
 export default function CreateForm() {
+  const [location] = useLocation();
+  const isAuditMode = location.includes("audit-create-form");
+  const isAssessmentMode = location.includes("assessment-create-form");
+  const isSectionDraftMode = isAuditMode || isAssessmentMode;
   const [activeTab, setActiveTab] = useState("build");
+  const [processDraft, setProcessDraft] = useState<ProcessDraftState | AuditDraftState | null>(null);
+  const [sections, setSections] = useState<ProcessSectionDraft[] | AuditSectionDraft[]>([]);
+  const [activeSectionId, setActiveSectionId] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    // Navigation is handled by ProcessHeader component
-  };
-
-  const handleSave = () => {
-    console.log('Save');
-  };
-
-  const handlePublish = () => {
-    console.log('Publish');
   };
 
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -45,11 +77,18 @@ export default function CreateForm() {
       reviewType?: 'none' | 'review-existing' | 'independent-review';
       reviewerLevel?: 'L1' | 'L2' | 'L3' | 'L4';
       actionPoint?: 'none' | 'manual' | 'auto';
+      actionPointAutoTriggers?: string[];
       allowComment?: boolean;
+      commentRequired?: boolean;
       timestamp?: boolean;
       attachFile?: boolean;
+      questionReferenceFile?: string;
       markNA?: boolean;
       answerAttachment?: boolean;
+      answerAttachmentRequired?: boolean;
+      instructionText?: string;
+      instructionAttachment?: string;
+      questionTag?: string;
       autoFill?: boolean;
       barcode?: boolean;
       scoringType?: 'none' | 'weightage' | 'input';
@@ -58,12 +97,186 @@ export default function CreateForm() {
       calculatorFunction?: 'none' | 'average' | 'sum-na' | 'sum-weightage';
     };
   }>>([]);
-  const [instructionsDialogOpen, setInstructionsDialogOpen] = useState(false);
-  const [instructions, setInstructions] = useState("");
-  const [attachedFileName, setAttachedFileName] = useState<string | null>(null);
-  const [listCounter, setListCounter] = useState(1);
+  const [questionTags, setQuestionTags] = useState<Array<{ id?: string; tagName: string; values?: string[] }>>([]);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchQuestionTags().then(setQuestionTags).catch(() => setQuestionTags([]));
+  }, []);
+
+  useEffect(() => {
+    if (isAssessmentMode) {
+      const draft = loadAssessmentDraft();
+      setProcessDraft(draft);
+      setSections(draft.sections);
+      setActiveSectionId(draft.sections[0]?.clientId ?? "");
+      setFieldValues({ field1: draft.title, field2: draft.description });
+      setFormElements(assessmentQuestionsToFormElements(draft.sections.slice(0, 1)));
+      return;
+    }
+    if (isAuditMode) {
+      const draft = loadAuditDraft();
+      setProcessDraft(draft);
+      setSections(draft.sections);
+      setActiveSectionId(draft.sections[0]?.clientId ?? "");
+      setFieldValues({ field1: draft.title, field2: draft.description });
+      setFormElements(auditQuestionsToFormElements(draft.sections.slice(0, 1)));
+      return;
+    }
+    const draft = loadProcessDraft();
+    setProcessDraft(draft);
+    setSections(draft.sections);
+    setActiveSectionId(draft.sections[0]?.clientId ?? "");
+    setFieldValues({
+      field1: draft.title,
+      field2: draft.description,
+    });
+    setFormElements(questionsToFormElements(draft.sections.slice(0, 1)));
+  }, [isAuditMode, isAssessmentMode]);
+
+  useEffect(() => {
+    if (!isSectionDraftMode || !processDraft) return;
+    if (isAssessmentMode) {
+      saveAssessmentDraftLocalOnly({
+        ...(processDraft as AssessmentDraftState),
+        title: fieldValues.field1,
+        description: fieldValues.field2,
+        sections: sections as AssessmentSectionDraft[],
+      });
+      return;
+    }
+    saveAuditDraftLocalOnly({
+      ...(processDraft as AuditDraftState),
+      title: fieldValues.field1,
+      description: fieldValues.field2,
+      sections: sections as AuditSectionDraft[],
+    });
+  }, [isSectionDraftMode, isAssessmentMode, processDraft, fieldValues.field1, fieldValues.field2, sections]);
+
+  const syncActiveSectionQuestions = (
+    nextSections: ProcessSectionDraft[],
+    sectionId: string,
+    elements: typeof formElements,
+    sectionDraftMode = isSectionDraftMode,
+    assessmentMode = isAssessmentMode,
+  ) =>
+    nextSections.map((section) =>
+      section.clientId === sectionId
+        ? {
+            ...section,
+            questions: sectionDraftMode
+              ? assessmentMode
+                ? formElementsToAssessmentQuestions(elements)
+                : formElementsToAuditQuestions(elements)
+              : formElementsToQuestions(elements),
+          }
+        : section,
+    );
+
+  const switchSection = (sectionId: string) => {
+    if (sectionId === activeSectionId) return;
+    const synced = syncActiveSectionQuestions(sections as ProcessSectionDraft[], activeSectionId, formElements);
+    setSections(synced);
+    const nextSection = synced.find((section) => section.clientId === sectionId);
+    setActiveSectionId(sectionId);
+    setFormElements(
+      isSectionDraftMode
+        ? isAssessmentMode
+          ? assessmentQuestionsToFormElements(nextSection ? [nextSection] : [])
+          : auditQuestionsToFormElements(nextSection ? [nextSection] : [])
+        : questionsToFormElements(nextSection ? [nextSection] : []),
+    );
+  };
+
+  const addSection = (titlePrefix = "Section") => {
+    const synced = syncActiveSectionQuestions(sections, activeSectionId, formElements);
+    const sameTypeCount = synced.filter((section) =>
+      section.title.startsWith(`${titlePrefix} `),
+    ).length;
+    const newSection: ProcessSectionDraft = {
+      clientId: `${titlePrefix.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
+      title: `${titlePrefix} ${sameTypeCount + 1}`,
+      description: "",
+      displayOrder: synced.length,
+      questions: [],
+    };
+    const nextSections = [...synced, newSection];
+    setSections(nextSections);
+    setActiveSectionId(newSection.clientId);
+    setFormElements([]);
+  };
+
+  const handleSave = async () => {
+    if (!processDraft) return;
+    if (!processDraft.title.trim() && !fieldValues.field1.trim() && !isAssessmentMode) {
+      toast.error(
+        isAuditMode
+          ? "Add an audit title on the Title tab first"
+          : "Add a process title on the Title tab first",
+      );
+      return;
+    }
+
+    const syncedSections = syncActiveSectionQuestions(
+      sections as ProcessSectionDraft[],
+      activeSectionId,
+      formElements,
+      isSectionDraftMode,
+      isAssessmentMode,
+    );
+    const payload = {
+      ...processDraft,
+      title: fieldValues.field1 || processDraft.title || (isAssessmentMode ? "New Assessment" : ""),
+      description: fieldValues.field2 || processDraft.description,
+      sections: syncedSections,
+      properties: processDraft.properties,
+    };
+
+    setIsSaving(true);
+    try {
+      if (isAssessmentMode) {
+        const saved = await saveAssessmentDraft(payload as AssessmentDraftState);
+        setProcessDraft(saved);
+        setSections(saved.sections);
+        saveAssessmentDraftLocalOnly(saved);
+        toast.success("Assessment draft saved");
+      } else if (isAuditMode) {
+        const saved = await saveAuditDraft(payload as AuditDraftState);
+        setProcessDraft(saved);
+        setSections(saved.sections);
+        saveAuditDraftLocalOnly(saved);
+        toast.success("Audit draft saved");
+      } else {
+        const saved = await saveProcessDraft(payload as ProcessDraftState);
+        setProcessDraft(saved);
+        setSections(saved.sections);
+        if (saved.sections[0]) {
+          setActiveSectionId(
+            saved.sections.find((s) => s.clientId === activeSectionId)?.clientId ??
+              saved.sections[0].clientId,
+          );
+        }
+        saveProcessDraftLocal(saved);
+        toast.success("Process draft saved");
+      }
+    } catch (error: any) {
+      toast.error(
+        error.message ||
+          `Failed to save ${isAssessmentMode ? "assessment" : isAuditMode ? "audit" : "process"} draft`,
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePublish = () => {
+    if (isAssessmentMode) {
+      toast.message("Configure properties and publish on the Publish tab");
+      return;
+    }
+    toast.message("Publish will be enabled after properties and assign are configured");
+  };
 
   // Process Properties State
   const [processProperties, setProcessProperties] = useState({
@@ -105,19 +318,6 @@ export default function CreateForm() {
     language: 'completed',
   });
 
-  const insertBulletList = () => {
-    setInstructions(prev => prev + '\n• ');
-  };
-
-  const insertNumberedList = () => {
-    setInstructions(prev => prev + `\n${listCounter}. `);
-    setListCounter(prev => prev + 1);
-  };
-
-  const handleSaveInstructions = () => {
-    setInstructionsDialogOpen(false);
-  };
-
   const openSettingsDialog = (elementId: string) => {
     setSelectedElementId(elementId);
     setSettingsDialogOpen(true);
@@ -132,16 +332,20 @@ export default function CreateForm() {
     const newElement: any = {
       id: Date.now().toString(),
       type,
-      label,
+      label: isAssessmentMode ? "" : label,
     };
 
     // Add default config based on type
     if (type === 'short-answer') {
       newElement.config = { validationType: 'text' };
     } else if (type === 'single-answer') {
-      newElement.config = { options: [{ label: 'Compliant', score: 100 }, { label: 'Non-Compliant', score: 0 }] };
+      newElement.config = isAssessmentMode
+        ? { options: [], optionImage: false }
+        : { options: [{ label: 'Compliant', score: 100 }, { label: 'Non-Compliant', score: 0 }] };
     } else if (type === 'multiple-answers') {
-      newElement.config = { marks: 5, options: [] };
+      newElement.config = isAssessmentMode
+        ? { options: [], optionImage: false }
+        : { marks: 5, options: [] };
     } else if (type === 'dropdown') {
       newElement.config = { options: [] };
     }
@@ -164,13 +368,28 @@ export default function CreateForm() {
     setFormElements(newElements);
   };
   return (
-    <div className="min-h-screen bg-background">
-      <ProcessHeader 
-        activeTab={activeTab} 
-        onTabChange={handleTabChange}
-        onSave={handleSave}
-        onPublish={handlePublish}
-      />
+    <div className="workflow-page">
+      {isAssessmentMode ? (
+        <AssessmentHeader
+          activeTab="build"
+          onSave={handleSave}
+          onPublish={handlePublish}
+        />
+      ) : isAuditMode ? (
+        <AuditHeader
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          onSave={handleSave}
+          onPublish={handlePublish}
+        />
+      ) : (
+        <ProcessHeader
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          onSave={handleSave}
+          onPublish={handlePublish}
+        />
+      )}
       <Tabs defaultValue="build" className="flex-1">
         <TabsContent value="title" className="space-y-6 p-6">
           {/* Click to edit fields */}
@@ -784,16 +1003,31 @@ export default function CreateForm() {
           <div className="flex h-[calc(100vh-73px)]">
             {/* Left Sidebar - Sections */}
             <div className="w-64 border-r bg-white p-4">
+              {isAuditMode && fieldValues.field1 && (
+                <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-sky-600">Audit</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">{fieldValues.field1}</p>
+                </div>
+              )}
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">Sections</h3>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <span className="text-lg font-bold">+</span>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={addSection}>
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
               <div className="space-y-2">
-                <div className="p-2 bg-muted rounded">
-                  <div className="text-sm font-medium">1. 00</div>
-                </div>
+                {sections.map((section, index) => (
+                  <button
+                    key={section.clientId}
+                    type="button"
+                    onClick={() => switchSection(section.clientId)}
+                    className={`w-full rounded p-2 text-left text-sm ${
+                      activeSectionId === section.clientId ? "bg-sky-100 text-sky-700" : "bg-muted"
+                    }`}
+                  >
+                    {index + 1}. {section.title}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -806,7 +1040,20 @@ export default function CreateForm() {
               ) : (
                 <div className="space-y-4">
                   <Input placeholder="Put the title here" className="mb-4" />
-                  {formElements.map((element) => (
+                  {isAssessmentMode
+                    ? formElements.map((element, index) => (
+                        <AssessmentQuestionCard
+                          key={element.id}
+                          element={element}
+                          index={index}
+                          formElements={formElements}
+                          setFormElements={setFormElements}
+                          onDelete={() => deleteFormElement(element.id)}
+                          onDuplicate={() => copyFormElement(element)}
+                          onOpenSettings={() => openSettingsDialog(element.id)}
+                        />
+                      ))
+                    : formElements.map((element) => (
                     <div key={element.id} className="border rounded-md p-4 bg-white shadow-sm relative">
                       <div className="absolute right-2 top-2 flex flex-col space-y-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteFormElement(element.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
@@ -818,206 +1065,13 @@ export default function CreateForm() {
                         <div className="w-2 h-2 rounded-full bg-gray-400"></div>
                         <span className="text-sm font-medium">{element.label}</span>
                       </div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className={`h-9 w-9 ${element.config?.attachFile ? 'bg-blue-50 border-blue-500' : ''}`}
-                              onClick={() => {
-                                const newElements = formElements.map(el => {
-                                  if (el.id === element.id) {
-                                    return {
-                                      ...el,
-                                      config: { ...el.config, attachFile: !el.config?.attachFile }
-                                    };
-                                  }
-                                  return el;
-                                });
-                                setFormElements(newElements);
-                              }}
-                            >
-                              <FilePlus className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Attach file with question</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className={`flex items-center gap-1 ${element.config?.markNA ? 'bg-blue-50 border-blue-500' : ''}`}
-                              onClick={() => {
-                                const newElements = formElements.map(el => {
-                                  if (el.id === element.id) {
-                                    return {
-                                      ...el,
-                                      config: { ...el.config, markNA: !el.config?.markNA }
-                                    };
-                                  }
-                                  return el;
-                                });
-                                setFormElements(newElements);
-                              }}
-                            >
-                              <FileText className="h-3 w-3" /> N/A
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Enable N/A</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className={`h-9 w-9 ${element.config?.actionPoint && element.config?.actionPoint !== 'none' ? 'bg-blue-50 border-blue-500' : ''}`}
-                              onClick={() => {
-                                const newElements = formElements.map(el => {
-                                  if (el.id === element.id) {
-                                    return {
-                                      ...el,
-                                      config: { ...el.config, actionPoint: (el.config?.actionPoint === 'none' || !el.config?.actionPoint) ? 'manual' : 'none' as 'none' | 'manual' | 'auto' }
-                                    };
-                                  }
-                                  return el;
-                                });
-                                setFormElements(newElements);
-                              }}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Enable Action Point</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-9 w-9"><Clipboard className="h-4 w-4" /></Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Enable Default Response</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className={`h-9 w-9 ${element.config?.allowComment ? 'bg-blue-50 border-blue-500' : ''}`}
-                              onClick={() => {
-                                const newElements = formElements.map(el => {
-                                  if (el.id === element.id) {
-                                    return {
-                                      ...el,
-                                      config: { ...el.config, allowComment: !el.config?.allowComment }
-                                    };
-                                  }
-                                  return el;
-                                });
-                                setFormElements(newElements);
-                              }}
-                            >
-                              <MessageSquareMore className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Enable Comment</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className={`h-9 w-9 ${element.config?.autoFill ? 'bg-blue-50 border-blue-500' : ''}`}
-                              onClick={() => {
-                                const newElements = formElements.map(el => {
-                                  if (el.id === element.id) {
-                                    return {
-                                      ...el,
-                                      config: { ...el.config, autoFill: !el.config?.autoFill }
-                                    };
-                                  }
-                                  return el;
-                                });
-                                setFormElements(newElements);
-                              }}
-                            >
-                              <Zap className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Enable Auto Fill</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className={`h-9 w-9 ${element.config?.barcode ? 'bg-blue-50 border-blue-500' : ''}`}
-                              onClick={() => {
-                                const newElements = formElements.map(el => {
-                                  if (el.id === element.id) {
-                                    return {
-                                      ...el,
-                                      config: { ...el.config, barcode: !el.config?.barcode }
-                                    };
-                                  }
-                                  return el;
-                                });
-                                setFormElements(newElements);
-                              }}
-                            >
-                              <Scan className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Enable Barcode</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className={`h-9 w-9 ${element.config?.answerAttachment ? 'bg-blue-50 border-blue-500' : ''}`}
-                              onClick={() => {
-                                const newElements = formElements.map(el => {
-                                  if (el.id === element.id) {
-                                    return {
-                                      ...el,
-                                      config: { ...el.config, answerAttachment: !el.config?.answerAttachment }
-                                    };
-                                  }
-                                  return el;
-                                });
-                                setFormElements(newElements);
-                              }}
-                            >
-                              <Paperclip className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Answer Attachments with answer</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className={`h-9 w-9 ${element.config?.timestamp ? 'bg-blue-50 border-blue-500' : ''}`}
-                              onClick={() => {
-                                const newElements = formElements.map(el => {
-                                  if (el.id === element.id) {
-                                    return {
-                                      ...el,
-                                      config: { ...el.config, timestamp: !el.config?.timestamp }
-                                    };
-                                  }
-                                  return el;
-                                });
-                                setFormElements(newElements);
-                              }}
-                            >
-                              <Clock className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Timestamp</TooltipContent>
-                        </Tooltip>
-                      </div>
+                      <QuestionAddonsToolbar
+                        element={element}
+                        formElements={formElements}
+                        setFormElements={setFormElements}
+                        processWithTags={processWithTags}
+                        questionTags={questionTags}
+                      />
                       <div className="flex items-center gap-2 mb-2">
                         <Input placeholder="Type Question Here" className="flex-grow" />
                         <Input value="0" className="w-16 text-center" />
@@ -1670,103 +1724,6 @@ export default function CreateForm() {
                           </div>
                         </div>
                       )}
-                      <Dialog open={instructionsDialogOpen} onOpenChange={setInstructionsDialogOpen}>
-                        <DialogTrigger asChild>
-                          <div className="flex items-center gap-2 text-sm text-blue-500 cursor-pointer mb-2">
-                            <CalculatorIcon className="w-4 h-4" />
-                            <span>Add Instructions</span>
-                          </div>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-3xl">
-                          <DialogHeader>
-                            <DialogTitle>Add Instructions</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            {/* Simple Textarea with Toolbar */}
-                            <div className="border rounded-md">
-                              <div className="border-b bg-gray-50 p-2 flex items-center gap-1 flex-wrap">
-                                <Button variant="ghost" size="icon" className="h-8 w-8"><Bold className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8"><Italic className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8"><Underline className="h-4 w-4" /></Button>
-                                <div className="w-px h-6 bg-gray-300 mx-1" />
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={insertBulletList}><List className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={insertNumberedList}><ListOrdered className="h-4 w-4" /></Button>
-                                <div className="w-px h-6 bg-gray-300 mx-1" />
-                                <Button variant="ghost" size="icon" className="h-8 w-8"><AlignLeft className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8"><AlignCenter className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8"><AlignRight className="h-4 w-4" /></Button>
-                              </div>
-                              <Textarea
-                                placeholder="Enter instructions here..."
-                                value={instructions}
-                                onChange={(e) => setInstructions(e.target.value)}
-                                className="min-h-[200px] border-0 rounded-none focus-visible:ring-0"
-                              />
-                            </div>
-                            
-                            {/* Attachment Section */}
-                            <div className="border rounded-md p-4">
-                              <div className="flex items-center gap-2 mb-3">
-                                <Paperclip className="h-5 w-5 text-gray-500" />
-                                <span className="text-sm font-medium">Instruction Attachment</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="file"
-                                  id="file-upload"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      setAttachedFileName(file.name);
-                                    }
-                                  }}
-                                />
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => document.getElementById('file-upload')?.click()}
-                                >
-                                  <Paperclip className="h-4 w-4 mr-2" />
-                                  Attach
-                                </Button>
-                                {attachedFileName && (
-                                  <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-md">
-                                    <FileText className="h-4 w-4 text-gray-500" />
-                                    <span className="text-sm">{attachedFileName}</span>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-5 w-5"
-                                      onClick={() => setAttachedFileName(null)}
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                              {!attachedFileName && (
-                                <p className="text-sm text-muted-foreground mt-2">No files attached</p>
-                              )}
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button variant="outline" onClick={() => setInstructionsDialogOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              className="border-red-500 text-red-500 hover:bg-red-50"
-                              onClick={() => { setInstructions(""); setAttachedFileName(null); setInstructionsDialogOpen(false); }}
-                            >
-                              Discard
-                            </Button>
-                            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveInstructions}>
-                              Save
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
                       <Button variant="outline" className="w-full border-dashed text-sm mb-4">
                         + ADD NEW
                       </Button>
@@ -2705,59 +2662,86 @@ export default function CreateForm() {
 
                 <TabsContent value="add-type" className="flex-1 overflow-y-auto">
                   <div className="p-4 space-y-2">
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('single-answer', 'Single answer')}>
-                      <Type className="w-4 h-4" />
-                      <span className="text-sm">Single answer</span>
-                    </div>
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('multiple-answers', 'Multiple answers')}>
-                      <Type className="w-4 h-4" />
-                      <span className="text-sm">Multiple answers</span>
-                    </div>
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('short-answer', 'Short answer')}>
-                      <Type className="w-4 h-4" />
-                      <span className="text-sm">Short answer</span>
-                    </div>
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('file-upload', 'File Upload')}>
-                      <Pen className="w-4 h-4" />
-                      <span className="text-sm">File Upload</span>
-                    </div>
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('long-answer', 'Long Answer')}>
-                      <Type className="w-4 h-4" />
-                      <span className="text-sm">Long Answer</span>
-                    </div>
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('dropdown', 'Dropdown')}>
-                      <ChevronDown className="w-4 h-4" />
-                      <span className="text-sm">Dropdown</span>
-                    </div>
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('adv-dropdown', 'Adv Dropdown')}>
-                      <ChevronDown className="w-4 h-4" />
-                      <span className="text-sm">Adv Dropdown</span>
-                    </div>
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('scoring-dropdown', 'Scoring Dropdown')}>
-                      <ChevronDown className="w-4 h-4" />
-                      <span className="text-sm">Scoring Dropdown</span>
-                    </div>
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('grid', 'Grid')}>
-                      <Grid2x2 className="w-4 h-4" />
-                      <span className="text-sm">Grid</span>
-                    </div>
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('calculation-grid', 'Calculation Grid')}>
-                      <Calculator className="w-4 h-4" />
-                      <span className="text-sm">Calculation Grid</span>
-                    </div>
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('dynamic-grid', 'Dynamic Grid')}>
-                      <Grid2x2 className="w-4 h-4" />
-                      <span className="text-sm">Dynamic Grid</span>
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">BETA</span>
-                    </div>
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('date', 'Date')}>
-                      <Calendar className="w-4 h-4" />
-                      <span className="text-sm">Date</span>
-                    </div>
-                    <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('time', 'Time')}>
-                      <Clock className="w-4 h-4" />
-                      <span className="text-sm">Time</span>
-                    </div>
+                    {isAssessmentMode ? (
+                      <>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('single-answer', 'Single answer')}>
+                          <Type className="w-4 h-4" />
+                          <span className="text-sm">Single answer</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('multiple-answers', 'Multiple answers')}>
+                          <Type className="w-4 h-4" />
+                          <span className="text-sm">Multiple answers</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('short-answer', 'Short answer')}>
+                          <Type className="w-4 h-4" />
+                          <span className="text-sm">Short answer</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addSection()}>
+                          <Type className="w-4 h-4" />
+                          <span className="text-sm">Section</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addSection('Sub-section')}>
+                          <Type className="w-4 h-4" />
+                          <span className="text-sm">Sub-section</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('single-answer', 'Single answer')}>
+                          <Type className="w-4 h-4" />
+                          <span className="text-sm">Single answer</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('multiple-answers', 'Multiple answers')}>
+                          <Type className="w-4 h-4" />
+                          <span className="text-sm">Multiple answers</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('short-answer', 'Short answer')}>
+                          <Type className="w-4 h-4" />
+                          <span className="text-sm">Short answer</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('file-upload', 'File Upload')}>
+                          <Pen className="w-4 h-4" />
+                          <span className="text-sm">File Upload</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('long-answer', 'Long Answer')}>
+                          <Type className="w-4 h-4" />
+                          <span className="text-sm">Long Answer</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('dropdown', 'Dropdown')}>
+                          <ChevronDown className="w-4 h-4" />
+                          <span className="text-sm">Dropdown</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('adv-dropdown', 'Adv Dropdown')}>
+                          <ChevronDown className="w-4 h-4" />
+                          <span className="text-sm">Adv Dropdown</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('scoring-dropdown', 'Scoring Dropdown')}>
+                          <ChevronDown className="w-4 h-4" />
+                          <span className="text-sm">Scoring Dropdown</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('grid', 'Grid')}>
+                          <Grid2x2 className="w-4 h-4" />
+                          <span className="text-sm">Grid</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('calculation-grid', 'Calculation Grid')}>
+                          <Calculator className="w-4 h-4" />
+                          <span className="text-sm">Calculation Grid</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('dynamic-grid', 'Dynamic Grid')}>
+                          <Grid2x2 className="w-4 h-4" />
+                          <span className="text-sm">Dynamic Grid</span>
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">BETA</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('date', 'Date')}>
+                          <Calendar className="w-4 h-4" />
+                          <span className="text-sm">Date</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('time', 'Time')}>
+                          <Clock className="w-4 h-4" />
+                          <span className="text-sm">Time</span>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="p-4 border-t">
@@ -2775,6 +2759,12 @@ export default function CreateForm() {
                       onCheckedChange={setProcessWithTags}
                     />
                   </div>
+                  {processWithTags && (
+                    <p className="text-xs text-muted-foreground rounded-md border bg-sky-50 p-3">
+                      Question tag dropdowns appear on each question. Tags come from Manage Tags → Question Tag.
+                      Enable Visual Report View in Advanced Settings to filter submission photos by tag.
+                    </p>
+                  )}
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Process with review</span>
                     <Switch

@@ -33,6 +33,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Search,
   CalendarIcon,
@@ -46,6 +47,8 @@ import {
   CheckCircle,
   XCircle,
   PauseCircle,
+  Settings,
+  ArrowUpDown,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -53,6 +56,56 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
+import { toast } from "sonner";
+import {
+  addTicketComment,
+  createTicket,
+  exportTicketsToCsv,
+  fetchAllTickets,
+  fetchTicketById,
+  fetchTicketCategories,
+  fetchTicketSettings,
+  fetchTicketTags,
+  fetchTicketsAssignedToMe,
+  fetchTicketsCreatedByMe,
+  isTicketDueToday,
+  isTicketOnTime,
+  isTicketOverdue,
+  updateTicketStatus,
+  type TicketRecord,
+} from "@/lib/ticketApi";
+import { fetchEntities, fetchUsers, getUserDisplayName } from "@/lib/processApi";
+
+type AssignOption = { id: string; label: string };
+
+const ALL_EXPORT_COLUMNS = [
+  "id",
+  "title",
+  "description",
+  "priority",
+  "status",
+  "assignedTo",
+  "storeId",
+  "dueDate",
+  "createdBy",
+  "ticketType",
+  "categoryId",
+  "createdAt",
+] as const;
+
+const COLUMN_DEFS: { key: string; label: string; sortable?: boolean }[] = [
+  { key: "id", label: "ID", sortable: true },
+  { key: "title", label: "Title", sortable: true },
+  { key: "description", label: "Description" },
+  { key: "priority", label: "Priority", sortable: true },
+  { key: "status", label: "Status", sortable: true },
+  { key: "assignedTo", label: "Assigned To", sortable: true },
+  { key: "storeId", label: "Store", sortable: true },
+  { key: "dueDate", label: "Due Date", sortable: true },
+  { key: "timeLeft", label: "Time Left" },
+  { key: "createdBy", label: "Created By", sortable: true },
+];
 
 export default function Tickets() {
   const [primaryFilter, setPrimaryFilter] = useState("assigned-to-me");
@@ -66,6 +119,26 @@ export default function Tickets() {
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [comment, setComment] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [tags, setTags] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [entities, setEntities] = useState<any[]>([]);
+  const [users, setUsers] = useState<AssignOption[]>([]);
+  const [ticketSettings, setTicketSettings] = useState<any>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    "id",
+    "title",
+    "description",
+    "priority",
+    "status",
+    "assignedTo",
+    "storeId",
+    "dueDate",
+    "timeLeft",
+  ]);
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [isCreating, setIsCreating] = useState(false);
 
   const [newTicket, setNewTicket] = useState({
     title: "",
@@ -74,93 +147,275 @@ export default function Tickets() {
     storeId: "",
     assignedTo: "",
     dueDate: undefined as Date | undefined,
-    ticketType: "custom",
+    ticketType: "custom" as "custom" | "auto",
+    categoryId: "",
+    tagValues: {} as Record<string, string>,
+    attachments: [] as { name: string; type: string; dataUrl: string }[],
   });
 
   useEffect(() => {
     fetchTickets();
+    fetchTicketTags().then(setTags).catch(() => setTags([]));
+    fetchTicketCategories().then(setCategories).catch(() => setCategories([]));
+    fetchEntities().then(setEntities).catch(() => setEntities([]));
+    fetchUsers(200)
+      .then((userRows) =>
+        setUsers(
+          userRows
+            .map((user: any) => ({
+              id: user.userId ?? user.id,
+              label: getUserDisplayName(user),
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label)),
+        ),
+      )
+      .catch(() => setUsers([]));
+    fetchTicketSettings().then(setTicketSettings).catch(() => null);
   }, [primaryFilter]);
 
-  const fetchTickets = async () => {
-    try {
-      let endpoint = 'http://localhost:3000/api/org/tickets?organizationId=default-org';
-      
-      if (primaryFilter === "assigned-to-me") {
-        endpoint = 'http://localhost:3000/api/org/tickets/assigned-to-me?userId=current-user-id&organizationId=default-org';
-      } else if (primaryFilter === "created-by-me") {
-        endpoint = 'http://localhost:3000/api/org/tickets/created-by-me?userId=current-user-id&organizationId=default-org';
-      }
+  const getUserLabel = (userId?: string) => {
+    if (!userId) return "N/A";
+    return users.find((user) => user.id === userId)?.label || userId;
+  };
 
-      const response = await fetch(endpoint);
-      const data = await response.json();
+  const refreshTicketList = async () => {
+    try {
+      let data: TicketRecord[] = [];
+      if (primaryFilter === "assigned-to-me") {
+        data = await fetchTicketsAssignedToMe();
+      } else if (primaryFilter === "created-by-me") {
+        data = await fetchTicketsCreatedByMe();
+      } else {
+        data = await fetchAllTickets();
+      }
       setTickets(data || []);
-    } catch (err) {
-      console.error('Failed to fetch tickets:', err);
+      setLastUpdated(new Date());
+      return data;
+    } catch (err: any) {
+      console.error("Failed to fetch tickets:", err);
+      toast.error(err.message || "Failed to fetch tickets");
+      setTickets([]);
+      return [];
     }
+  };
+
+  const fetchTickets = () => refreshTicketList();
+
+  const applyDateFilter = async () => {
+    try {
+      const start = startDate ? format(startDate, "yyyy-MM-dd") : undefined;
+      const end = endDate ? format(endDate, "yyyy-MM-dd") : undefined;
+      const data = await fetchAllTickets(start, end);
+      setTickets(data || []);
+      setLastUpdated(new Date());
+    } catch (err: any) {
+      toast.error(err.message || "Failed to apply date filter");
+    }
+  };
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("total");
+    setStartDate(undefined);
+    setEndDate(undefined);
+    fetchTickets();
   };
 
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
-      await fetch(`http://localhost:3000/api/org/tickets/${id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, userId: 'current-user-id' }),
-      });
-      fetchTickets();
-      setIsDetailDialogOpen(false);
-    } catch (err) {
-      console.error('Error updating status:', err);
+      await updateTicketStatus(id, status as TicketRecord["status"]);
+      await refreshTicketList();
+      const refreshed = await fetchTicketById(id);
+      setSelectedTicket(refreshed);
+      toast.success("Ticket status updated");
+    } catch (err: any) {
+      toast.error(err.message || "Error updating status");
     }
   };
 
   const handleAddComment = async () => {
     if (!selectedTicket || !comment) return;
-
     try {
-      await fetch(`http://localhost:3000/api/org/tickets/${selectedTicket.id}/comments`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: comment,
-          userId: 'current-user-id',
-          timestamp: new Date(),
-        }),
-      });
+      await addTicketComment(selectedTicket.id, comment);
       setComment("");
       setIsCommentDialogOpen(false);
-      fetchTickets();
-    } catch (err) {
-      console.error('Error adding comment:', err);
+      await refreshTicketList();
+      const refreshed = await fetchTicketById(selectedTicket.id);
+      setSelectedTicket(refreshed);
+      toast.success("Comment added");
+    } catch (err: any) {
+      toast.error(err.message || "Error adding comment");
     }
   };
 
+  const handleAttachmentUpload = (file: File | null) => {
+    if (!file) return;
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      toast.error("Attachment must be 5 MB or smaller");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setNewTicket((prev) => ({
+        ...prev,
+        attachments: [
+          ...prev.attachments,
+          { name: file.name, type: file.type, dataUrl: String(reader.result) },
+        ],
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreateTicket = async () => {
+    if (isCreating) return;
+    if (!newTicket.title.trim() && newTicket.ticketType === "custom") {
+      toast.error("Title is required");
+      return;
+    }
+    if (!newTicket.storeId) {
+      toast.error("Store is required");
+      return;
+    }
+    if (!newTicket.assignedTo) {
+      toast.error("Please select a user to assign the ticket");
+      return;
+    }
+
     try {
-      const response = await fetch('http://localhost:3000/api/org/tickets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newTicket,
-          organizationId: 'default-org',
-          createdBy: 'current-user-id',
-        }),
+      setIsCreating(true);
+      await createTicket({
+        title: newTicket.title,
+        description: newTicket.description,
+        priority: newTicket.priority as TicketRecord["priority"],
+        storeId: newTicket.storeId,
+        assignedTo: newTicket.assignedTo,
+        dueDate: newTicket.dueDate?.toISOString(),
+        ticketType: newTicket.ticketType,
+        categoryId: newTicket.categoryId || undefined,
+        tags: Object.keys(newTicket.tagValues).length ? newTicket.tagValues : undefined,
+        attachments: newTicket.attachments.length ? newTicket.attachments : undefined,
       });
 
-      if (response.ok) {
-        setNewTicket({
-          title: "",
-          description: "",
-          priority: "medium",
-          storeId: "",
-          assignedTo: "",
-          dueDate: undefined,
-          ticketType: "custom",
-        });
-        setIsCreateDialogOpen(false);
-        fetchTickets();
+      setNewTicket({
+        title: "",
+        description: "",
+        priority: "medium",
+        storeId: "",
+        assignedTo: "",
+        dueDate: undefined,
+        ticketType: "custom",
+        categoryId: "",
+        tagValues: {},
+        attachments: [],
+      });
+      setIsCreateDialogOpen(false);
+      fetchTickets();
+      toast.success("Ticket created");
+    } catch (err: any) {
+      toast.error(err.message || "Error creating ticket");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleExportCsv = (allFields = false) => {
+    const columns = allFields ? [...ALL_EXPORT_COLUMNS] : visibleColumns.filter((c) => c !== "timeLeft");
+    exportTicketsToCsv(sortedTickets, columns);
+    toast.success("CSV exported");
+  };
+
+  const toggleColumn = (key: string, checked: boolean) => {
+    setVisibleColumns((prev) =>
+      checked ? [...prev, key] : prev.filter((col) => col !== key),
+    );
+  };
+
+  const toggleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const getColumnCellClass = (key: string) => {
+    switch (key) {
+      case "title":
+      case "description":
+        return "max-w-[200px] truncate";
+      case "assignedTo":
+      case "createdBy":
+        return "max-w-[160px] truncate";
+      case "storeId":
+        return "max-w-[120px] truncate";
+      default:
+        return "";
+    }
+  };
+
+  const renderCellValue = (ticket: TicketRecord, key: string) => {
+    switch (key) {
+      case "id":
+        return <span className="font-mono text-sm">{ticket.id.slice(0, 8)}</span>;
+      case "title":
+        return <span className="font-medium">{ticket.title}</span>;
+      case "description":
+        return ticket.description;
+      case "priority":
+        return (
+          <Badge
+            variant={
+              ticket.priority === "highest" || ticket.priority === "high"
+                ? "destructive"
+                : ticket.priority === "medium"
+                  ? "default"
+                  : "secondary"
+            }
+          >
+            {ticket.priority}
+          </Badge>
+        );
+      case "status":
+        return (
+          <div className="flex items-center gap-2">
+            {getStatusIcon(ticket.status)}
+            <Badge
+              variant={
+                ticket.status === "closed"
+                  ? "default"
+                  : ticket.status === "rejected"
+                    ? "destructive"
+                    : ticket.status === "in_progress"
+                      ? "secondary"
+                      : "outline"
+              }
+            >
+              {ticket.status}
+            </Badge>
+          </div>
+        );
+      case "assignedTo":
+        return getUserLabel(ticket.assignedTo);
+      case "storeId":
+        return ticket.storeId || "N/A";
+      case "dueDate":
+        return ticket.dueDate ? new Date(ticket.dueDate).toLocaleDateString() : "N/A";
+      case "timeLeft": {
+        const left = getTimeLeft(ticket.dueDate || "");
+        return (
+          <div className="flex items-center gap-1">
+            <Clock className="w-4 h-4" />
+            <span className={left === "Overdue" ? "text-red-600" : ""}>{left}</span>
+          </div>
+        );
       }
-    } catch (err) {
-      console.error('Error creating ticket:', err);
+      case "createdBy":
+        return ticket.createdBy || "N/A";
+      default:
+        return null;
     }
   };
 
@@ -196,12 +451,34 @@ export default function Tickets() {
     }
   };
 
-  const filteredTickets = tickets.filter((ticket: any) => {
-    const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (ticket.description && ticket.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesStatus = statusFilter === 'total' || ticket.status === statusFilter;
+  const filteredTickets = tickets.filter((ticket: TicketRecord) => {
+    const query = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      !query ||
+      ticket.title.toLowerCase().includes(query) ||
+      ticket.id.toLowerCase().includes(query) ||
+      (ticket.description && ticket.description.toLowerCase().includes(query));
+
+    let matchesStatus = true;
+    if (statusFilter === "overdue") matchesStatus = isTicketOverdue(ticket);
+    else if (statusFilter === "due-today") matchesStatus = isTicketDueToday(ticket);
+    else if (statusFilter === "on-time") matchesStatus = isTicketOnTime(ticket);
+    else if (statusFilter === "active")
+      matchesStatus = !["closed", "rejected"].includes(ticket.status);
+    else if (statusFilter !== "total") matchesStatus = ticket.status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
+
+  const sortedTickets = [...filteredTickets].sort((a, b) => {
+    if (!sortField) return 0;
+    const av = String((a as Record<string, unknown>)[sortField] ?? "");
+    const bv = String((b as Record<string, unknown>)[sortField] ?? "");
+    const cmp = av.localeCompare(bv, undefined, { numeric: true });
+    return sortDirection === "asc" ? cmp : -cmp;
+  });
+
+  const activeColumns = COLUMN_DEFS.filter((col) => visibleColumns.includes(col.key));
 
   const primaryFilters = [
     { label: "Assigned to me", value: "assigned-to-me" },
@@ -231,10 +508,12 @@ export default function Tickets() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-3xl font-bold text-gray-900">Ticket Dashboard</h1>
-        <p className="text-gray-600 mt-1">
-          Manage and track all your tickets in one place
-        </p>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Ticket Dashboard</h1>
+          <p className="text-gray-600 mt-1">
+            Manage and track all your tickets in one place
+          </p>
+        </div>
       </motion.div>
 
       {/* Primary Filters */}
@@ -252,8 +531,8 @@ export default function Tickets() {
               onClick={() => setPrimaryFilter(filter.value)}
               className={
                 primaryFilter === filter.value
-                  ? "bg-orange-500 hover:bg-orange-600 text-white"
-                  : "border-gray-300 hover:border-orange-500"
+                  ? ""
+                  : ""
               }
             >
               {filter.label}
@@ -274,7 +553,7 @@ export default function Tickets() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <Input
           placeholder="Search tickets..."
-          className="pl-10 border-gray-300 focus:border-orange-500"
+          className="pl-10"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -324,9 +603,8 @@ export default function Tickets() {
             </PopoverContent>
           </Popover>
 
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white">
-            Apply
-          </Button>
+          <Button onClick={applyDateFilter}>Apply</Button>
+          <Button variant="outline" onClick={resetFilters}>Reset</Button>
         </div>
       </motion.div>
 
@@ -345,8 +623,8 @@ export default function Tickets() {
               onClick={() => setStatusFilter(filter.value)}
               className={
                 statusFilter === filter.value
-                  ? "bg-orange-500 hover:bg-orange-600 text-white"
-                  : "border-gray-300 hover:border-orange-500"
+                  ? ""
+                  : ""
               }
             >
               {filter.label}
@@ -363,30 +641,52 @@ export default function Tickets() {
         className="flex flex-wrap gap-3 items-center justify-between"
       >
         <div className="flex gap-3 items-center">
-          <Button variant="outline" size="sm" className="border-gray-300">
-            Load More
+          <Button variant="outline" size="sm" onClick={fetchTickets}>
+            Refresh
           </Button>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Report Settings
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64" align="start">
+              <p className="text-sm font-medium mb-3">Visible columns</p>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {COLUMN_DEFS.map((col) => (
+                  <label key={col.key} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={visibleColumns.includes(col.key)}
+                      onCheckedChange={(checked) => toggleColumn(col.key, checked === true)}
+                    />
+                    {col.label}
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-gray-300 flex items-center gap-2"
-              >
+              <Button variant="outline" size="sm" className="flex items-center gap-2">
                 <Download className="w-4 h-4" />
                 Export CSV
                 <ChevronDown className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Export All</DropdownMenuItem>
-              <DropdownMenuItem>Export Current Page</DropdownMenuItem>
-              <DropdownMenuItem>Export Selected</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportCsv(false)}>
+                Visible columns
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportCsv(true)}>
+                With all fields
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2" onClick={() => setIsCreateDialogOpen(true)}>
+          <Button className="flex items-center gap-2" onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="w-4 h-4" />
             New Ticket
           </Button>
@@ -394,8 +694,8 @@ export default function Tickets() {
 
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <span>Last Updated At:</span>
-          <span>Today, 10:30 AM</span>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+          <span>{lastUpdated ? lastUpdated.toLocaleString() : "-"}</span>
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={fetchTickets}>
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
@@ -407,7 +707,7 @@ export default function Tickets() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.5 }}
       >
-        {filteredTickets.length === 0 ? (
+        {sortedTickets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
             <motion.div
               initial={{ scale: 0 }}
@@ -429,72 +729,55 @@ export default function Tickets() {
         ) : (
           <div className="bg-card border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="table-fixed min-w-[900px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    <TableHead>Store</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Time Left</TableHead>
-                    <TableHead>Actions</TableHead>
+                    {activeColumns.map((col) => (
+                      <TableHead key={col.key} className={getColumnCellClass(col.key)}>
+                        {col.sortable ? (
+                          <button
+                            type="button"
+                            className="flex items-center gap-1 hover:text-foreground"
+                            onClick={() => toggleSort(col.key)}
+                          >
+                            {col.label}
+                            <ArrowUpDown className="w-3 h-3" />
+                          </button>
+                        ) : (
+                          col.label
+                        )}
+                      </TableHead>
+                    ))}
+                    <TableHead className="w-[90px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTickets.map((ticket: any) => (
+                  {sortedTickets.map((ticket: TicketRecord) => (
                     <TableRow key={ticket.id}>
-                      <TableCell className="font-mono text-sm">{ticket.id.slice(0, 8)}</TableCell>
-                      <TableCell className="font-medium">{ticket.title}</TableCell>
-                      <TableCell className="max-w-xs truncate">{ticket.description}</TableCell>
+                      {activeColumns.map((col) => {
+                        const value = renderCellValue(ticket, col.key);
+                        const cellClass = getColumnCellClass(col.key);
+                        const title =
+                          typeof value === "string" && cellClass.includes("truncate")
+                            ? value
+                            : undefined;
+                        return (
+                          <TableCell key={col.key} className={cellClass} title={title}>
+                            {value}
+                          </TableCell>
+                        );
+                      })}
                       <TableCell>
-                        <Badge
-                          variant={ticket.priority === 'highest' || ticket.priority === 'high' ? 'destructive' : ticket.priority === 'medium' ? 'default' : 'secondary'}
-                        >
-                          {ticket.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(ticket.status)}
-                          <Badge
-                            variant={
-                              ticket.status === 'closed' ? 'default' :
-                              ticket.status === 'rejected' ? 'destructive' :
-                              ticket.status === 'in_progress' ? 'secondary' : 'outline'
-                            }
+                        <TableActionsMenu>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedTicket(ticket);
+                              setIsDetailDialogOpen(true);
+                            }}
                           >
-                            {ticket.status}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>{ticket.assignedTo || 'N/A'}</TableCell>
-                      <TableCell>{ticket.storeId || 'N/A'}</TableCell>
-                      <TableCell>
-                        {ticket.dueDate ? new Date(ticket.dueDate).toLocaleDateString() : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          <span className={getTimeLeft(ticket.dueDate) === 'Overdue' ? 'text-red-600' : ''}>
-                            {getTimeLeft(ticket.dueDate)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedTicket(ticket);
-                            setIsDetailDialogOpen(true);
-                          }}
-                        >
-                          View
-                        </Button>
+                            View
+                          </DropdownMenuItem>
+                        </TableActionsMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -515,6 +798,56 @@ export default function Tickets() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Ticket Type</Label>
+              <Select
+                value={newTicket.ticketType}
+                onValueChange={(value: "custom" | "auto") =>
+                  setNewTicket({ ...newTicket, ticketType: value, categoryId: "" })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="custom">Custom Ticket</SelectItem>
+                  <SelectItem value="auto">Auto Ticket</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {newTicket.ticketType === "auto" && (
+              <div className="grid gap-2">
+                <Label>Category</Label>
+                <Select
+                  value={newTicket.categoryId || "none"}
+                  onValueChange={(value) => {
+                    const categoryId = value === "none" ? "" : value;
+                    const cat = categories.find((c) => c.id === categoryId);
+                    setNewTicket({
+                      ...newTicket,
+                      categoryId,
+                      title: cat?.categoryName || newTicket.title,
+                      priority: cat?.priority || newTicket.priority,
+                      assignedTo: cat?.assigneeIds?.[0] || newTicket.assignedTo,
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select category</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.categoryName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="grid gap-2">
               <Label htmlFor="title">Title *</Label>
               <Input
@@ -537,6 +870,7 @@ export default function Tickets() {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="priority">Priority</Label>
+                {!ticketSettings?.hidePriorities && (
                 <Select
                   value={newTicket.priority}
                   onValueChange={(value) => setNewTicket({ ...newTicket, priority: value })}
@@ -552,26 +886,51 @@ export default function Tickets() {
                     <SelectItem value="lowest">Lowest</SelectItem>
                   </SelectContent>
                 </Select>
+                )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="storeId">Store ID</Label>
-                <Input
-                  id="storeId"
-                  placeholder="Enter store ID"
-                  value={newTicket.storeId}
-                  onChange={(e) => setNewTicket({ ...newTicket, storeId: e.target.value })}
-                />
+                <Label htmlFor="storeId">Store</Label>
+                <Select
+                  value={newTicket.storeId || "none"}
+                  onValueChange={(value) =>
+                    setNewTicket({ ...newTicket, storeId: value === "none" ? "" : value })
+                  }
+                >
+                  <SelectTrigger id="storeId">
+                    <SelectValue placeholder="Select store" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select store</SelectItem>
+                    {entities.map((entity: any) => (
+                      <SelectItem key={entity.id} value={entity.id}>
+                        {entity.storeName || entity.name || entity.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="assignedTo">Assigned To</Label>
-                <Input
-                  id="assignedTo"
-                  placeholder="Enter user ID"
-                  value={newTicket.assignedTo}
-                  onChange={(e) => setNewTicket({ ...newTicket, assignedTo: e.target.value })}
-                />
+                <Label htmlFor="assignedTo">Assigned To *</Label>
+                <Select
+                  value={newTicket.assignedTo || "none"}
+                  onValueChange={(value) =>
+                    setNewTicket({ ...newTicket, assignedTo: value === "none" ? "" : value })
+                  }
+                >
+                  <SelectTrigger id="assignedTo">
+                    <SelectValue placeholder="Select user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select user</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label>Due Date</Label>
@@ -593,13 +952,72 @@ export default function Tickets() {
                 </Popover>
               </div>
             </div>
+
+            {tags.map((tag) => (
+              <div key={tag.id} className="grid gap-2">
+                <Label>
+                  {tag.tagName}
+                  {tag.isMandatory ? " *" : ""}
+                </Label>
+                {(tag.tagValues?.length ?? 0) > 0 ? (
+                  <Select
+                    value={newTicket.tagValues[tag.tagName] || "none"}
+                    onValueChange={(value) =>
+                      setNewTicket({
+                        ...newTicket,
+                        tagValues: {
+                          ...newTicket.tagValues,
+                          [tag.tagName]: value === "none" ? "" : value,
+                        },
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={`Select ${tag.tagName}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select value</SelectItem>
+                      {tag.tagValues.map((val: string) => (
+                        <SelectItem key={val} value={val}>
+                          {val}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={newTicket.tagValues[tag.tagName] || ""}
+                    onChange={(e) =>
+                      setNewTicket({
+                        ...newTicket,
+                        tagValues: { ...newTicket.tagValues, [tag.tagName]: e.target.value },
+                      })
+                    }
+                  />
+                )}
+              </div>
+            ))}
+
+            <div className="grid gap-2">
+              <Label>Attachments {ticketSettings?.attachmentMandatory ? "*" : ""}</Label>
+              <Input
+                type="file"
+                accept="image/*,video/*,.pdf"
+                onChange={(e) => handleAttachmentUpload(e.target.files?.[0] || null)}
+              />
+              {newTicket.attachments.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {newTicket.attachments.length} file(s) attached
+                </p>
+              )}
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={isCreating}>
               Cancel
             </Button>
-            <Button onClick={handleCreateTicket}>
-              Create Ticket
+            <Button onClick={handleCreateTicket} disabled={isCreating}>
+              {isCreating ? "Creating..." : "Create Ticket"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -653,7 +1071,7 @@ export default function Tickets() {
                 </div>
                 <div>
                   <Label>Assigned To</Label>
-                  <div className="text-sm mt-1">{selectedTicket.assignedTo || 'N/A'}</div>
+                  <div className="text-sm mt-1">{getUserLabel(selectedTicket.assignedTo)}</div>
                 </div>
                 <div>
                   <Label>Created By</Label>
@@ -667,6 +1085,38 @@ export default function Tickets() {
                   {selectedTicket.description || 'No description'}
                 </div>
               </div>
+
+              {Array.isArray(selectedTicket.attachments) && selectedTicket.attachments.length > 0 && (
+                <div>
+                  <Label>Attachments</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedTicket.attachments.map((att: any, index: number) => (
+                      <a
+                        key={index}
+                        href={att.dataUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary underline"
+                      >
+                        {att.name || `Attachment ${index + 1}`}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedTicket.tags && Object.keys(selectedTicket.tags).length > 0 && (
+                <div>
+                  <Label>Tags</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {Object.entries(selectedTicket.tags).map(([key, value]) => (
+                      <Badge key={key} variant="outline">
+                        {key}: {String(value)}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {selectedTicket.comments && selectedTicket.comments.length > 0 && (
                 <div>

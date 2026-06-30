@@ -7,8 +7,18 @@ import { TicketTag } from './ticket-tag.entity';
 import { AutoTicketCategory } from './auto-ticket-category.entity';
 import { TicketRule } from './ticket-rule.entity';
 
+import { TicketSettings } from './ticket-settings.entity';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([Ticket, TicketTag, AutoTicketCategory, TicketRule])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Ticket,
+      TicketTag,
+      AutoTicketCategory,
+      TicketRule,
+      TicketSettings,
+    ]),
+  ],
   controllers: [TicketsController],
   providers: [TicketsService],
   exports: [TicketsService],

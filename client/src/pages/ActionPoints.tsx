@@ -29,12 +29,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import { Search, Filter, Download, Plus, AlertCircle, Clock, CheckCircle, XCircle, PauseCircle, LayoutGrid, LayoutList } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  type ActionPointTab,
+  addActionPointComment,
+  exportActionPointsToCsv,
+  fetchActionPointsByTab,
+  updateActionPointStatus,
+} from "@/lib/actionPointApi";
 
 export default function ActionPoints() {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState("Assigned to Me");
+  const [activeTab, setActiveTab] = useState<ActionPointTab>("assigned");
   const [actionPoints, setActionPoints] = useState<any[]>([]);
   const [selectedActionPoint, setSelectedActionPoint] = useState<any>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
@@ -51,31 +60,17 @@ export default function ActionPoints() {
 
   const fetchActionPoints = async () => {
     try {
-      let endpoint = 'http://localhost:3000/api/org/action-points?organizationId=default-org';
-      
-      if (activeTab === "Assigned to Me") {
-        endpoint = 'http://localhost:3000/api/org/action-points/assigned-to-me?userId=current-user-id&organizationId=default-org';
-      } else if (activeTab === "Created by Me") {
-        endpoint = 'http://localhost:3000/api/org/action-points/created-by-me?userId=current-user-id&organizationId=default-org';
-      } else if (activeTab === "Closure Assigned") {
-        endpoint = 'http://localhost:3000/api/org/action-points/closure-assigned-to-me?userId=current-user-id&organizationId=default-org';
-      }
-
-      const response = await fetch(endpoint);
-      const data = await response.json();
+      const data = await fetchActionPointsByTab(activeTab);
       setActionPoints(data || []);
     } catch (err) {
       console.error('Failed to fetch action points:', err);
+      setActionPoints([]);
     }
   };
 
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
-      await fetch(`http://localhost:3000/api/org/action-points/${id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, userId: 'current-user-id' }),
-      });
+      await updateActionPointStatus(id, status);
       fetchActionPoints();
       setIsDetailDialogOpen(false);
     } catch (err) {
@@ -87,15 +82,7 @@ export default function ActionPoints() {
     if (!selectedActionPoint || !comment) return;
 
     try {
-      await fetch(`http://localhost:3000/api/org/action-points/${selectedActionPoint.id}/comments`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: comment,
-          userId: 'current-user-id',
-          timestamp: new Date(),
-        }),
-      });
+      await addActionPointComment(selectedActionPoint.id, comment);
       setComment("");
       setIsCommentDialogOpen(false);
       fetchActionPoints();
@@ -105,8 +92,7 @@ export default function ActionPoints() {
   };
 
   const handleExport = (type: 'shown' | 'all') => {
-    console.log(`Exporting ${type} fields`);
-    // Implement export logic
+    exportActionPointsToCsv(filteredActionPoints, type);
   };
 
   const getTimeLeft = (dueDate: string) => {
@@ -157,15 +143,15 @@ export default function ActionPoints() {
           <AlertCircle className="w-8 h-8 text-primary" />
           <div>
             <h1 className="text-3xl font-bold">{t('actionPoints')}</h1>
-            <p className="text-muted-foreground mt-1">{t('manageAndTrackActionItems')}</p>
+            <p className="text-muted-foreground mt-1">{t('actionPointsIntro')}</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => handleExport('shown')}>
             <Download className="w-4 h-4" />
             {t('exportShown')}
           </Button>
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => handleExport('all')}>
             <Download className="w-4 h-4" />
             {t('exportAll')}
           </Button>
@@ -180,18 +166,24 @@ export default function ActionPoints() {
       <div className="border-b bg-card">
         <div className="px-6">
           <div className="flex gap-1 overflow-x-auto">
-            {[t('assignedToMe'), t('createdByMe'), t('closureAssigned')].map((tab) => (
+            {(
+              [
+                { key: 'assigned' as ActionPointTab, label: t('assignedToMe') },
+                { key: 'created' as ActionPointTab, label: t('createdByMe') },
+                { key: 'closure' as ActionPointTab, label: t('closureAssigned') },
+              ] as const
+            ).map(({ key, label }) => (
               <Button
-                key={tab}
-                variant={activeTab === tab ? "default" : "ghost"}
+                key={key}
+                variant={activeTab === key ? "default" : "ghost"}
                 className={`rounded-t-lg border-b-2 ${
-                  activeTab === tab
+                  activeTab === key
                     ? "border-primary"
                     : "border-transparent hover:border-muted-foreground/30"
                 }`}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => setActiveTab(key)}
               >
-                {tab}
+                {label}
               </Button>
             ))}
           </div>
@@ -365,16 +357,16 @@ export default function ActionPoints() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedActionPoint(ap);
-                            setIsDetailDialogOpen(true);
-                          }}
-                        >
-                          {t('view')}
-                        </Button>
+                        <TableActionsMenu>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedActionPoint(ap);
+                              setIsDetailDialogOpen(true);
+                            }}
+                          >
+                            {t('view')}
+                          </DropdownMenuItem>
+                        </TableActionsMenu>
                       </TableCell>
                     </TableRow>
                   ))

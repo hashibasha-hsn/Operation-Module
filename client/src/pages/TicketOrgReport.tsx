@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Download, Building2, Ticket, TrendingUp, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { fetchTicketOrgReport } from "@/lib/ticketApi";
 
 export default function TicketOrgReport() {
   const { t } = useLanguage();
@@ -19,38 +20,34 @@ export default function TicketOrgReport() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchTicketOrgReport();
+    fetchTicketOrgReportData();
   }, [dateFilter]);
 
-  const fetchTicketOrgReport = async () => {
+  const fetchTicketOrgReportData = async () => {
     setLoading(true);
     try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const organizationId = user.organizationId;
-
-      let startDate, endDate;
+      let startDate: string | undefined;
+      let endDate: string | undefined;
       if (dateFilter === "today") {
-        startDate = new Date().toISOString().split('T')[0];
-        endDate = new Date().toISOString().split('T')[0];
+        startDate = new Date().toISOString().split("T")[0];
+        endDate = startDate;
       } else if (dateFilter === "week") {
         const now = new Date();
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        startDate = weekAgo.toISOString().split('T')[0];
-        endDate = now.toISOString().split('T')[0];
+        startDate = weekAgo.toISOString().split("T")[0];
+        endDate = now.toISOString().split("T")[0];
       } else if (dateFilter === "month") {
         const now = new Date();
         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        startDate = monthAgo.toISOString().split('T')[0];
-        endDate = now.toISOString().split('T')[0];
+        startDate = monthAgo.toISOString().split("T")[0];
+        endDate = now.toISOString().split("T")[0];
       }
 
-      const response = await fetch(
-        `http://localhost:3001/tickets/reports/org-report?organizationId=${organizationId}${startDate ? `&startDate=${startDate}` : ''}${endDate ? `&endDate=${endDate}` : ''}`
-      );
-      const data = await response.json();
+      const data = await fetchTicketOrgReport(startDate, endDate);
       setOrgData(data);
     } catch (error) {
       console.error("Error fetching ticket org report:", error);
+      setOrgData(null);
     } finally {
       setLoading(false);
     }

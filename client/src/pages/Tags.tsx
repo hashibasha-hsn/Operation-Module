@@ -29,8 +29,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import { Plus, Search, Tag, Users, ChevronDown, Edit, Trash2, Building2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+function toArray<T>(data: unknown, key?: string): T[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object" && key) {
+    const value = (data as Record<string, unknown>)[key];
+    if (Array.isArray(value)) return value as T[];
+  }
+  return [];
+}
 
 export default function Tags() {
   const { t } = useLanguage();
@@ -53,6 +64,7 @@ export default function Tags() {
   const [assigneeData, setAssigneeData] = useState({
     profileName: "",
     storeIds: [] as string[],
+    userIds: [] as string[],
   });
   const [editingAssigneeProfile, setEditingAssigneeProfile] = useState<any>(null);
   const [isViewStoresDialogOpen, setIsViewStoresDialogOpen] = useState(false);
@@ -80,30 +92,42 @@ export default function Tags() {
   const fetchAdvDropdownTags = async () => {
     try {
       const response = await fetch('http://localhost:3002/tags/adv-dropdown?organizationId=default-org');
+      if (!response.ok) {
+        setAdvDropdownTags([]);
+        return;
+      }
       const data = await response.json();
-      setAdvDropdownTags(data || []);
+      setAdvDropdownTags(toArray(data));
     } catch (err) {
       console.error('Failed to fetch adv dropdown tags:', err);
+      setAdvDropdownTags([]);
     }
   };
 
   const fetchAssigneeProfiles = async () => {
     try {
       const response = await fetch('http://localhost:3002/tags/assignee-profile?organizationId=default-org');
+      if (!response.ok) {
+        setAssigneeProfiles([]);
+        return;
+      }
       const data = await response.json();
-      setAssigneeProfiles(data || []);
+      setAssigneeProfiles(toArray(data));
     } catch (err) {
       console.error('Failed to fetch assignee profiles:', err);
+      setAssigneeProfiles([]);
     }
   };
 
   const fetchUsers = async () => {
     try {
       const response = await fetch('http://localhost:3002/users?organizationId=default-org');
+      if (!response.ok) {
+        setUsers([]);
+        return;
+      }
       const data = await response.json();
-      // Handle both array and object responses
-      const usersArray = Array.isArray(data) ? data : (data?.users || []);
-      setUsers(usersArray);
+      setUsers(toArray(data, 'users'));
     } catch (err) {
       console.error('Failed to fetch users:', err);
       setUsers([]);
@@ -112,23 +136,28 @@ export default function Tags() {
 
   const fetchEntities = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/org/entities?organizationId=default-org');
+      const response = await fetch('http://localhost:3009/api/org/entities?organizationId=default-org');
+      if (!response.ok) {
+        setEntities([]);
+        return;
+      }
       const data = await response.json();
-      setEntities(data || []);
+      setEntities(toArray(data));
     } catch (err) {
       console.error('Failed to fetch entities:', err);
+      setEntities([]);
     }
   };
 
   const fetchProcessTags = async () => {
     try {
       const response = await fetch('http://localhost:3002/tags/process?organizationId=default-org');
+      if (!response.ok) {
+        setProcessTags([]);
+        return;
+      }
       const data = await response.json();
-      console.log('Fetched process tags data:', data);
-      // Handle both array and object responses
-      const tagsArray = Array.isArray(data) ? data : (data?.tags || []);
-      console.log('Setting process tags:', tagsArray);
-      setProcessTags(tagsArray);
+      setProcessTags(toArray(data, 'tags'));
     } catch (err) {
       console.error('Failed to fetch process tags:', err);
       setProcessTags([]);
@@ -138,10 +167,12 @@ export default function Tags() {
   const fetchQuestionTags = async () => {
     try {
       const response = await fetch('http://localhost:3002/tags/question?organizationId=default-org');
+      if (!response.ok) {
+        setQuestionTags([]);
+        return;
+      }
       const data = await response.json();
-      // Handle both array and object responses
-      const tagsArray = Array.isArray(data) ? data : (data?.tags || []);
-      setQuestionTags(tagsArray);
+      setQuestionTags(toArray(data, 'tags'));
     } catch (err) {
       console.error('Failed to fetch question tags:', err);
       setQuestionTags([]);
@@ -179,12 +210,30 @@ export default function Tags() {
     }
   };
 
+  const resetAssigneeForm = () => {
+    setAssigneeData({ profileName: "", storeIds: [], userIds: [] });
+    setEditingAssigneeProfile(null);
+  };
+
   const handleCreateAssigneeProfile = async () => {
+    if (!assigneeData.profileName.trim()) {
+      alert(t('profileName') + ' is required');
+      return;
+    }
+    if (assigneeData.storeIds.length === 0) {
+      alert('Select at least one store');
+      return;
+    }
+    if (assigneeData.userIds.length === 0) {
+      alert('Select at least one user');
+      return;
+    }
+
     try {
-      const url = editingAssigneeProfile 
+      const url = editingAssigneeProfile
         ? `http://localhost:3002/tags/assignee-profile/${editingAssigneeProfile.id}`
         : 'http://localhost:3002/tags/assignee-profile';
-      
+
       const method = editingAssigneeProfile ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -193,21 +242,25 @@ export default function Tags() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...assigneeData,
+          profileName: assigneeData.profileName.trim(),
+          storeIds: assigneeData.storeIds,
+          userIds: assigneeData.userIds,
           organizationId: 'default-org',
         }),
       });
 
       if (response.ok) {
-        setAssigneeData({ profileName: "", storeIds: [] });
-        setEditingAssigneeProfile(null);
+        resetAssigneeForm();
         setIsAssigneeDialogOpen(false);
         fetchAssigneeProfiles();
       } else {
-        console.error('Failed to save assignee profile');
+        const errorData = await response.json().catch(() => null);
+        console.error('Failed to save assignee profile', errorData);
+        alert('Failed to save assignee profile');
       }
     } catch (err) {
       console.error('Error saving assignee profile:', err);
+      alert('Failed to save assignee profile');
     }
   };
 
@@ -216,6 +269,7 @@ export default function Tags() {
     setAssigneeData({
       profileName: profile.profileName,
       storeIds: profile.storeIds || [],
+      userIds: (profile.users || []).map((user: any) => user.id),
     });
     setIsAssigneeDialogOpen(true);
   };
@@ -524,9 +578,11 @@ export default function Tags() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteAdvTag(tag.id)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <TableActionsMenu>
+                            <DropdownMenuItem onClick={() => handleDeleteAdvTag(tag.id)} className="text-destructive">
+                              {t('delete')}
+                            </DropdownMenuItem>
+                          </TableActionsMenu>
                         </TableCell>
                       </TableRow>
                     ))
@@ -549,14 +605,20 @@ export default function Tags() {
                 className="pl-10 w-64"
               />
             </div>
-            <Dialog open={isAssigneeDialogOpen} onOpenChange={setIsAssigneeDialogOpen}>
+            <Dialog
+              open={isAssigneeDialogOpen}
+              onOpenChange={(open) => {
+                setIsAssigneeDialogOpen(open);
+                if (!open) resetAssigneeForm();
+              }}
+            >
               <DialogTrigger asChild>
-                <Button className="gap-2">
+                <Button className="gap-2" onClick={resetAssigneeForm}>
                   <Plus className="w-4 h-4" />
                   {t('createNewProfile')}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingAssigneeProfile ? t('editAssigneeProfile') : t('createAssigneeProfile')}</DialogTitle>
                   <DialogDescription>
@@ -578,31 +640,70 @@ export default function Tags() {
                   <div className="grid gap-2">
                     <Label>{t('selectStores')}</Label>
                     <div className="border rounded-md p-4 max-h-48 overflow-y-auto">
-                      {entities.map((entity: any) => (
-                        <div key={entity.id} className="flex items-center gap-2 mb-2">
-                          <input
-                            type="checkbox"
-                            id={`store-${entity.id}`}
-                            checked={assigneeData.storeIds.includes(entity.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setAssigneeData({
-                                  ...assigneeData,
-                                  storeIds: [...assigneeData.storeIds, entity.id],
-                                });
-                              } else {
-                                setAssigneeData({
-                                  ...assigneeData,
-                                  storeIds: assigneeData.storeIds.filter((id) => id !== entity.id),
-                                });
-                              }
-                            }}
-                          />
-                          <label htmlFor={`store-${entity.id}`} className="text-sm">
-                            {entity.storeName}
-                          </label>
-                        </div>
-                      ))}
+                      {entities.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No stores available</p>
+                      ) : (
+                        entities.map((entity: any) => (
+                          <div key={entity.id} className="flex items-center gap-2 mb-2">
+                            <input
+                              type="checkbox"
+                              id={`store-${entity.id}`}
+                              checked={assigneeData.storeIds.includes(entity.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setAssigneeData({
+                                    ...assigneeData,
+                                    storeIds: [...assigneeData.storeIds, entity.id],
+                                  });
+                                } else {
+                                  setAssigneeData({
+                                    ...assigneeData,
+                                    storeIds: assigneeData.storeIds.filter((id) => id !== entity.id),
+                                  });
+                                }
+                              }}
+                            />
+                            <label htmlFor={`store-${entity.id}`} className="text-sm">
+                              {entity.storeName}
+                            </label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>{t('selectUsers')}</Label>
+                    <div className="border rounded-md p-4 max-h-48 overflow-y-auto">
+                      {users.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No users available</p>
+                      ) : (
+                        users.map((user: any) => (
+                          <div key={user.id} className="flex items-center gap-2 mb-2">
+                            <input
+                              type="checkbox"
+                              id={`user-${user.id}`}
+                              checked={assigneeData.userIds.includes(user.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setAssigneeData({
+                                    ...assigneeData,
+                                    userIds: [...assigneeData.userIds, user.id],
+                                  });
+                                } else {
+                                  setAssigneeData({
+                                    ...assigneeData,
+                                    userIds: assigneeData.userIds.filter((id) => id !== user.id),
+                                  });
+                                }
+                              }}
+                            />
+                            <label htmlFor={`user-${user.id}`} className="text-sm">
+                              {user.name}
+                              {user.designation ? ` (${user.designation})` : ''}
+                            </label>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
@@ -624,43 +725,48 @@ export default function Tags() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('tag')}</TableHead>
-                    <TableHead>{t('tagValue')}</TableHead>
+                    <TableHead>{t('profileName')}</TableHead>
+                    <TableHead>{t('stores')}</TableHead>
+                    <TableHead>{t('users')}</TableHead>
                     <TableHead>{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {assigneeProfiles.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
-                        {t('noData')}
+                      <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                        {t('noAssigneeProfilesAvailable')}
                       </TableCell>
                     </TableRow>
                   ) : (
                     assigneeProfiles
-                      .filter((profile: any) => 
+                      .filter((profile: any) =>
                         profile.profileName?.toLowerCase().includes(searchQuery.toLowerCase())
                       )
                       .map((profile: any) => (
                       <TableRow key={profile.id}>
                         <TableCell className="font-medium">{profile.profileName}</TableCell>
                         <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            <Badge variant="outline">{profile.storeIds?.length || 0} {t('stores')}</Badge>
-                          </div>
+                          <Badge variant="outline">{profile.storeIds?.length || 0} {t('stores')}</Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => handleViewStores(profile)}>
-                              <Building2 className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleEditAssigneeProfile(profile)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDeleteAssigneeProfile(profile.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                          <Badge variant="outline">{profile.users?.length || 0} {t('users')}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <TableActionsMenu>
+                            <DropdownMenuItem onClick={() => handleViewStores(profile)}>
+                              View Stores
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditAssigneeProfile(profile)}>
+                              {t('edit')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteAssigneeProfile(profile.id)}
+                              className="text-destructive"
+                            >
+                              {t('delete')}
+                            </DropdownMenuItem>
+                          </TableActionsMenu>
                         </TableCell>
                       </TableRow>
                     ))
@@ -680,19 +786,37 @@ export default function Tags() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="border rounded-md p-4 max-h-48 overflow-y-auto">
-                  {viewingProfileStores?.storeIds?.length > 0 ? (
-                    entities
-                      .filter((entity: any) => viewingProfileStores.storeIds.includes(entity.id))
-                      .map((entity: any) => (
-                        <div key={entity.id} className="flex items-center gap-2 mb-2">
-                          <Building2 className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm">{entity.storeName}</span>
+                <div>
+                  <h4 className="text-sm font-medium mb-2">{t('stores')}</h4>
+                  <div className="border rounded-md p-4 max-h-48 overflow-y-auto">
+                    {viewingProfileStores?.storeIds?.length > 0 ? (
+                      entities
+                        .filter((entity: any) => viewingProfileStores.storeIds.includes(entity.id))
+                        .map((entity: any) => (
+                          <div key={entity.id} className="flex items-center gap-2 mb-2">
+                            <Building2 className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm">{entity.storeName}</span>
+                          </div>
+                        ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{t('noStoresAssigned')}</p>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-2">{t('users')}</h4>
+                  <div className="border rounded-md p-4 max-h-48 overflow-y-auto">
+                    {viewingProfileStores?.users?.length > 0 ? (
+                      viewingProfileStores.users.map((user: any) => (
+                        <div key={user.id} className="flex items-center gap-2 mb-2">
+                          <Users className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm">{user.name}</span>
                         </div>
                       ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">{t('noStoresAssigned')}</p>
-                  )}
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No users assigned</p>
+                    )}
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -802,14 +926,15 @@ export default function Tags() {
                           {tag.ownerName || '-'}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => handleEditProcessTag(tag)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDeleteProcessTag(tag.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                          <TableActionsMenu>
+                            <DropdownMenuItem onClick={() => handleEditProcessTag(tag)}>{t('edit')}</DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteProcessTag(tag.id)}
+                              className="text-destructive"
+                            >
+                              {t('delete')}
+                            </DropdownMenuItem>
+                          </TableActionsMenu>
                         </TableCell>
                       </TableRow>
                     ))
@@ -939,14 +1064,15 @@ export default function Tags() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => handleEditQuestionTag(tag)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDeleteQuestionTag(tag.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                          <TableActionsMenu>
+                            <DropdownMenuItem onClick={() => handleEditQuestionTag(tag)}>{t('edit')}</DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteQuestionTag(tag.id)}
+                              className="text-destructive"
+                            >
+                              {t('delete')}
+                            </DropdownMenuItem>
+                          </TableActionsMenu>
                         </TableCell>
                       </TableRow>
                     ))

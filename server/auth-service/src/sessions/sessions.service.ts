@@ -50,6 +50,17 @@ export class SessionsService {
     await this.sessionRepository.delete({ token });
   }
 
+  async deleteSessionsForUser(userId: string): Promise<void> {
+    await this.sessionRepository.delete({ userId });
+  }
+
+  async revokeRefreshTokensForUser(userId: string): Promise<void> {
+    await this.refreshTokenRepository.update(
+      { userId, isRevoked: false },
+      { isRevoked: true, revokedAt: new Date() },
+    );
+  }
+
   async deleteExpiredSessions(): Promise<void> {
     await this.sessionRepository
       .createQueryBuilder()

@@ -1,64 +1,74 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  BadRequestException,
+} from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { Ticket } from './ticket.entity';
 import { TicketTag } from './ticket-tag.entity';
 import { AutoTicketCategory } from './auto-ticket-category.entity';
 import { TicketRule } from './ticket-rule.entity';
+import { TicketSettings } from './ticket-settings.entity';
 
 @Controller('tickets')
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
-  // Ticket endpoints
+  // --- Static routes (must be before :id) ---
+
   @Post()
   create(@Body() createTicketDto: Partial<Ticket>) {
     return this.ticketsService.create(createTicketDto);
   }
 
   @Get()
-  findAll(@Query('organizationId') organizationId: string) {
-    return this.ticketsService.findAll(organizationId);
+  findAll(
+    @Query('organizationId') organizationId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.ticketsService.findAll(
+      organizationId,
+      startDate ? new Date(startDate) : undefined,
+      endDate ? new Date(endDate) : undefined,
+    );
   }
 
   @Get('assigned-to-me')
-  findAssignedToMe(@Query('userId') userId: string, @Query('organizationId') organizationId: string) {
+  findAssignedToMe(
+    @Query('userId') userId: string,
+    @Query('organizationId') organizationId: string,
+  ) {
     return this.ticketsService.findAssignedToMe(userId, organizationId);
   }
 
   @Get('created-by-me')
-  findCreatedByMe(@Query('userId') userId: string, @Query('organizationId') organizationId: string) {
+  findCreatedByMe(
+    @Query('userId') userId: string,
+    @Query('organizationId') organizationId: string,
+  ) {
     return this.ticketsService.findCreatedByMe(userId, organizationId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ticketsService.findOne(id);
+  @Get('settings')
+  getSettings(@Query('organizationId') organizationId: string) {
+    return this.ticketsService.getSettings(organizationId);
   }
 
-  @Put(':id')
-  update(@Param('id') id: string, @Body() updateTicketDto: Partial<Ticket>) {
-    return this.ticketsService.update(id, updateTicketDto);
+  @Put('settings')
+  updateSettings(@Body() body: Partial<TicketSettings> & { organizationId: string }) {
+    if (!body.organizationId) {
+      throw new BadRequestException('organizationId is required');
+    }
+    return this.ticketsService.updateSettings(body.organizationId, body);
   }
 
-  @Put(':id/status')
-  updateStatus(
-    @Param('id') id: string,
-    @Body() body: { status: string; userId: string }
-  ) {
-    return this.ticketsService.updateStatus(id, body.status, body.userId);
-  }
-
-  @Put(':id/comments')
-  addComment(@Param('id') id: string, @Body() comment: any) {
-    return this.ticketsService.addComment(id, comment);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ticketsService.remove(id);
-  }
-
-  // Ticket Tag endpoints
   @Post('tags')
   createTag(@Body() createTagDto: Partial<TicketTag>) {
     return this.ticketsService.createTag(createTagDto);
@@ -79,7 +89,6 @@ export class TicketsController {
     return this.ticketsService.removeTag(id);
   }
 
-  // Auto Ticket Category endpoints
   @Post('categories')
   createCategory(@Body() createCategoryDto: Partial<AutoTicketCategory>) {
     return this.ticketsService.createCategory(createCategoryDto);
@@ -91,7 +100,10 @@ export class TicketsController {
   }
 
   @Put('categories/:id')
-  updateCategory(@Param('id') id: string, @Body() updateCategoryDto: Partial<AutoTicketCategory>) {
+  updateCategory(
+    @Param('id') id: string,
+    @Body() updateCategoryDto: Partial<AutoTicketCategory>,
+  ) {
     return this.ticketsService.updateCategory(id, updateCategoryDto);
   }
 
@@ -100,7 +112,6 @@ export class TicketsController {
     return this.ticketsService.removeCategory(id);
   }
 
-  // Ticket Rule endpoints
   @Post('rules')
   createRule(@Body() createRuleDto: Partial<TicketRule>) {
     return this.ticketsService.createRule(createRuleDto);
@@ -121,7 +132,6 @@ export class TicketsController {
     return this.ticketsService.removeRule(id);
   }
 
-  // Ticket Report endpoints
   @Get('reports/org-report')
   getTicketOrgReport(
     @Query('organizationId') organizationId: string,
@@ -136,7 +146,7 @@ export class TicketsController {
   @Post('reports/advance-search')
   getTicketAdvanceSearch(
     @Query('organizationId') organizationId: string,
-    @Body() filters: any,
+    @Body() filters: Record<string, unknown>,
   ) {
     return this.ticketsService.getTicketAdvanceSearch(organizationId, filters);
   }
@@ -147,5 +157,35 @@ export class TicketsController {
     @Query('tagId') tagId?: string,
   ) {
     return this.ticketsService.getTicketTagReport(organizationId, tagId);
+  }
+
+  // --- Parameterized ticket routes ---
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.ticketsService.findOne(id);
+  }
+
+  @Put(':id')
+  update(@Param('id') id: string, @Body() updateTicketDto: Partial<Ticket>) {
+    return this.ticketsService.update(id, updateTicketDto);
+  }
+
+  @Put(':id/status')
+  updateStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string; userId: string },
+  ) {
+    return this.ticketsService.updateStatus(id, body.status, body.userId);
+  }
+
+  @Put(':id/comments')
+  addComment(@Param('id') id: string, @Body() comment: Record<string, unknown>) {
+    return this.ticketsService.addComment(id, comment);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string, @Query('userId') userId?: string) {
+    return this.ticketsService.remove(id, userId);
   }
 }

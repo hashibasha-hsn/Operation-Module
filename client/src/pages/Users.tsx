@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -19,6 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -40,6 +46,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import {
   ArrowLeft,
   MoreVertical,
@@ -55,18 +67,109 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import * as XLSX from 'xlsx';
+import {
+  sortDesignationsBySystemRole,
+  sortSystemRolesByHierarchy,
+} from "@/lib/designationOrder";
+import {
+  assignUserToProcesses,
+  fetchPublishedProcesses,
+} from "@/lib/processSubmission";
+import UserHierarchyTree from "@/components/users/UserHierarchyTree";
+import UserHierarchyDetails from "@/components/users/UserHierarchyDetails";
+import HybridAssigneePanel from "@/components/users/HybridAssigneePanel";
+import {
+  countHierarchySubordinates,
+  getUserDefaultStoreName as resolveHierarchyDefaultStoreName,
+  getStoresUnderCoverage,
+  resolveHierarchyUser,
+} from "@/lib/userHierarchy";
+import type { HierarchyUser } from "@/components/users/UserHierarchyTree";
+
+const COUNTRY_PHONE_OPTIONS = [
+  { code: "+966", label: "+966 (Saudi Arabia)", maxLength: 9, pattern: /^5\d{8}$/ },
+  { code: "+965", label: "+965 (Kuwait)", maxLength: 8, pattern: /^[569]\d{7}$/ },
+] as const;
+
+function sanitizePhoneInput(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+function validatePhoneNumber(phone: string, countryCode: string): string | null {
+  if (!phone) return null;
+
+  const option = COUNTRY_PHONE_OPTIONS.find((item) => item.code === countryCode);
+  if (!option) return "Please select a valid country code";
+
+  if (!option.pattern.test(phone)) {
+    if (countryCode === "+966") {
+      return "Saudi number must be 9 digits and start with 5";
+    }
+    return "Kuwait number must be 8 digits and start with 5, 6, or 9";
+  }
+
+  return null;
+}
+
+const DEFAULT_USER_TABLE_COLUMNS = [
+  'name', 'email', 'employeeId', 'designation', 'manager', 'storeName', 'createdAt', 'lastLogin', 'validEmail', 'status', 'action',
+];
+
+const USER_TABLE_STANDARD_COLUMNS = [
+  { key: 'name', labelKey: 'name' },
+  { key: 'email', labelKey: 'email' },
+  { key: 'employeeId', labelKey: 'employeeId' },
+  { key: 'designation', labelKey: 'designation' },
+  { key: 'manager', labelKey: 'manager' },
+  { key: 'storeName', labelKey: 'storeName' },
+  { key: 'createdAt', labelKey: 'createdAt' },
+  { key: 'lastLogin', labelKey: 'lastLogin' },
+  { key: 'validEmail', labelKey: 'validEmail' },
+  { key: 'status', labelKey: 'status' },
+  { key: 'action', labelKey: 'action' },
+] as const;
+
+function userTagColumnKey(tagId: string) {
+  return `tag:${tagId}`;
+}
+
+function isUserTagColumnKey(key: string) {
+  return key.startsWith('tag:');
+}
+
+function getUserTagCellValue(user: any, tag: { name: string }) {
+  if (!user?.tags || typeof user.tags !== 'object') return '-';
+  const value = user.tags[tag.name];
+  return value != null && value !== '' ? String(value) : '-';
+}
+
+function formatDateTime(value: unknown, fallback = 'N/A') {
+  if (!value) return fallback;
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleString();
+}
 
 export default function UsersPage() {
   const { t } = useLanguage();
   const [users, setUsers] = useState<any[]>([]);
+  const [selectedHierarchyUser, setSelectedHierarchyUser] = useState<any | null>(null);
   const [entities, setEntities] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalUsers: 0, activeUsers: 0, inactiveUsers: 0, validEmails: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [emailFilter, setEmailFilter] = useState("");
+  const [validEmailFilter, setValidEmailFilter] = useState<"all" | "valid" | "invalid">("all");
+  const [sortBy, setSortBy] = useState<"nameAsc" | "nameDesc" | "emailAsc" | "emailDesc">("nameAsc");
+  const [appliedEmailFilter, setAppliedEmailFilter] = useState("");
+  const [appliedValidEmailFilter, setAppliedValidEmailFilter] = useState<"all" | "valid" | "invalid">("all");
+  const [appliedSortBy, setAppliedSortBy] = useState<"nameAsc" | "nameDesc" | "emailAsc" | "emailDesc" | null>(null);
   const [activeTab, setActiveTab] = useState("Users");
   const [showActive, setShowActive] = useState(true);
   const [showInactive, setShowInactive] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+  const [createError, setCreateError] = useState("");
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [isDesignationDialogOpen, setIsDesignationDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -78,7 +181,7 @@ export default function UsersPage() {
     validEmail: false,
     password: "",
     phoneNumber: "",
-    countryCode: "+1",
+    countryCode: "+966",
     manager: "",
     designation: "",
     tags: "",
@@ -93,6 +196,8 @@ export default function UsersPage() {
   const [designations, setDesignations] = useState<any[]>([]);
   const [systemRoles, setSystemRoles] = useState<any[]>([]);
   const [isProcessAssignmentOpen, setIsProcessAssignmentOpen] = useState(false);
+  const [publishedProcesses, setPublishedProcesses] = useState<any[]>([]);
+  const [selectedProcessIds, setSelectedProcessIds] = useState<string[]>([]);
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [isEditDesignationDialogOpen, setIsEditDesignationDialogOpen] = useState(false);
   const [editingDesignation, setEditingDesignation] = useState<any>(null);
@@ -112,6 +217,7 @@ export default function UsersPage() {
     name: "",
     memberIds: [] as string[],
   });
+  const [editingTeam, setEditingTeam] = useState<any>(null);
   const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({
@@ -129,17 +235,13 @@ export default function UsersPage() {
   });
   const [editSelectedTags, setEditSelectedTags] = useState<any>({});
   const [isColumnSettingsOpen, setIsColumnSettingsOpen] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState([
-    'name', 'email', 'designation', 'manager', 'entityId', 'storeName', 'createdAt', 'lastLogin', 'validEmail', 'status', 'action'
-  ]);
-  const [tempVisibleColumns, setTempVisibleColumns] = useState([
-    'name', 'email', 'designation', 'manager', 'entityId', 'storeName', 'createdAt', 'lastLogin', 'validEmail', 'status', 'action'
-  ]);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([...DEFAULT_USER_TABLE_COLUMNS]);
+  const [tempVisibleColumns, setTempVisibleColumns] = useState<string[]>([...DEFAULT_USER_TABLE_COLUMNS]);
   const [selectedUserForMapping, setSelectedUserForMapping] = useState<any>(null);
   const [isAdvanceMappingDialogOpen, setIsAdvanceMappingDialogOpen] = useState(false);
+  const [advanceMappingMode, setAdvanceMappingMode] = useState<'add' | 'edit'>('add');
+  const [advanceMappingUserId, setAdvanceMappingUserId] = useState('');
   const [additionalStores, setAdditionalStores] = useState<string[]>([]);
-  const [isHybridDialogOpen, setIsHybridDialogOpen] = useState(false);
-  const [hybridData, setHybridData] = useState({ userId: '', isHybrid: false, hybridStores: [] as string[] });
   const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
   const [selectedDesignationForPermissions, setSelectedDesignationForPermissions] = useState<any>(null);
   const [features, setFeatures] = useState<any[]>([]);
@@ -174,9 +276,9 @@ export default function UsersPage() {
       // Transform database response to match frontend structure
       const transformedTags = Array.isArray(data) ? data.map((tag: any) => ({
         id: tag.id,
-        tag: tag.tagName,
-        tagValues: Array.isArray(tag.tagValues) ? tag.tagValues : (typeof tag.tagValues === 'string' ? JSON.parse(tag.tagValues) : []),
-        mandatory: tag.mandatory
+        name: tag.name,
+        tagValues: Array.isArray(tag.values) ? tag.values : (typeof tag.values === 'string' ? JSON.parse(tag.values) : []),
+        mandatory: tag.isMandatory ? 'YES' : 'NO'
       })) : [];
       setUserTags(transformedTags);
     } catch (err) {
@@ -189,9 +291,10 @@ export default function UsersPage() {
     try {
       const response = await fetch('http://localhost:3002/user-teams?organizationId=default-org');
       const data = await response.json();
-      setUserTeams(data || []);
+      setUserTeams(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch user teams:', err);
+      setUserTeams([]);
     }
   };
 
@@ -205,12 +308,41 @@ export default function UsersPage() {
   }, []);
 
   useEffect(() => {
+    const validTagKeys = new Set(userTags.map((tag) => userTagColumnKey(tag.id)));
+    const prune = (columns: string[]) =>
+      columns.filter((column) => !isUserTagColumnKey(column) || validTagKeys.has(column));
+    setVisibleColumns((prev) => prune(prev));
+    setTempVisibleColumns((prev) => prune(prev));
+  }, [userTags]);
+
+  const visibleUserTagColumns = useMemo(
+    () => userTags.filter((tag) => visibleColumns.includes(userTagColumnKey(tag.id))),
+    [userTags, visibleColumns],
+  );
+
+  const userTableColumnCount = Math.max(visibleColumns.length, 1);
+
+  useEffect(() => {
+    if (!isDialogOpen) {
+      setSelectedProcessIds([]);
+      setIsProcessAssignmentOpen(false);
+      return;
+    }
+    fetchPublishedProcesses()
+      .then(setPublishedProcesses)
+      .catch(() => setPublishedProcesses([]));
+  }, [isDialogOpen]);
+
+  useEffect(() => {
     if (activeTab === "Designation") {
       fetchDesignations();
       fetchSystemRoles();
     }
     if (activeTab === "Removed User") {
       fetchRemovedUsers();
+    }
+    if (activeTab === "Team") {
+      fetchUserTeams();
     }
   }, [activeTab]);
 
@@ -254,7 +386,7 @@ export default function UsersPage() {
         })
       );
 
-      setDesignations(designationsWithDetails || []);
+      setDesignations(sortDesignationsBySystemRole(designationsWithDetails || []));
     } catch (err) {
       console.error('Failed to fetch designations:', err);
     }
@@ -264,7 +396,7 @@ export default function UsersPage() {
     try {
       const response = await fetch('http://localhost:3009/api/user/system-roles');
       const data = await response.json();
-      setSystemRoles(data || []);
+      setSystemRoles(sortSystemRolesByHierarchy(data || []));
     } catch (err) {
       console.error('Failed to fetch system roles:', err);
     }
@@ -415,12 +547,13 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3002/users');
+      const response = await fetch('http://localhost:3002/users?limit=1000');
       const data = await response.json();
       // Parse tags if they come as JSON strings from the database
       const usersWithParsedTags = (data.users || []).map((user: any) => ({
         ...user,
-        tags: typeof user.tags === 'string' ? JSON.parse(user.tags) : (user.tags || {})
+        tags: typeof user.tags === 'string' ? JSON.parse(user.tags) : (user.tags || {}),
+        additionalStores: normalizeStoreIds(user.additionalStores),
       }));
       setUsers(usersWithParsedTags);
     } catch (err) {
@@ -461,27 +594,6 @@ export default function UsersPage() {
     }
   };
 
-  const handleRestoreUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to restore this user?')) return;
-
-    try {
-      const response = await fetch(`http://localhost:3002/users/removed/${userId}/restore`, {
-        method: 'POST',
-      });
-      if (response.ok) {
-        alert('User restored successfully');
-        fetchRemovedUsers();
-        fetchUsers();
-        fetchStats();
-      } else {
-        alert('Failed to restore user');
-      }
-    } catch (err) {
-      console.error('Error restoring user:', err);
-      alert('Error restoring user');
-    }
-  };
-
   const handleToggleValidEmail = async (userId: string) => {
     try {
       const response = await fetch(`http://localhost:3002/users/${userId}/toggle-valid-email`, {
@@ -515,20 +627,46 @@ export default function UsersPage() {
   };
 
   const handleCreateUser = async () => {
+    if (!formData.name.trim()) {
+      setCreateError("Name is required");
+      return;
+    }
+    if (!formData.email.trim()) {
+      setCreateError("Email is required");
+      return;
+    }
+    if (!formData.password.trim()) {
+      setCreateError("Password is required");
+      return;
+    }
+    if (!formData.entityId) {
+      setCreateError("Please select an entity");
+      return;
+    }
+
+    const phoneValidationError = validatePhoneNumber(formData.phoneNumber, formData.countryCode);
+    if (phoneValidationError) {
+      setPhoneError(phoneValidationError);
+      setCreateError("");
+      return;
+    }
+
     try {
-      // Create user in user-service database
+      setPhoneError("");
+      setCreateError("");
       const response = await fetch('http://localhost:3002/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: crypto.randomUUID(),
-          name: formData.name,
-          email: formData.email,
+          name: formData.name.trim(),
+          email: formData.email.trim(),
           password: formData.password,
           employeeId: formData.employeeId,
-          phone: formData.phoneNumber,
+          phone: formData.phoneNumber || null,
           countryCode: formData.countryCode,
           entityId: formData.entityId,
+          storeName: formData.entity,
           designation: formData.designation,
           manager: formData.manager,
           validEmail: formData.validEmail,
@@ -539,15 +677,14 @@ export default function UsersPage() {
 
       if (response.ok) {
         const userData = await response.json();
-        
-        // Also create user in auth-service database
+
         try {
           await fetch('http://localhost:3009/api/auth/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               id: userData.userId,
-              email: formData.email,
+              email: formData.email.trim(),
               password: formData.password,
               verificationStatus: 'VERIFIED',
             }),
@@ -556,20 +693,49 @@ export default function UsersPage() {
           console.error('Failed to create user in auth-service:', error);
         }
 
+        if (selectedProcessIds.length > 0) {
+          try {
+            await assignUserToProcesses(userData.userId, selectedProcessIds);
+          } catch (error) {
+            console.error('Failed to assign processes to user:', error);
+          }
+        }
+
         setFormData({
           entity: "", entityId: "", name: "", employeeId: "", email: "",
-          validEmail: false, password: "", phoneNumber: "", countryCode: "+1",
+          validEmail: false, password: "", phoneNumber: "", countryCode: "+966",
           manager: "", designation: "", tags: "",
         });
+        setPhoneError("");
+        setCreateError("");
         setSelectedTags({});
+        setSelectedProcessIds([]);
+        setIsProcessAssignmentOpen(false);
         setIsDialogOpen(false);
         fetchUsers();
+        fetchStats();
       } else {
-        console.error('Failed to create user');
+        const errorBody = await response.json().catch(() => null);
+        setCreateError(errorBody?.message || 'Failed to create user. Please check all required fields.');
       }
     } catch (err) {
       console.error('Error creating user:', err);
+      setCreateError('Could not connect to the server. Make sure user-service is running.');
     }
+  };
+
+  const handlePhoneNumberChange = (value: string, countryCode: string) => {
+    const option = COUNTRY_PHONE_OPTIONS.find((item) => item.code === countryCode);
+    const sanitized = sanitizePhoneInput(value).slice(0, option?.maxLength ?? 15);
+    setPhoneError("");
+    setFormData((prev) => ({ ...prev, phoneNumber: sanitized }));
+  };
+
+  const handleCountryCodeChange = (countryCode: string) => {
+    const option = COUNTRY_PHONE_OPTIONS.find((item) => item.code === countryCode);
+    const sanitized = sanitizePhoneInput(formData.phoneNumber).slice(0, option?.maxLength ?? 15);
+    setPhoneError("");
+    setFormData((prev) => ({ ...prev, countryCode, phoneNumber: sanitized }));
   };
 
   const handleCreateUserTag = async () => {
@@ -578,9 +744,9 @@ export default function UsersPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tagName: userTagData.name,
-          tagValues: userTagData.tagValues,
-          mandatory: userTagData.mandatory ? 'YES' : 'NO',
+          name: userTagData.name,
+          values: JSON.stringify(userTagData.tagValues),
+          isMandatory: userTagData.mandatory,
           organizationId: 'default-org',
         }),
       });
@@ -619,9 +785,9 @@ export default function UsersPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tagName: userTagData.name,
-          tagValues: userTagData.tagValues,
-          mandatory: userTagData.mandatory ? 'YES' : 'NO',
+          name: userTagData.name,
+          values: JSON.stringify(userTagData.tagValues),
+          isMandatory: userTagData.mandatory,
         }),
       });
 
@@ -661,26 +827,192 @@ export default function UsersPage() {
   };
 
   const handleCreateUserTeam = async () => {
+    if (!userTeamData.name.trim()) {
+      alert('Team name is required');
+      return;
+    }
+
     try {
       const response = await fetch('http://localhost:3002/user-teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: userTeamData.name,
+          name: userTeamData.name.trim(),
           organizationId: 'default-org',
+          memberIds: userTeamData.memberIds,
         }),
       });
 
       if (response.ok) {
         setUserTeamData({ name: "", memberIds: [] });
+        setEditingTeam(null);
         setIsUserTeamDialogOpen(false);
         fetchUserTeams();
       } else {
         console.error('Failed to create user team');
+        alert('Failed to create team');
       }
     } catch (err) {
       console.error('Error creating user team:', err);
+      alert('Error creating team');
     }
+  };
+
+  const handleEditTeam = async (team: any) => {
+    try {
+      const response = await fetch(`http://localhost:3002/user-teams/${team.id}`);
+      const data = await response.json();
+      setEditingTeam(data);
+      setUserTeamData({
+        name: data.name,
+        memberIds: data.memberIds || data.members?.map((member: any) => member.userId) || [],
+      });
+      setIsUserTeamDialogOpen(true);
+    } catch (err) {
+      console.error('Failed to load team details:', err);
+    }
+  };
+
+  const handleUpdateTeam = async () => {
+    if (!editingTeam) return;
+
+    try {
+      const response = await fetch(`http://localhost:3002/user-teams/${editingTeam.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: userTeamData.name,
+          memberIds: userTeamData.memberIds,
+        }),
+      });
+
+      if (response.ok) {
+        setUserTeamData({ name: "", memberIds: [] });
+        setEditingTeam(null);
+        setIsUserTeamDialogOpen(false);
+        fetchUserTeams();
+      } else {
+        console.error('Failed to update team');
+      }
+    } catch (err) {
+      console.error('Error updating team:', err);
+    }
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    if (!confirm('Are you sure you want to delete this team?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:3002/user-teams/${teamId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        fetchUserTeams();
+      } else {
+        console.error('Failed to delete team');
+      }
+    } catch (err) {
+      console.error('Error deleting team:', err);
+    }
+  };
+
+  const getDirectReports = (userName: string) =>
+    users.filter((u: any) => u.manager === userName);
+
+  const selectedHierarchyUserId = selectedHierarchyUser
+    ? String(selectedHierarchyUser.userId || selectedHierarchyUser.id || selectedHierarchyUser.name)
+    : null;
+
+  const hierarchyStoresUnderCoverage = useMemo(() => {
+    if (!selectedHierarchyUser) return [];
+    return getStoresUnderCoverage(selectedHierarchyUser, entities);
+  }, [selectedHierarchyUser, entities]);
+
+  const hierarchyDirectReportCount = useMemo(() => {
+    if (!selectedHierarchyUser?.name) return 0;
+    return countHierarchySubordinates(selectedHierarchyUser.name, getDirectReports);
+  }, [selectedHierarchyUser, users]);
+
+  const hierarchyDefaultStoreLabel = useMemo(() => {
+    if (!selectedHierarchyUser) return t("notAvailable");
+    return resolveHierarchyDefaultStoreName(selectedHierarchyUser, entities, t("notAvailable"));
+  }, [selectedHierarchyUser, entities, t]);
+
+  const handleSelectHierarchyUser = (node: HierarchyUser) => {
+    setSelectedHierarchyUser(resolveHierarchyUser(node, users));
+  };
+
+  const filteredUsers = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return users;
+
+    return users.filter((user: any) =>
+      (user.name || "").toLowerCase().includes(query),
+    );
+  }, [users, searchTerm]);
+
+  const displayUsers = useMemo(() => {
+    let result = [...filteredUsers];
+
+    const emailQuery = appliedEmailFilter.trim().toLowerCase();
+    if (emailQuery) {
+      result = result.filter((user: any) =>
+        (user.email || "").toLowerCase().includes(emailQuery),
+      );
+    }
+
+    if (appliedValidEmailFilter === "valid") {
+      result = result.filter((user: any) => user.validEmail);
+    } else if (appliedValidEmailFilter === "invalid") {
+      result = result.filter((user: any) => !user.validEmail);
+    }
+
+    if (appliedSortBy) {
+      result.sort((a: any, b: any) => {
+        switch (appliedSortBy) {
+          case "nameDesc":
+            return (b.name || "").localeCompare(a.name || "", undefined, { sensitivity: "base" });
+          case "emailAsc":
+            return (a.email || "").localeCompare(b.email || "", undefined, { sensitivity: "base" });
+          case "emailDesc":
+            return (b.email || "").localeCompare(a.email || "", undefined, { sensitivity: "base" });
+          case "nameAsc":
+          default:
+            return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+        }
+      });
+    }
+
+    return result;
+  }, [filteredUsers, appliedEmailFilter, appliedValidEmailFilter, appliedSortBy]);
+
+  const validEmailFilterLabel =
+    validEmailFilter === "valid" ? t("valid") : validEmailFilter === "invalid" ? t("invalid") : t("all");
+
+  const sortByLabel =
+    sortBy === "nameDesc"
+      ? t("nameDesc")
+      : sortBy === "emailAsc"
+        ? t("emailAsc")
+        : sortBy === "emailDesc"
+          ? t("emailDesc")
+          : t("nameAsc");
+
+  const handleApplyFilters = () => {
+    setAppliedEmailFilter(emailFilter);
+    setAppliedValidEmailFilter(validEmailFilter);
+    setAppliedSortBy(sortBy);
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setEmailFilter("");
+    setValidEmailFilter("all");
+    setSortBy("nameAsc");
+    setAppliedEmailFilter("");
+    setAppliedValidEmailFilter("all");
+    setAppliedSortBy(null);
   };
 
   const handleEditUser = (user: any) => {
@@ -703,37 +1035,29 @@ export default function UsersPage() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user? This will delete the user from both databases.')) {
+    if (!confirm('Are you sure you want to remove this user? They will be moved to the Removed User list.')) {
       return;
     }
 
     try {
-      console.log('Attempting to delete user with ID:', userId);
-      
-      // Delete from user-service database
       const userResponse = await fetch(`http://localhost:3002/users/${userId}`, {
         method: 'DELETE',
       });
-      
-      console.log('User-service delete response:', userResponse.status);
 
-      // Delete from auth-service database
-      const authResponse = await fetch(`http://localhost:3009/api/auth/users/${userId}`, {
-        method: 'DELETE',
-      });
-      
-      console.log('Auth-service delete response:', authResponse.status);
-
-      if (userResponse.ok || authResponse.ok) {
-        console.log('Delete successful, refreshing users');
+      if (userResponse.ok) {
         fetchUsers();
+        fetchStats();
+        if (activeTab === "Removed User") {
+          fetchRemovedUsers();
+        }
       } else {
-        console.error('Failed to delete user');
-        console.error('User-service response:', await userResponse.text());
-        console.error('Auth-service response:', await authResponse.text());
+        const errorText = await userResponse.text();
+        console.error('Failed to remove user:', errorText);
+        alert('Failed to remove user');
       }
     } catch (err) {
-      console.error('Error deleting user:', err);
+      console.error('Error removing user:', err);
+      alert('Error removing user');
     }
   };
 
@@ -794,72 +1118,169 @@ export default function UsersPage() {
     setIsColumnSettingsOpen(true);
   };
 
-  const handleOpenAdvanceMapping = (user: any) => {
-    setSelectedUserForMapping(user);
-    setAdditionalStores(user.additionalStores || []);
+  const normalizeStoreIds = (stores: unknown): string[] => {
+    if (!stores) return [];
+    let parsed = stores;
+    if (typeof parsed === 'string') {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch {
+        return [];
+      }
+    }
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((store) => (typeof store === 'string' ? store : store?.id))
+      .filter(Boolean);
+  };
+
+  const getStoreNameById = (storeId?: string) => {
+    if (!storeId) return '';
+    const entity = entities.find(
+      (e: any) => e.id === storeId || e.entityId === storeId,
+    );
+    return entity?.storeName || '';
+  };
+
+  const isValidStoreId = (storeId: string) =>
+    entities.some((e: any) => e.id === storeId || e.entityId === storeId);
+
+  const getUserDefaultStoreId = (user: any) => user.storeId || user.entityId;
+
+  const getUserDefaultStoreName = (user: any) =>
+    user.storeName || getStoreNameById(getUserDefaultStoreId(user)) || 'N/A';
+
+  const getAdditionalStoreDetails = (user: any) =>
+    normalizeStoreIds(user.additionalStores)
+      .filter((storeId) => isValidStoreId(storeId))
+      .map((storeId) => {
+        const entity = entities.find(
+          (e: any) => e.id === storeId || e.entityId === storeId,
+        );
+        return {
+          id: storeId,
+          name: entity?.storeName || 'Unknown store',
+          area: entity?.area || '',
+        };
+      });
+
+  const advanceMappedUsers = useMemo(
+    () => users.filter((user) => getAdditionalStoreDetails(user).length > 0),
+    [users, entities],
+  );
+
+  const handleOpenAddAdvanceMapping = () => {
+    setAdvanceMappingMode('add');
+    setAdvanceMappingUserId('');
+    setSelectedUserForMapping(null);
+    setAdditionalStores([]);
     setIsAdvanceMappingDialogOpen(true);
   };
 
-  const handleSaveAdvanceMapping = async () => {
-    if (!selectedUserForMapping) return;
+  const handleAdvanceMappingUserChange = (userId: string) => {
+    setAdvanceMappingUserId(userId);
+    const user = users.find((u: any) => u.userId === userId) || null;
+    setSelectedUserForMapping(user);
+    setAdditionalStores([]);
+  };
+
+  const handleOpenAdvanceMapping = (user: any) => {
+    setAdvanceMappingMode('edit');
+    setAdvanceMappingUserId(user.userId);
+    setSelectedUserForMapping(user);
+    setAdditionalStores(
+      normalizeStoreIds(user.additionalStores).filter((storeId) => isValidStoreId(storeId)),
+    );
+    setIsAdvanceMappingDialogOpen(true);
+  };
+
+  const handleDeleteAdvanceMapping = async (user: any) => {
+    if (!confirm(`Remove all advance mapping for ${user.name}?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:3002/users/${selectedUserForMapping.userId}/advance-mapping`, {
+      const response = await fetch(`http://localhost:3002/users/${user.userId}/advance-mapping`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          additionalStores,
+          additionalStores: [],
+        }),
+      });
+
+      if (response.ok) {
+        fetchUsers();
+      } else {
+        const error = await response.json().catch(() => null);
+        console.error('Failed to delete advance mapping', error);
+      }
+    } catch (err) {
+      console.error('Error deleting advance mapping:', err);
+    }
+  };
+
+  const handleSaveAdvanceMapping = async () => {
+    const user =
+      advanceMappingMode === 'add'
+        ? users.find((u: any) => u.userId === advanceMappingUserId)
+        : selectedUserForMapping;
+
+    if (!user) return;
+
+    const defaultStoreId = getUserDefaultStoreId(user);
+    const selectedStores = additionalStores
+      .filter((storeId) => storeId !== defaultStoreId && isValidStoreId(storeId));
+
+    const sanitizedStores =
+      advanceMappingMode === 'add'
+        ? [
+            ...new Set([
+              ...normalizeStoreIds(user.additionalStores).filter(
+                (storeId) => storeId !== defaultStoreId && isValidStoreId(storeId),
+              ),
+              ...selectedStores,
+            ]),
+          ]
+        : selectedStores;
+
+    if (sanitizedStores.length === 0) return;
+
+    try {
+      const response = await fetch(`http://localhost:3002/users/${user.userId}/advance-mapping`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          additionalStores: sanitizedStores,
         }),
       });
 
       if (response.ok) {
         setIsAdvanceMappingDialogOpen(false);
         setSelectedUserForMapping(null);
+        setAdvanceMappingUserId('');
         setAdditionalStores([]);
+        setAdvanceMappingMode('add');
         fetchUsers();
       } else {
-        console.error('Failed to save advance mapping');
+        const error = await response.json().catch(() => null);
+        console.error('Failed to save advance mapping', error);
       }
     } catch (err) {
       console.error('Error saving advance mapping:', err);
     }
   };
 
-  const handleOpenHybridDialog = (user: any) => {
-    setHybridData({
-      userId: user.userId,
-      isHybrid: user.isHybrid || false,
-      hybridStores: user.hybridStores || [],
-    });
-    setIsHybridDialogOpen(true);
-  };
-
-  const handleSaveHybrid = async () => {
-    try {
-      const response = await fetch(`http://localhost:3002/users/${hybridData.userId}/hybrid`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          isHybrid: hybridData.isHybrid,
-          hybridStores: hybridData.hybridStores,
-        }),
-      });
-
-      if (response.ok) {
-        setIsHybridDialogOpen(false);
-        setHybridData({ userId: '', isHybrid: false, hybridStores: [] });
-        fetchUsers();
-      } else {
-        console.error('Failed to save hybrid settings');
-      }
-    } catch (err) {
-      console.error('Error saving hybrid settings:', err);
-    }
-  };
+  const selectedUserDefaultStoreId = selectedUserForMapping
+    ? getUserDefaultStoreId(selectedUserForMapping)
+    : '';
+  const advanceMappingStoreOptions = entities;
+  const canSaveAdvanceMapping =
+    Boolean(advanceMappingMode === 'add' ? advanceMappingUserId : selectedUserForMapping) &&
+    additionalStores.some(
+      (storeId) => storeId !== selectedUserDefaultStoreId && isValidStoreId(storeId),
+    );
 
   const fetchFeatures = async () => {
     try {
@@ -929,19 +1350,28 @@ export default function UsersPage() {
   };
 
   const handleExport = () => {
-    // Prepare data for export
-    const exportData = users.map((user: any) => ({
-      [t('name')]: user.name || t('notAvailable'),
-      [t('email')]: user.email || t('notAvailable'),
-      [t('designation')]: user.designation || t('notAvailable'),
-      [t('manager')]: user.manager || t('notAvailable'),
-      [t('entityId')]: user.entityId || t('notAvailable'),
-      [t('storeName')]: user.storeName || t('notAvailable'),
-      [t('createdAt')]: user.createdAt || t('notAvailable'),
-      [t('lastLogin')]: user.lastLogin || t('notAvailable'),
-      [t('validEmail')]: user.validEmail ? 'Yes' : 'No',
-      [t('status')]: user.isActive ? 'Active' : 'Inactive',
-    }));
+    const exportData = users.map((user: any) => {
+      const row: Record<string, string> = {};
+
+      if (visibleColumns.includes('name')) row[t('name')] = user.name || t('notAvailable');
+      if (visibleColumns.includes('email')) row[t('email')] = user.email || t('notAvailable');
+      if (visibleColumns.includes('employeeId')) row[t('employeeId')] = user.employeeId || t('notAvailable');
+      if (visibleColumns.includes('designation')) row[t('designation')] = user.designation || t('notAvailable');
+      if (visibleColumns.includes('manager')) row[t('manager')] = user.manager || t('notAvailable');
+      if (visibleColumns.includes('storeName')) {
+        row[t('storeName')] = user.storeName || getStoreNameById(user.entityId) || t('notAvailable');
+      }
+      if (visibleColumns.includes('createdAt')) row[t('createdAt')] = user.createdAt || t('notAvailable');
+      if (visibleColumns.includes('lastLogin')) row[t('lastLogin')] = formatDateTime(user.lastLogin, t('notAvailable'));
+      if (visibleColumns.includes('validEmail')) row[t('validEmail')] = user.validEmail ? 'Yes' : 'No';
+      if (visibleColumns.includes('status')) row[t('status')] = user.isActive ? 'Active' : 'Inactive';
+
+      visibleUserTagColumns.forEach((tag: any) => {
+        row[tag.name] = getUserTagCellValue(user, tag);
+      });
+
+      return row;
+    });
 
     // Create worksheet
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -980,27 +1410,34 @@ export default function UsersPage() {
         employeeId: row[t('employeeId')] || row['employeeId'] || row['Employee ID'] || '',
         designation: row[t('designation')] || row['designation'] || row['Designation'] || '',
         manager: row[t('manager')] || row['manager'] || row['Manager'] || '',
+        password: row['password'] || row['Password'] || 'ChangeMe123!',
         entityId: formData.entityId,
+        storeName: formData.entity,
         validEmail: true,
         isActive: true,
+        tags: {},
       }));
 
-      // Send users to backend
       const response = await fetch('http://localhost:3002/users/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ users: usersToCreate }),
       });
 
+      const result = await response.json().catch(() => null);
+
       if (response.ok) {
-        alert('Users uploaded successfully');
+        const message = result?.failed
+          ? `Uploaded ${result.created} user(s). ${result.failed} failed.`
+          : `Users uploaded successfully (${result?.created ?? usersToCreate.length})`;
+        alert(message);
         setIsBulkDialogOpen(false);
         setBulkFile(null);
         setFormData({ ...formData, entity: '', entityId: '' });
         fetchUsers();
         fetchStats();
       } else {
-        alert('Failed to upload users');
+        alert(result?.message || 'Failed to upload users');
       }
     } catch (err) {
       console.error('Error uploading users:', err);
@@ -1024,11 +1461,11 @@ export default function UsersPage() {
             {tabs.map((tab) => (
               <Button
                 key={tab.key}
-                variant={activeTab === tab.key ? "default" : "ghost"}
-                className={`rounded-t-lg border-b-2 ${
+                variant="ghost"
+                className={`rounded-none border-b-2 px-4 ${
                   activeTab === tab.key
-                    ? "border-primary"
-                    : "border-transparent hover:border-muted-foreground/30"
+                    ? "border-sky-500 text-sky-700 bg-transparent hover:bg-sky-50/60 font-semibold"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-slate-300"
                 }`}
                 onClick={() => setActiveTab(tab.key)}
               >
@@ -1068,41 +1505,50 @@ export default function UsersPage() {
               <div className="flex-1 min-w-[200px] relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder={t('searchUsers')}
+                  placeholder={t('searchByName')}
                   className="pl-10"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
+              <div className="flex-1 min-w-[200px] relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('filterByEmail')}
+                  className="pl-10"
+                  value={emailFilter}
+                  onChange={(e) => setEmailFilter(e.target.value)}
+                />
+              </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2">
-                    {t('validEmail')}
+                    {validEmailFilterLabel}
                     <ChevronDown className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem>{t('all')}</DropdownMenuItem>
-                  <DropdownMenuItem>{t('valid')}</DropdownMenuItem>
-                  <DropdownMenuItem>{t('invalid')}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setValidEmailFilter("all")}>{t("all")}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setValidEmailFilter("valid")}>{t("valid")}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setValidEmailFilter("invalid")}>{t("invalid")}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2">
-                    {t('nameAsc')}
+                    {sortByLabel}
                     <ChevronDown className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem>{t('nameAsc')}</DropdownMenuItem>
-                  <DropdownMenuItem>{t('nameDesc')}</DropdownMenuItem>
-                  <DropdownMenuItem>{t('emailAsc')}</DropdownMenuItem>
-                  <DropdownMenuItem>{t('emailDesc')}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("nameAsc")}>{t("nameAsc")}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("nameDesc")}>{t("nameDesc")}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("emailAsc")}>{t("emailAsc")}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("emailDesc")}>{t("emailDesc")}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="outline">{t('apply')}</Button>
-              <Button variant="ghost">{t('reset')}</Button>
+              <Button variant="outline" onClick={handleApplyFilters}>{t("apply")}</Button>
+              <Button variant="ghost" onClick={handleResetFilters}>{t("reset")}</Button>
             </div>
 
             {/* Action Buttons */}
@@ -1291,31 +1737,39 @@ export default function UsersPage() {
                       <div className="flex gap-2">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="w-32 justify-between">
+                            <Button variant="outline" className="w-40 justify-between">
                               {formData.countryCode}
                               <ChevronDown className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => setFormData({ ...formData, countryCode: "+1" })}>
-                              +1 (US)
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setFormData({ ...formData, countryCode: "+91" })}>
-                              +91 (IN)
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setFormData({ ...formData, countryCode: "+44" })}>
-                              +44 (UK)
-                            </DropdownMenuItem>
+                            {COUNTRY_PHONE_OPTIONS.map((option) => (
+                              <DropdownMenuItem
+                                key={option.code}
+                                onClick={() => handleCountryCodeChange(option.code)}
+                              >
+                                {option.label}
+                              </DropdownMenuItem>
+                            ))}
                           </DropdownMenuContent>
                         </DropdownMenu>
                         <Input
                           id="phoneNumber"
+                          type="tel"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           value={formData.phoneNumber}
-                          onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                          onChange={(e) => handlePhoneNumberChange(e.target.value, formData.countryCode)}
                           placeholder={t('enterPhoneNumber')}
                           className="flex-1"
+                          maxLength={
+                            COUNTRY_PHONE_OPTIONS.find((item) => item.code === formData.countryCode)?.maxLength
+                          }
                         />
                       </div>
+                      {phoneError && (
+                        <p className="text-sm text-destructive">{phoneError}</p>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -1370,20 +1824,38 @@ export default function UsersPage() {
                       </CollapsibleTrigger>
                       <CollapsibleContent className="space-y-4 mt-4">
                         <div className="space-y-2">
-                          <Label htmlFor="process">{t('selectProcess')}</Label>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" className="w-full justify-between">
-                                {t('selectProcess')}
-                                <ChevronDown className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-full">
-                              <DropdownMenuItem>{t('process1')}</DropdownMenuItem>
-                              <DropdownMenuItem>{t('process2')}</DropdownMenuItem>
-                              <DropdownMenuItem>{t('process3')}</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Label>{t('selectProcess')}</Label>
+                          {publishedProcesses.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              No published processes available. Publish a process first from Process Management.
+                            </p>
+                          ) : (
+                            <div className="rounded-md border divide-y max-h-48 overflow-y-auto">
+                              {publishedProcesses.map((process: any) => (
+                                <label
+                                  key={process.id}
+                                  className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50"
+                                >
+                                  <Checkbox
+                                    checked={selectedProcessIds.includes(process.id)}
+                                    onCheckedChange={(checked) => {
+                                      setSelectedProcessIds((prev) =>
+                                        checked
+                                          ? [...prev, process.id]
+                                          : prev.filter((id) => id !== process.id),
+                                      );
+                                    }}
+                                  />
+                                  <span className="text-sm">{process.title}</span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                          {selectedProcessIds.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {selectedProcessIds.length} process(es) will be assigned to this user
+                            </p>
+                          )}
                         </div>
                       </CollapsibleContent>
                     </Collapsible>
@@ -1397,14 +1869,14 @@ export default function UsersPage() {
                             const values = Array.isArray(tag.tagValues) ? tag.tagValues : [];
                             return (
                               <div key={tag.id} className="space-y-2">
-                                <Label htmlFor={`tag-${tag.id}`}>{tag.tag}</Label>
+                                <Label htmlFor={`tag-${tag.id}`}>{tag.name}</Label>
                                 {values.length > 0 ? (
                                   <Select
-                                    value={selectedTags[tag.tag] || ''}
-                                    onValueChange={(value) => setSelectedTags({ ...selectedTags, [tag.tag]: value })}
+                                    value={selectedTags[tag.name] || ''}
+                                    onValueChange={(value) => setSelectedTags({ ...selectedTags, [tag.name]: value })}
                                   >
                                     <SelectTrigger id={`tag-${tag.id}`}>
-                                      <SelectValue placeholder={`Select ${tag.tag}`} />
+                                      <SelectValue placeholder={`Select ${tag.name}`} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {values.map((value: string, index: number) => (
@@ -1417,9 +1889,9 @@ export default function UsersPage() {
                                 ) : (
                                   <Input
                                     id={`tag-${tag.id}`}
-                                    placeholder={`Enter ${tag.tag}`}
-                                    value={selectedTags[tag.tag] || ''}
-                                    onChange={(e) => setSelectedTags({ ...selectedTags, [tag.tag]: e.target.value })}
+                                    placeholder={`Enter ${tag.name}`}
+                                    value={selectedTags[tag.name] || ''}
+                                    onChange={(e) => setSelectedTags({ ...selectedTags, [tag.name]: e.target.value })}
                                   />
                                 )}
                               </div>
@@ -1429,6 +1901,9 @@ export default function UsersPage() {
                       )}
                     </div>
                   </div>
+                  {createError && (
+                    <p className="text-sm text-destructive px-1">{createError}</p>
+                  )}
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                       {t('cancel')}
@@ -1586,14 +2061,14 @@ export default function UsersPage() {
                             const values = Array.isArray(tag.tagValues) ? tag.tagValues : [];
                             return (
                               <div key={tag.id} className="space-y-2">
-                                <Label htmlFor={`edit-tag-${tag.id}`}>{tag.tag}</Label>
+                                <Label htmlFor={`edit-tag-${tag.id}`}>{tag.name}</Label>
                                 {values.length > 0 ? (
                                   <Select
-                                    value={editSelectedTags[tag.tag] || ''}
-                                    onValueChange={(value) => setEditSelectedTags({ ...editSelectedTags, [tag.tag]: value })}
+                                    value={editSelectedTags[tag.name] || ''}
+                                    onValueChange={(value) => setEditSelectedTags({ ...editSelectedTags, [tag.name]: value })}
                                   >
                                     <SelectTrigger id={`edit-tag-${tag.id}`}>
-                                      <SelectValue placeholder={`Select ${tag.tag}`} />
+                                      <SelectValue placeholder={`Select ${tag.name}`} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {values.map((value: string, index: number) => (
@@ -1606,9 +2081,9 @@ export default function UsersPage() {
                                 ) : (
                                   <Input
                                     id={`edit-tag-${tag.id}`}
-                                    placeholder={`Enter ${tag.tag}`}
-                                    value={editSelectedTags[tag.tag] || ''}
-                                    onChange={(e) => setEditSelectedTags({ ...editSelectedTags, [tag.tag]: e.target.value })}
+                                    placeholder={`Enter ${tag.name}`}
+                                    value={editSelectedTags[tag.name] || ''}
+                                    onChange={(e) => setEditSelectedTags({ ...editSelectedTags, [tag.name]: e.target.value })}
                                   />
                                 )}
                               </div>
@@ -1644,19 +2119,7 @@ export default function UsersPage() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
-                    {[
-                      { key: 'name', label: t('name') },
-                      { key: 'email', label: t('email') },
-                      { key: 'designation', label: t('designation') },
-                      { key: 'manager', label: t('manager') },
-                      { key: 'entityId', label: t('entityId') },
-                      { key: 'storeName', label: t('storeName') },
-                      { key: 'createdAt', label: t('createdAt') },
-                      { key: 'lastLogin', label: t('lastLogin') },
-                      { key: 'validEmail', label: t('validEmail') },
-                      { key: 'status', label: t('status') },
-                      { key: 'action', label: t('action') }
-                    ].map((column) => (
+                    {USER_TABLE_STANDARD_COLUMNS.map((column) => (
                       <div key={column.key} className="flex items-center gap-2">
                         <input
                           type="checkbox"
@@ -1665,10 +2128,36 @@ export default function UsersPage() {
                           onChange={() => handleToggleColumn(column.key)}
                         />
                         <label htmlFor={`column-${column.key}`} className="text-sm">
-                          {column.label}
+                          {t(column.labelKey)}
                         </label>
                       </div>
                     ))}
+                    {userTags.length > 0 && (
+                      <>
+                        <div className="border-t pt-3">
+                          <p className="text-sm font-medium mb-2">{t('userTags')}</p>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            {t('selectUserTagColumnsToDisplay')}
+                          </p>
+                        </div>
+                        {userTags.map((tag: any) => {
+                          const columnKey = userTagColumnKey(tag.id);
+                          return (
+                            <div key={tag.id} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id={`column-${columnKey}`}
+                                checked={tempVisibleColumns.includes(columnKey)}
+                                onChange={() => handleToggleColumn(columnKey)}
+                              />
+                              <label htmlFor={`column-${columnKey}`} className="text-sm">
+                                {tag.name}
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsColumnSettingsOpen(false)}>
@@ -1701,44 +2190,56 @@ export default function UsersPage() {
                     <TableRow>
                       {visibleColumns.includes('name') && <TableHead>{t('name')}</TableHead>}
                       {visibleColumns.includes('email') && <TableHead>{t('email')}</TableHead>}
+                      {visibleColumns.includes('employeeId') && <TableHead>{t('employeeId')}</TableHead>}
                       {visibleColumns.includes('designation') && <TableHead>{t('designation')}</TableHead>}
                       {visibleColumns.includes('manager') && <TableHead>{t('manager')}</TableHead>}
-                      {visibleColumns.includes('entityId') && <TableHead>{t('entityId')}</TableHead>}
                       {visibleColumns.includes('storeName') && <TableHead>{t('storeName')}</TableHead>}
                       {visibleColumns.includes('createdAt') && <TableHead>{t('createdAt')}</TableHead>}
                       {visibleColumns.includes('lastLogin') && <TableHead>{t('lastLogin')}</TableHead>}
                       {visibleColumns.includes('validEmail') && <TableHead>{t('validEmail')}</TableHead>}
                       {visibleColumns.includes('status') && <TableHead>{t('status')}</TableHead>}
-                      {userTags.map((tag: any) => (
-                        <TableHead key={tag.id}>{tag.tag}</TableHead>
+                      {visibleUserTagColumns.map((tag: any) => (
+                        <TableHead key={tag.id}>{tag.name}</TableHead>
                       ))}
-                      <TableHead>{t('action')}</TableHead>
+                      {visibleColumns.includes('action') && <TableHead>{t('action')}</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={visibleColumns.length + userTags.length + 1} className="text-center py-12">
+                        <TableCell colSpan={userTableColumnCount} className="text-center py-12">
                           {t('loadingUsers')}
                         </TableCell>
                       </TableRow>
                     ) : users.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={visibleColumns.length + userTags.length + 1} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={userTableColumnCount} className="text-center py-12 text-muted-foreground">
                           {t('noUsersAvailable')}
                         </TableCell>
                       </TableRow>
+                    ) : displayUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={userTableColumnCount} className="text-center py-12 text-muted-foreground">
+                          {searchTerm.trim()
+                            ? `No users match "${searchTerm.trim()}"`
+                            : appliedEmailFilter.trim() || appliedValidEmailFilter !== "all"
+                              ? "No users match the selected filters"
+                              : t("noUsersAvailable")}
+                        </TableCell>
+                      </TableRow>
                     ) : (
-                      users.map((user: any) => (
+                      displayUsers.map((user: any) => (
                         <TableRow key={user.id}>
                           {visibleColumns.includes('name') && <TableCell className="font-medium">{user.name || t('notAvailable')}</TableCell>}
                           {visibleColumns.includes('email') && <TableCell>{user.email || t('notAvailable')}</TableCell>}
+                          {visibleColumns.includes('employeeId') && <TableCell>{user.employeeId || t('notAvailable')}</TableCell>}
                           {visibleColumns.includes('designation') && <TableCell>{user.designation || t('notAvailable')}</TableCell>}
                           {visibleColumns.includes('manager') && <TableCell>{user.manager || t('notAvailable')}</TableCell>}
-                          {visibleColumns.includes('entityId') && <TableCell>{user.entityId || t('notAvailable')}</TableCell>}
-                          {visibleColumns.includes('storeName') && <TableCell>{user.storeName || t('notAvailable')}</TableCell>}
+                          {visibleColumns.includes('storeName') && <TableCell>{user.entityId ? entities.find((e: any) => e.id === user.entityId || e.entityId === user.entityId)?.storeName || t('notAvailable') : t('notAvailable')}</TableCell>}
                           {visibleColumns.includes('createdAt') && <TableCell>{user.createdAt || t('notAvailable')}</TableCell>}
-                          {visibleColumns.includes('lastLogin') && <TableCell>{user.lastLogin || t('notAvailable')}</TableCell>}
+                          {visibleColumns.includes('lastLogin') && (
+                            <TableCell>{formatDateTime(user.lastLogin, t('notAvailable'))}</TableCell>
+                          )}
                           {visibleColumns.includes('validEmail') && (
                             <TableCell>
                               <div className="flex items-center gap-2">
@@ -1761,25 +2262,29 @@ export default function UsersPage() {
                               </div>
                             </TableCell>
                           )}
-                          {userTags.map((tag: any) => (
+                          {visibleUserTagColumns.map((tag: any) => (
                             <TableCell key={tag.id}>
-                              {user.tags && user.tags[tag.tag] ? String(user.tags[tag.tag]) : '-'}
+                              {getUserTagCellValue(user, tag)}
                             </TableCell>
                           ))}
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button variant="ghost" size="sm" onClick={() => handleEditUser(user)}>
-                                {t('edit')}
-                              </Button>
-                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => {
-                                const userId = user.userId || user.id;
-                                console.log('Delete button clicked for user:', user.name, 'with ID:', userId);
-                                handleDeleteUser(userId);
-                              }}>
-                                {t('delete')}
-                              </Button>
-                            </div>
-                          </TableCell>
+                          {visibleColumns.includes('action') && (
+                            <TableCell>
+                              <TableActionsMenu>
+                                <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                  {t('edit')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    const userId = user.userId || user.id;
+                                    handleDeleteUser(userId);
+                                  }}
+                                >
+                                  {t('delete')}
+                                </DropdownMenuItem>
+                              </TableActionsMenu>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))
                     )}
@@ -1954,14 +2459,7 @@ export default function UsersPage() {
                 </DialogContent>
               </Dialog>
 
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder={t('searchUsers')}
-                    className="pl-10 w-64"
-                  />
-                </div>
+              <div className="flex items-center gap-3 ml-auto">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="icon">
@@ -2007,17 +2505,20 @@ export default function UsersPage() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm" onClick={() => handleEditDesignation(designation)}>
+                            <TableActionsMenu>
+                              <DropdownMenuItem onClick={() => handleEditDesignation(designation)}>
                                 {t('edit')}
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleOpenPermissionDialog(designation)}>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenPermissionDialog(designation)}>
                                 {t('permissions')}
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleDeleteDesignation(designation.id)}>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteDesignation(designation.id)}
+                                className="text-destructive"
+                              >
                                 {t('delete')}
-                              </Button>
-                            </div>
+                              </DropdownMenuItem>
+                            </TableActionsMenu>
                           </TableCell>
                         </TableRow>
                       ))
@@ -2081,65 +2582,51 @@ export default function UsersPage() {
             </Dialog>
           </>
         ) : activeTab === "User Hierarchy" ? (
-          <>
-            {/* User Hierarchy Tab Content */}
-            <div className="grid grid-cols-3 gap-6">
-              <div className="col-span-1 bg-card border rounded-lg p-4">
-                <h3 className="text-lg font-semibold mb-4">User Hierarchy</h3>
-                <div className="space-y-2">
-                  {users.filter((u: any) => !u.manager).map((user: any) => (
-                    <div key={user.userId} className="cursor-pointer hover:bg-muted p-2 rounded">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {user.designation || 'N/A'}
-                        </Badge>
-                        <span className="font-medium">{user.name}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="col-span-2 bg-card border rounded-lg p-4">
-                <h3 className="text-lg font-semibold mb-4">User Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Name</p>
-                    <p className="font-medium">Select a user</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="font-medium">--</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Designation</p>
-                    <p className="font-medium">--</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Store</p>
-                    <p className="font-medium">--</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Users (Direct Reports)</p>
-                    <p className="font-medium">--</p>
-                  </div>
-                </div>
-
-                <h4 className="text-md font-semibold mt-6 mb-4">Stores Under Coverage</h4>
-                <div className="bg-muted rounded p-4 text-center text-muted-foreground">
-                  Select a user to view stores under coverage
-                </div>
-              </div>
-            </div>
-          </>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+            <UserHierarchyTree
+              users={users}
+              getDirectReports={getDirectReports}
+              selectedUserId={selectedHierarchyUserId}
+              onSelectUser={handleSelectHierarchyUser}
+              searchPlaceholder={t("searchByName")}
+              expandAllLabel={t("expandAll")}
+              collapseAllLabel={t("collapseAll")}
+            />
+            <UserHierarchyDetails
+              user={selectedHierarchyUser}
+              defaultStoreLabel={hierarchyDefaultStoreLabel}
+              storesUnderCoverage={hierarchyStoresUnderCoverage}
+              directReportCount={hierarchyDirectReportCount}
+              labels={{
+                userDetails: t("userDetails") || "User Details",
+                name: t("name"),
+                phoneNumber: t("phoneNumber") || "Phone Number",
+                email: t("email"),
+                store: t("storeName"),
+                designation: t("designation"),
+                users: t("users") || "Users",
+                storesUnderCoverage: t("storesUnderCoverage") || "Stores under coverage",
+                storeName: t("storeName"),
+                storeId: t("entityId") || "Store ID",
+                selectUserPrompt: t("selectHierarchyUser") || "Select a user from the hierarchy to view details",
+                notAvailable: t("notAvailable"),
+              }}
+            />
+          </div>
         ) : activeTab === "Advance Mapping" ? (
           <>
             {/* Advance Mapping Tab Content */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-4">Advance Mapping - Report Access</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Give users report access to additional stores beyond their default mapped stores.
-              </p>
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Advance Mapping - Report Access</h2>
+                <p className="text-sm text-muted-foreground">
+                  Give users report access to additional stores beyond their default mapped stores.
+                </p>
+              </div>
+              <Button className="gap-2 shrink-0" onClick={handleOpenAddAdvanceMapping}>
+                <Plus className="w-4 h-4" />
+                Add Advance Mapping
+              </Button>
             </div>
 
             {/* Users Table for Advance Mapping */}
@@ -2157,28 +2644,72 @@ export default function UsersPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.length === 0 ? (
+                    {advanceMappedUsers.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                          No users available
+                          No advance mapped users yet. Click &quot;Add Advance Mapping&quot; to assign report access.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      users.map((user: any) => (
+                      advanceMappedUsers.map((user: any) => (
                         <TableRow key={user.userId}>
                           <TableCell className="font-medium">{user.name}</TableCell>
                           <TableCell>{user.email}</TableCell>
                           <TableCell>{user.designation}</TableCell>
-                          <TableCell>{user.storeName || 'N/A'}</TableCell>
+                          <TableCell>{getUserDefaultStoreName(user)}</TableCell>
                           <TableCell>
-                            <Badge variant="outline">
-                              {user.additionalStores?.length || 0} stores
-                            </Badge>
+                            {(() => {
+                              const additionalStores = getAdditionalStoreDetails(user);
+                              if (additionalStores.length === 0) {
+                                return (
+                                  <span className="text-sm text-muted-foreground">None</span>
+                                );
+                              }
+
+                              return (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    >
+                                      <Badge variant="outline" className="cursor-pointer hover:bg-muted">
+                                        {additionalStores.length} store{additionalStores.length === 1 ? '' : 's'}
+                                      </Badge>
+                                    </button>
+                                  </PopoverTrigger>
+                                  <PopoverContent align="start" className="w-72">
+                                    <div className="space-y-2">
+                                      <p className="text-sm font-medium">Additional stores</p>
+                                      <ul className="space-y-2">
+                                        {additionalStores.map((store) => (
+                                          <li key={store.id} className="text-sm">
+                                            <p className="font-medium">{store.name}</p>
+                                            {store.area ? (
+                                              <p className="text-xs text-muted-foreground">{store.area}</p>
+                                            ) : null}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="sm" onClick={() => handleOpenAdvanceMapping(user)}>
-                              Map Stores
-                            </Button>
+                            <TableActionsMenu>
+                              <DropdownMenuItem onClick={() => handleOpenAdvanceMapping(user)}>
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteAdvanceMapping(user)}
+                                disabled={getAdditionalStoreDetails(user).length === 0}
+                                className="text-destructive"
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </TableActionsMenu>
                           </TableCell>
                         </TableRow>
                       ))
@@ -2189,46 +2720,149 @@ export default function UsersPage() {
             </div>
 
             {/* Advance Mapping Dialog */}
-            <Dialog open={isAdvanceMappingDialogOpen} onOpenChange={setIsAdvanceMappingDialogOpen}>
+            <Dialog
+              open={isAdvanceMappingDialogOpen}
+              onOpenChange={(open) => {
+                setIsAdvanceMappingDialogOpen(open);
+                if (!open) {
+                  setSelectedUserForMapping(null);
+                  setAdvanceMappingUserId('');
+                  setAdditionalStores([]);
+                  setAdvanceMappingMode('add');
+                }
+              }}
+            >
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Give Report Access</DialogTitle>
+                  <DialogTitle>
+                    {advanceMappingMode === 'add' ? 'Add Advance Mapping' : 'Edit Report Access'}
+                  </DialogTitle>
                   <DialogDescription>
-                    Select additional stores {selectedUserForMapping?.name} should have report access to.
+                    {advanceMappingMode === 'add'
+                      ? 'Select a user and choose additional stores for report access.'
+                      : `Update additional stores ${selectedUserForMapping?.name} can access for reporting.`}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Select Stores</Label>
-                    <div className="border rounded-md p-4 max-h-64 overflow-y-auto">
-                      {entities.map((entity: any) => (
-                        <div key={entity.id} className="flex items-center gap-2 mb-2">
-                          <input
-                            type="checkbox"
-                            id={`store-${entity.id}`}
-                            checked={additionalStores.includes(entity.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setAdditionalStores([...additionalStores, entity.id]);
-                              } else {
-                                setAdditionalStores(additionalStores.filter((id) => id !== entity.id));
-                              }
-                            }}
-                          />
-                          <label htmlFor={`store-${entity.id}`} className="text-sm">
-                            {entity.storeName}
-                          </label>
-                        </div>
-                      ))}
+                  {advanceMappingMode === 'add' ? (
+                    <>
+                      <div className="grid gap-2">
+                        <Label htmlFor="advance-mapping-user">
+                          User Name <span className="text-destructive">*</span>
+                        </Label>
+                        <Select
+                          value={advanceMappingUserId}
+                          onValueChange={handleAdvanceMappingUserChange}
+                        >
+                          <SelectTrigger id="advance-mapping-user">
+                            <SelectValue placeholder="Select user" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {users.map((user: any) => (
+                              <SelectItem key={user.userId} value={user.userId}>
+                                {user.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="advance-mapping-designation">Designation</Label>
+                        <Input
+                          id="advance-mapping-designation"
+                          value={selectedUserForMapping?.designation || ''}
+                          placeholder="Select a user to view designation"
+                          readOnly
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label>User Name</Label>
+                        <Input value={selectedUserForMapping?.name || ''} readOnly />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Designation</Label>
+                        <Input value={selectedUserForMapping?.designation || ''} readOnly />
+                      </div>
                     </div>
+                  )}
+
+                  {selectedUserForMapping ? (
+                    <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                      <p className="text-muted-foreground">Default store</p>
+                      <p className="font-medium">{getUserDefaultStoreName(selectedUserForMapping)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Default store cannot be added as an additional mapping.
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-2">
+                    <Label>Stores for Report Access</Label>
+                    <div className="border rounded-md p-4 max-h-64 overflow-y-auto">
+                      {advanceMappingStoreOptions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No stores available</p>
+                      ) : (
+                        advanceMappingStoreOptions.map((entity: any) => {
+                          const isDefaultStore =
+                            selectedUserDefaultStoreId &&
+                            (entity.id === selectedUserDefaultStoreId ||
+                              entity.entityId === selectedUserDefaultStoreId);
+
+                          return (
+                            <div key={entity.id} className="flex items-center gap-2 mb-2">
+                              <input
+                                type="checkbox"
+                                id={`advance-store-${entity.id}`}
+                                checked={additionalStores.includes(entity.id)}
+                                disabled={!selectedUserForMapping || Boolean(isDefaultStore)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setAdditionalStores([...additionalStores, entity.id]);
+                                  } else {
+                                    setAdditionalStores(
+                                      additionalStores.filter((id) => id !== entity.id),
+                                    );
+                                  }
+                                }}
+                              />
+                              <label
+                                htmlFor={`advance-store-${entity.id}`}
+                                className={`text-sm ${isDefaultStore ? 'text-muted-foreground' : ''}`}
+                              >
+                                {entity.storeName}
+                                {entity.area ? ` (${entity.area})` : ''}
+                                {isDefaultStore ? ' — default store' : ''}
+                              </label>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                    {!selectedUserForMapping && advanceMappingMode === 'add' ? (
+                      <p className="text-xs text-muted-foreground">
+                        Select a user first to enable store selection.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAdvanceMappingDialogOpen(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsAdvanceMappingDialogOpen(false);
+                      setSelectedUserForMapping(null);
+                      setAdvanceMappingUserId('');
+                      setAdditionalStores([]);
+                      setAdvanceMappingMode('add');
+                    }}
+                  >
                     Cancel
                   </Button>
-                  <Button onClick={handleSaveAdvanceMapping}>
-                    Save Mapping
+                  <Button onClick={handleSaveAdvanceMapping} disabled={!canSaveAdvanceMapping}>
+                    {advanceMappingMode === 'add' ? 'Create' : 'Update Mapping'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -2237,72 +2871,79 @@ export default function UsersPage() {
         ) : activeTab === "Team" ? (
           <>
             {/* User Teams Tab Content */}
-            <div className="flex items-center justify-between mb-6">
-              <Dialog open={isUserTeamDialogOpen} onOpenChange={setIsUserTeamDialogOpen}>
+            <Dialog open={isUserTeamDialogOpen} onOpenChange={setIsUserTeamDialogOpen}>
+              <div className="flex items-center justify-between mb-6">
                 <DialogTrigger asChild>
                   <Button className="gap-2">
                     <Plus className="w-4 h-4" />
-                    Create New Team
+                    {t('createNewTeam')}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Create User Team</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="teamName">
-                        Team Name <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="teamName"
-                        placeholder="e.g., East Zonal Team, Store Ops Leads"
-                        value={userTeamData.name}
-                        onChange={(e) => setUserTeamData({ ...userTeamData, name: e.target.value })}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="teamMembers">Select Users</Label>
-                      <div className="border rounded-md p-4 max-h-48 overflow-y-auto">
-                        {users.map((user: any) => (
-                          <div key={user.userId} className="flex items-center gap-2 mb-2">
-                            <input
-                              type="checkbox"
-                              id={`user-${user.userId}`}
-                              checked={userTeamData.memberIds.includes(user.userId)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setUserTeamData({
-                                    ...userTeamData,
-                                    memberIds: [...userTeamData.memberIds, user.userId],
-                                  });
-                                } else {
-                                  setUserTeamData({
-                                    ...userTeamData,
-                                    memberIds: userTeamData.memberIds.filter((id) => id !== user.userId),
-                                  });
-                                }
-                              }}
-                            />
-                            <label htmlFor={`user-${user.userId}`} className="text-sm">
-                              {user.name}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
+              </div>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>{editingTeam ? t('editUserTeam') : t('createUserTeam')}</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="teamName">
+                      {t('teamName')} <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="teamName"
+                      placeholder={t('teamNamePlaceholder')}
+                      value={userTeamData.name}
+                      onChange={(e) => setUserTeamData({ ...userTeamData, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="teamMembers">{t('selectUsers')}</Label>
+                    <div className="border rounded-md p-4 max-h-48 overflow-y-auto">
+                      {users.map((user: any) => {
+                        const memberId = user.userId || user.id;
+                        return (
+                        <div key={memberId} className="flex items-center gap-2 mb-2">
+                          <input
+                            type="checkbox"
+                            id={`user-${memberId}`}
+                            checked={userTeamData.memberIds.includes(memberId)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setUserTeamData({
+                                  ...userTeamData,
+                                  memberIds: [...userTeamData.memberIds, memberId],
+                                });
+                              } else {
+                                setUserTeamData({
+                                  ...userTeamData,
+                                  memberIds: userTeamData.memberIds.filter((id) => id !== memberId),
+                                });
+                              }
+                            }}
+                          />
+                          <label htmlFor={`user-${memberId}`} className="text-sm">
+                            {user.name}
+                          </label>
+                        </div>
+                        );
+                      })}
                     </div>
                   </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsUserTeamDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleCreateUserTeam}>
-                      Create Team
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => {
+                    setIsUserTeamDialogOpen(false);
+                    setEditingTeam(null);
+                    setUserTeamData({ name: "", memberIds: [] });
+                  }}>
+                    {t('cancel')}
+                  </Button>
+                  <Button onClick={editingTeam ? handleUpdateTeam : handleCreateUserTeam}>
+                    {editingTeam ? t('updateTeam') : t('createTeam')}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* User Teams Table */}
             <div className="bg-card border rounded-lg overflow-hidden">
@@ -2310,34 +2951,44 @@ export default function UsersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Team Name</TableHead>
-                      <TableHead>Members</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Action</TableHead>
+                      <TableHead>{t('teamName')}</TableHead>
+                      <TableHead>{t('members')}</TableHead>
+                      <TableHead>{t('status')}</TableHead>
+                      <TableHead>{t('action')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {userTeams.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
-                          No user teams available
+                          {t('noUserTeamsAvailable')}
                         </TableCell>
                       </TableRow>
                     ) : (
                       userTeams.map((team: any) => (
                         <TableRow key={team.id}>
                           <TableCell className="font-medium">{team.name}</TableCell>
-                          <TableCell>{team.members?.length || 0} members</TableCell>
+                          <TableCell>
+                            {team.memberCount ?? team.members?.length ?? 0}{' '}
+                            {(team.memberCount ?? team.members?.length ?? 0) === 1
+                              ? t('member')
+                              : t('membersPlural')}
+                          </TableCell>
                           <TableCell>
                             <Badge variant={team.isActive ? 'default' : 'secondary'}>
-                              {team.isActive ? 'Active' : 'Inactive'}
+                              {team.isActive ? t('active') : t('inactive')}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm">Edit</Button>
-                              <Button variant="ghost" size="sm">Delete</Button>
-                            </div>
+                            <TableActionsMenu>
+                              <DropdownMenuItem onClick={() => handleEditTeam(team)}>{t('edit')}</DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteTeam(team.id)}
+                                className="text-destructive"
+                              >
+                                {t('delete')}
+                              </DropdownMenuItem>
+                            </TableActionsMenu>
                           </TableCell>
                         </TableRow>
                       ))
@@ -2350,119 +3001,119 @@ export default function UsersPage() {
         ) : activeTab === "User Tags" ? (
           <>
             {/* User Tags Tab Content */}
-            <div className="flex items-center justify-between mb-6">
-              <Dialog open={isUserTagDialogOpen} onOpenChange={setIsUserTagDialogOpen}>
+            <Dialog open={isUserTagDialogOpen} onOpenChange={setIsUserTagDialogOpen}>
+              <div className="flex items-center justify-between mb-6">
                 <DialogTrigger asChild>
                   <Button className="gap-2">
                     <Plus className="w-4 h-4" />
                     Create New Tag
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>{editingUserTag ? 'Edit User Tag' : 'Create User Tag'}</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="createTagWithValue"
-                        checked={createTagWithValue}
-                        onCheckedChange={(checked) => setCreateTagWithValue(checked as boolean)}
-                      />
-                      <Label htmlFor="createTagWithValue">
-                        Create Tag With Value
-                      </Label>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="tagName">
-                        Tag Name <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="tagName"
-                        placeholder="e.g., Trained, Zone, Certified"
-                        value={userTagData.name}
-                        onChange={(e) => setUserTagData({ ...userTagData, name: e.target.value })}
-                      />
-                    </div>
-                    {createTagWithValue && (
-                      <div className="grid gap-2">
-                        <Label htmlFor="tagValue">Tag Values</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="tagValue"
-                            placeholder="Enter value and press Enter or click Add"
-                            value={tagValueInput}
-                            onChange={(e) => setTagValueInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && tagValueInput.trim()) {
-                                setUserTagData({ ...userTagData, tagValues: [...userTagData.tagValues, tagValueInput.trim()] });
-                                setTagValueInput('');
-                              }
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              if (tagValueInput.trim()) {
-                                setUserTagData({ ...userTagData, tagValues: [...userTagData.tagValues, tagValueInput.trim()] });
-                                setTagValueInput('');
-                              }
-                            }}
-                          >
-                            Add
-                          </Button>
-                        </div>
-                        {userTagData.tagValues.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {userTagData.tagValues.map((value, index) => (
-                              <div key={index} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
-                                <span className="text-sm">{value}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setUserTagData({
-                                      ...userTagData,
-                                      tagValues: userTagData.tagValues.filter((_, i) => i !== index)
-                                    });
-                                  }}
-                                  className="text-destructive hover:text-destructive/80"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="mandatory"
-                        checked={userTagData.mandatory}
-                        onCheckedChange={(checked) => setUserTagData({ ...userTagData, mandatory: checked as boolean })}
-                      />
-                      <Label htmlFor="mandatory">
-                        Mandatory During User Creation
-                      </Label>
-                    </div>
+              </div>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>{editingUserTag ? 'Edit User Tag' : 'Create User Tag'}</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="createTagWithValue"
+                      checked={createTagWithValue}
+                      onCheckedChange={(checked) => setCreateTagWithValue(checked as boolean)}
+                    />
+                    <Label htmlFor="createTagWithValue">
+                      Create Tag With Value
+                    </Label>
                   </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => {
-                      setIsUserTagDialogOpen(false);
-                      setEditingUserTag(null);
-                      setUserTagData({ name: "", tagValues: [], mandatory: false });
-                      setCreateTagWithValue(false);
-                      setTagValueInput("");
-                    }}>
-                      Cancel
-                    </Button>
-                    <Button onClick={editingUserTag ? handleUpdateUserTag : handleCreateUserTag}>
-                      {editingUserTag ? 'Update Tag' : 'Create Tag'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="tagName">
+                      Tag Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="tagName"
+                      placeholder="e.g., Trained, Zone, Certified"
+                      value={userTagData.name}
+                      onChange={(e) => setUserTagData({ ...userTagData, name: e.target.value })}
+                    />
+                  </div>
+                  {createTagWithValue && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="tagValue">Tag Values</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="tagValue"
+                          placeholder="Enter value and press Enter or click Add"
+                          value={tagValueInput}
+                          onChange={(e) => setTagValueInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && tagValueInput.trim()) {
+                              setUserTagData({ ...userTagData, tagValues: [...userTagData.tagValues, tagValueInput.trim()] });
+                              setTagValueInput('');
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            if (tagValueInput.trim()) {
+                              setUserTagData({ ...userTagData, tagValues: [...userTagData.tagValues, tagValueInput.trim()] });
+                              setTagValueInput('');
+                            }
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                      {userTagData.tagValues.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {userTagData.tagValues.map((value, index) => (
+                            <div key={index} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
+                              <span className="text-sm">{value}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setUserTagData({
+                                    ...userTagData,
+                                    tagValues: userTagData.tagValues.filter((_, i) => i !== index)
+                                  });
+                                }}
+                                className="text-destructive hover:text-destructive/80"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="mandatory"
+                      checked={userTagData.mandatory}
+                      onCheckedChange={(checked) => setUserTagData({ ...userTagData, mandatory: checked as boolean })}
+                    />
+                    <Label htmlFor="mandatory">
+                      Mandatory During User Creation
+                    </Label>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => {
+                    setIsUserTagDialogOpen(false);
+                    setEditingUserTag(null);
+                    setUserTagData({ name: "", tagValues: [], mandatory: false });
+                    setCreateTagWithValue(false);
+                    setTagValueInput("");
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button onClick={editingUserTag ? handleUpdateUserTag : handleCreateUserTag}>
+                    {editingUserTag ? 'Update Tag' : 'Create Tag'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* User Tags Table */}
             <div className="bg-card border rounded-lg overflow-hidden">
@@ -2488,7 +3139,7 @@ export default function UsersPage() {
                         const values = Array.isArray(tag.tagValues) ? tag.tagValues : [];
                         return (
                           <TableRow key={tag.id}>
-                            <TableCell className="font-medium">{tag.tag}</TableCell>
+                            <TableCell className="font-medium">{tag.name}</TableCell>
                             <TableCell>{values.length > 0 ? values.join(', ') : 'N/A'}</TableCell>
                             <TableCell>
                               <Badge variant={tag.mandatory === 'YES' ? 'default' : 'secondary'}>
@@ -2496,10 +3147,15 @@ export default function UsersPage() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => handleEditUserTag(tag)}>Edit</Button>
-                                <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteUserTag(tag.id)}>Delete</Button>
-                              </div>
+                              <TableActionsMenu>
+                                <DropdownMenuItem onClick={() => handleEditUserTag(tag)}>Edit</DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => handleDeleteUserTag(tag.id)}
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </TableActionsMenu>
                             </TableCell>
                           </TableRow>
                         );
@@ -2511,137 +3167,7 @@ export default function UsersPage() {
             </div>
           </>
         ) : activeTab === "Hybrid Assignee" ? (
-          <>
-            {/* Hybrid Assignee Tab Content */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-4">Hybrid Assignee Profile</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Configure users to work across multiple stores or entities with flexible reporting structures.
-              </p>
-            </div>
-
-            {/* Users Table for Hybrid Assignee */}
-            <div className="bg-card border rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Designation</TableHead>
-                      <TableHead>Default Store</TableHead>
-                      <TableHead>Hybrid Status</TableHead>
-                      <TableHead>Hybrid Stores</TableHead>
-                      <TableHead>Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                          No users available
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      users.map((user: any) => (
-                        <TableRow key={user.userId}>
-                          <TableCell className="font-medium">{user.name}</TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>{user.designation}</TableCell>
-                          <TableCell>{user.storeName || 'N/A'}</TableCell>
-                          <TableCell>
-                            <Badge variant={user.isHybrid ? "default" : "outline"}>
-                              {user.isHybrid ? "Hybrid" : "Standard"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {user.hybridStores?.length || 0} stores
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm" onClick={() => handleOpenHybridDialog(user)}>
-                              Configure
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-
-            {/* Hybrid Assignee Dialog */}
-            <Dialog open={isHybridDialogOpen} onOpenChange={setIsHybridDialogOpen}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Configure Hybrid Assignee</DialogTitle>
-                  <DialogDescription>
-                    Set up hybrid profile for this user to work across multiple stores.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="isHybrid">Enable Hybrid Profile</Label>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="isHybrid"
-                        checked={hybridData.isHybrid}
-                        onCheckedChange={(checked) => setHybridData({ ...hybridData, isHybrid: checked })}
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        {hybridData.isHybrid ? "Hybrid enabled" : "Standard profile"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Hybrid users can be assigned to multiple stores and have flexible reporting structures.
-                    </p>
-                  </div>
-                  {hybridData.isHybrid && (
-                    <div className="space-y-2">
-                      <Label>Select Hybrid Stores</Label>
-                      <div className="border rounded-md p-4 max-h-64 overflow-y-auto">
-                        {entities.map((entity: any) => (
-                          <div key={entity.id} className="flex items-center gap-2 mb-2">
-                            <input
-                              type="checkbox"
-                              id={`hybrid-store-${entity.id}`}
-                              checked={hybridData.hybridStores.includes(entity.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setHybridData({
-                                    ...hybridData,
-                                    hybridStores: [...hybridData.hybridStores, entity.id],
-                                  });
-                                } else {
-                                  setHybridData({
-                                    ...hybridData,
-                                    hybridStores: hybridData.hybridStores.filter((id) => id !== entity.id),
-                                  });
-                                }
-                              }}
-                            />
-                            <label htmlFor={`hybrid-store-${entity.id}`} className="text-sm">
-                              {entity.storeName}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsHybridDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSaveHybrid}>
-                    Save Configuration
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </>
+          <HybridAssigneePanel users={users} entities={entities} />
         ) : activeTab === "Removed User" ? (
           <>
             <div className="p-6">
@@ -2653,29 +3179,23 @@ export default function UsersPage() {
                     <TableHead>{t('designation')}</TableHead>
                     <TableHead>{t('entityId')}</TableHead>
                     <TableHead>{t('removedAt')}</TableHead>
-                    <TableHead>{t('action')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {removedUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                         {t('noRemovedUsers')}
                       </TableCell>
                     </TableRow>
                   ) : (
                     removedUsers.map((user: any) => (
-                      <TableRow key={user.user_id}>
+                      <TableRow key={user.userId}>
                         <TableCell className="font-medium">{user.name || t('notAvailable')}</TableCell>
                         <TableCell>{user.email || t('notAvailable')}</TableCell>
                         <TableCell>{user.designation || t('notAvailable')}</TableCell>
-                        <TableCell>{user.entity_id || t('notAvailable')}</TableCell>
-                        <TableCell>{user.removed_at || t('notAvailable')}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" onClick={() => handleRestoreUser(user.user_id)}>
-                            {t('restore')}
-                          </Button>
-                        </TableCell>
+                        <TableCell>{user.entityId ? entities.find((e: any) => e.id === user.entityId)?.storeName || user.storeName || user.entityId : user.storeName || t('notAvailable')}</TableCell>
+                        <TableCell>{user.updatedAt || t('notAvailable')}</TableCell>
                       </TableRow>
                     ))
                   )}
