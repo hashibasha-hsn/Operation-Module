@@ -1,4 +1,4 @@
-﻿import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,8 +14,6 @@ import AuditHeader from "@/components/AuditHeader";
 import AssessmentHeader from "@/components/AssessmentHeader";
 import AssessmentQuestionCard from "@/components/assessment/AssessmentQuestionCard";
 import QuestionAddonsToolbar from "@/components/process/QuestionAddonsToolbar";
-import QuestionCard, { QuestionSettingsContent } from "@/components/process/QuestionCard";
-import PropertiesPanel, { defaultProcessProperties, type ProcessProperties as PanelProcessProperties } from "@/components/process/PropertiesPanel";
 import { toast } from "sonner";
 import {
   formElementsToQuestions,
@@ -281,12 +279,35 @@ export default function CreateForm() {
   };
 
   // Process Properties State
-  const [processProperties, setProcessProperties] = useState<PanelProcessProperties>(defaultProcessProperties());
+  const [processProperties, setProcessProperties] = useState({
+    occurrence: 'one-time',
+    responsesAfterEndTime: 'accept',
+    numberOfResponses: 'one-per-user',
+    submissionBy: 'anyone',
+    dateRangeSelection: 'allowed',
+    periodicityType: 'daily',
+    startTime: '',
+    endTime: '',
+    emailAlerts: false,
+    mobileNotifications: false,
+    reportUrlSharing: false,
+    processWithReview: false,
+    reportType: 'hierarchical',
+    trackLocation: false,
+    trackVisualMerchandising: false,
+    dynamicAssignment: false,
+    carryForwardActionPoints: false,
+    createActionPointsFromReports: false,
+    processPriority: 'medium',
+    pageCount: 0,
+    publicFormEnabled: false,
+    defaultLanguage: 'english',
+  });
 
-  // Properties tab navigation state (kept for compatibility)
+  // Properties tab navigation state
   const [selectedPropertiesSection, setSelectedPropertiesSection] = useState('process');
 
-  // Section completion status (kept for compatibility)
+  // Section completion status
   const [sectionStatus, setSectionStatus] = useState({
     process: 'completed',
     periodicity: 'warning',
@@ -327,16 +348,6 @@ export default function CreateForm() {
         : { marks: 5, options: [] };
     } else if (type === 'dropdown') {
       newElement.config = { options: [] };
-    } else if (type === 'adv-dropdown') {
-      newElement.config = { selectedTag: '' };
-    } else if (type === 'scoring-dropdown') {
-      newElement.config = { options: [] };
-    } else if (type === 'grid') {
-      newElement.config = { columns: [], rows: [] };
-    } else if (type === 'calculation-grid') {
-      newElement.config = { columns: [], rows: [] };
-    } else if (type === 'dynamic-grid') {
-      newElement.config = { columns: [], allowRowAddition: true };
     }
 
     setFormElements([...formElements, newElement]);
@@ -459,12 +470,532 @@ export default function CreateForm() {
         </TabsContent>
 
         <TabsContent value="properties" className="p-0">
-          <div className="h-[calc(100vh-73px)]">
-            <PropertiesPanel
-              properties={processProperties}
-              onChange={setProcessProperties}
-              processTitle={fieldValues.field1}
-            />
+          <div className="flex h-[calc(100vh-73px)]">
+            {/* Left Panel - Navigation */}
+            <div className="w-64 border-r bg-white p-4">
+              <h3 className="font-semibold mb-4">Settings</h3>
+              <div className="space-y-1">
+                {[
+                  { id: 'process', label: 'Process' },
+                  { id: 'periodicity', label: 'Periodicity' },
+                  { id: 'reminders', label: 'Reminders and Notifications' },
+                  { id: 'submissionReport', label: 'Submission Report' },
+                  { id: 'review', label: 'Review' },
+                  { id: 'advanceSettings', label: 'Advance Settings' },
+                  { id: 'language', label: 'Language Settings' },
+                ].map((section) => (
+                  <button
+                    key={section.id}
+                    onClick={() => setSelectedPropertiesSection(section.id)}
+                    className={`w-full text-left px-3 py-2 rounded-md flex items-center justify-between ${
+                      selectedPropertiesSection === section.id
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="text-sm">{section.label}</span>
+                    {sectionStatus[section.id as keyof typeof sectionStatus] === 'completed' && (
+                      <Check className="w-4 h-4 text-blue-500" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Panel - Configuration */}
+            <div className="flex-1 bg-gray-50 p-6 overflow-y-auto">
+              {selectedPropertiesSection === 'process' && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">⚙️ Process Settings</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">1. Occurrence</label>
+                      <select
+                        className="border rounded px-3 py-2 w-full"
+                        value={processProperties.occurrence}
+                        onChange={(e) => setProcessProperties({ ...processProperties, occurrence: e.target.value })}
+                      >
+                        <option value="one-time">One-time</option>
+                        <option value="recurring">Recurring</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">2. Responses After End-Time</label>
+                      <select
+                        className="border rounded px-3 py-2 w-full"
+                        value={processProperties.responsesAfterEndTime}
+                        onChange={(e) => setProcessProperties({ ...processProperties, responsesAfterEndTime: e.target.value })}
+                      >
+                        <option value="accept">Accept</option>
+                        <option value="reject">Reject</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">3. Number of Responses</label>
+                      <select
+                        className="border rounded px-3 py-2 w-full"
+                        value={processProperties.numberOfResponses}
+                        onChange={(e) => setProcessProperties({ ...processProperties, numberOfResponses: e.target.value })}
+                      >
+                        <option value="one-per-user">One response per user</option>
+                        <option value="multiple-per-user">Multiple responses per user</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">4. Submission By</label>
+                      <select
+                        className="border rounded px-3 py-2 w-full"
+                        value={processProperties.submissionBy}
+                        onChange={(e) => setProcessProperties({ ...processProperties, submissionBy: e.target.value })}
+                      >
+                        <option value="anyone">Anyone</option>
+                        <option value="everyone">Everyone</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">5. Date Range Selection</label>
+                      <select
+                        className="border rounded px-3 py-2 w-full"
+                        value={processProperties.dateRangeSelection}
+                        onChange={(e) => setProcessProperties({ ...processProperties, dateRangeSelection: e.target.value })}
+                      >
+                        <option value="allowed">Allowed</option>
+                        <option value="restricted">Restricted</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedPropertiesSection === 'periodicity' && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">🗓️ Process Periodicity</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Periodicity Type</label>
+                      <select
+                        className="border rounded px-3 py-2 w-full"
+                        value={processProperties.periodicityType}
+                        onChange={(e) => setProcessProperties({ ...processProperties, periodicityType: e.target.value })}
+                      >
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Start Time</label>
+                        <Input
+                          type="time"
+                          className="w-40"
+                          value={processProperties.startTime}
+                          onChange={(e) => setProcessProperties({ ...processProperties, startTime: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">End Time</label>
+                        <Input
+                          type="time"
+                          className="w-40"
+                          value={processProperties.endTime}
+                          onChange={(e) => setProcessProperties({ ...processProperties, endTime: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedPropertiesSection === 'reminders' && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">🔔 Reminders and Notifications</h3>
+                  <div className="space-y-4">
+                    <div className="p-4 border rounded-md bg-white">
+                      <h4 className="font-medium mb-3">Email Alerts for the Process</h4>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="emailAlerts"
+                            checked={processProperties.emailAlerts}
+                            onChange={() => setProcessProperties({ ...processProperties, emailAlerts: true })}
+                          />
+                          <span className="text-sm">Yes</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="emailAlerts"
+                            checked={!processProperties.emailAlerts}
+                            onChange={() => setProcessProperties({ ...processProperties, emailAlerts: false })}
+                          />
+                          <span className="text-sm">No</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div className="p-4 border rounded-md bg-white">
+                      <h4 className="font-medium mb-3">Mobile Push Notification Alerts for the Process</h4>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="mobileNotifications"
+                            checked={processProperties.mobileNotifications}
+                            onChange={() => setProcessProperties({ ...processProperties, mobileNotifications: true })}
+                          />
+                          <span className="text-sm">Yes</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="mobileNotifications"
+                            checked={!processProperties.mobileNotifications}
+                            onChange={() => setProcessProperties({ ...processProperties, mobileNotifications: false })}
+                          />
+                          <span className="text-sm">No</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-4 border rounded-md bg-white">
+                      <div>
+                        <h4 className="font-medium">Enable Report URL Sharing</h4>
+                        <p className="text-sm text-gray-500">Allow recipients to open reports via URL</p>
+                      </div>
+                      <Switch
+                        checked={processProperties.reportUrlSharing}
+                        onCheckedChange={(checked) => setProcessProperties({ ...processProperties, reportUrlSharing: checked })}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1">+ Add Reminder</Button>
+                      <Button variant="outline" className="flex-1">+ Add Recurring Reminder</Button>
+                    </div>
+                    <a href="#" className="text-sm text-blue-600 hover:underline">Reminder Setup & Usage</a>
+                  </div>
+                </div>
+              )}
+
+              {selectedPropertiesSection === 'submissionReport' && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">📊 Submission Report Settings</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Report Type</label>
+                      <select
+                        className="border rounded px-3 py-2 w-full"
+                        value={processProperties.reportType}
+                        onChange={(e) => setProcessProperties({ ...processProperties, reportType: e.target.value })}
+                      >
+                        <option value="hierarchical">Hierarchical</option>
+                        <option value="store-hierarchical">Store Hierarchical</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedPropertiesSection === 'review' && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">📝 Review Settings</h3>
+                  <div className="p-4 border rounded-md bg-white">
+                    <p className="text-sm text-gray-500">Review configuration settings</p>
+                  </div>
+                </div>
+              )}
+
+              {selectedPropertiesSection === 'advanceSettings' && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">⚡ Advance Settings</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border rounded-md bg-white">
+                      <div>
+                        <h4 className="font-medium">Restrict or Track Location While Submitting</h4>
+                        <p className="text-sm text-gray-500">Track user location during submission</p>
+                      </div>
+                      <Switch
+                        checked={processProperties.trackLocation}
+                        onCheckedChange={(checked) => setProcessProperties({ ...processProperties, trackLocation: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-4 border rounded-md bg-white">
+                      <div>
+                        <h4 className="font-medium">Track Visual Merchandising Across Stores</h4>
+                        <p className="text-sm text-gray-500">Enable visual merchandising tracking</p>
+                      </div>
+                      <Switch
+                        checked={processProperties.trackVisualMerchandising}
+                        onCheckedChange={(checked) => setProcessProperties({ ...processProperties, trackVisualMerchandising: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-4 border rounded-md bg-white">
+                      <div>
+                        <h4 className="font-medium">Auto-Assign Users with Dynamic Assignment</h4>
+                        <p className="text-sm text-gray-500">Automatically assign users based on rules</p>
+                      </div>
+                      <Switch
+                        checked={processProperties.dynamicAssignment}
+                        onCheckedChange={(checked) => setProcessProperties({ ...processProperties, dynamicAssignment: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-4 border rounded-md bg-white">
+                      <div>
+                        <h4 className="font-medium">Carry Forward Action Points</h4>
+                        <p className="text-sm text-gray-500">Carry over action points from previous submissions</p>
+                      </div>
+                      <Switch
+                        checked={processProperties.carryForwardActionPoints}
+                        onCheckedChange={(checked) => setProcessProperties({ ...processProperties, carryForwardActionPoints: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-4 border rounded-md bg-white">
+                      <div>
+                        <h4 className="font-medium">Create Action Points from Reports</h4>
+                        <p className="text-sm text-gray-500">Generate action points from report data</p>
+                      </div>
+                      <Switch
+                        checked={processProperties.createActionPointsFromReports}
+                        onCheckedChange={(checked) => setProcessProperties({ ...processProperties, createActionPointsFromReports: checked })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Set Process Priority</label>
+                      <select
+                        className="border rounded px-3 py-2 w-full"
+                        value={processProperties.processPriority}
+                        onChange={(e) => setProcessProperties({ ...processProperties, processPriority: e.target.value })}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Add Page Count (Paper Equivalent)</label>
+                      <Input
+                        type="number"
+                        placeholder="Enter page count"
+                        className="w-full"
+                        value={processProperties.pageCount || ''}
+                        onChange={(e) => setProcessProperties({ ...processProperties, pageCount: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedPropertiesSection === 'language' && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">🌍 Language Settings</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Default Language</label>
+                      <select
+                        className="border rounded px-3 py-2 w-full"
+                        value={processProperties.defaultLanguage}
+                        onChange={(e) => setProcessProperties({ ...processProperties, defaultLanguage: e.target.value })}
+                      >
+                        <option value="abujhmaria">Abujhmaria</option>
+                        <option value="afrikaans">Afrikaans</option>
+                        <option value="agariya">Agariya</option>
+                        <option value="akh">Akh</option>
+                        <option value="albanian">Albanian</option>
+                        <option value="amharic">Amharic</option>
+                        <option value="arabic">Arabic</option>
+                        <option value="armenian">Armenian</option>
+                        <option value="assamese">Assamese</option>
+                        <option value="asur">Asur</option>
+                        <option value="azerbaijani">Azerbaijani</option>
+                        <option value="balochi">Balochi</option>
+                        <option value="basque">Basque</option>
+                        <option value="belarusian">Belarusian</option>
+                        <option value="bengali">Bengali</option>
+                        <option value="bharia">Bharia</option>
+                        <option value="bhojpuri">Bhojpuri</option>
+                        <option value="bisonhornmaria">Bisonhorn Maria</option>
+                        <option value="bishnupriya">Bishnupriya</option>
+                        <option value="bijori">Bijori</option>
+                        <option value="blang">Blang</option>
+                        <option value="bodo">Bodo</option>
+                        <option value="bondo">Bondo</option>
+                        <option value="bosnian">Bosnian</option>
+                        <option value="breton">Breton</option>
+                        <option value="bulgarian">Bulgarian</option>
+                        <option value="burmese">Burmese</option>
+                        <option value="catalan">Catalan</option>
+                        <option value="chak">Chak</option>
+                        <option value="chakma">Chakma</option>
+                        <option value="chattisgarhi">Chhattisgarhi</option>
+                        <option value="chepang">Chepang</option>
+                        <option value="chero">Chero</option>
+                        <option value="chinese">Chinese (Mandarin)</option>
+                        <option value="cornish">Cornish</option>
+                        <option value="croatian">Croatian</option>
+                        <option value="czech">Czech</option>
+                        <option value="dandamimaria">Dandami Maria</option>
+                        <option value="danau">Danau</option>
+                        <option value="dari">Dari</option>
+                        <option value="deang">Deang</option>
+                        <option value="didayi">Didayi</option>
+                        <option value="dogri">Dogri</option>
+                        <option value="doru">Doru</option>
+                        <option value="dutch">Dutch</option>
+                        <option value="dzongkha">Dzongkha</option>
+                        <option value="english">English</option>
+                        <option value="estonian">Estonian</option>
+                        <option value="faroese">Faroese</option>
+                        <option value="fijian">Fijian</option>
+                        <option value="finnish">Finnish</option>
+                        <option value="french">French</option>
+                        <option value="fula">Fula</option>
+                        <option value="gadaba">Gadaba</option>
+                        <option value="galician">Galician</option>
+                        <option value="garhwali">Garhwali</option>
+                        <option value="garo">Garo</option>
+                        <option value="gataq">Gataq</option>
+                        <option value="georgian">Georgian</option>
+                        <option value="german">German</option>
+                        <option value="ghale">Ghale</option>
+                        <option value="gondi">Gondi</option>
+                        <option value="greek">Greek</option>
+                        <option value="gujarati">Gujarati</option>
+                        <option value="gutob">Gutob</option>
+                        <option value="hausa">Hausa</option>
+                        <option value="hawaiian">Hawaiian</option>
+                        <option value="hebrew">Hebrew</option>
+                        <option value="hindi">Hindi</option>
+                        <option value="ho">Ho</option>
+                        <option value="hkal">Hkal</option>
+                        <option value="hkun">Hkun</option>
+                        <option value="hungarian">Hungarian</option>
+                        <option value="igbo">Igbo</option>
+                        <option value="icelandic">Icelandic</option>
+                        <option value="indonesian">Indonesian</option>
+                        <option value="irish">Irish</option>
+                        <option value="italian">Italian</option>
+                        <option value="japanese">Japanese</option>
+                        <option value="jharia">Jharia</option>
+                        <option value="kannada">Kannada</option>
+                        <option value="kashmiri">Kashmiri</option>
+                        <option value="kazakh">Kazakh</option>
+                        <option value="khmer">Khmer</option>
+                        <option value="khasi">Khasi</option>
+                        <option value="khumi">Khumi</option>
+                        <option value="kinnauri">Kinnauri</option>
+                        <option value="kisan">Kisan</option>
+                        <option value="koda">Koda</option>
+                        <option value="kokborok">Kokborok</option>
+                        <option value="kol">Kol</option>
+                        <option value="kolami">Kolami</option>
+                        <option value="korean">Korean</option>
+                        <option value="koraku">Koraku</option>
+                        <option value="korwa">Korwa</option>
+                        <option value="kosovar">Kosovar</option>
+                        <option value="koya">Koya</option>
+                        <option value="kullu">Kullu</option>
+                        <option value="kumaoni">Kumaoni</option>
+                        <option value="kunda">Kunda</option>
+                        <option value="kurdish">Kurdish</option>
+                        <option value="kusunda">Kusunda</option>
+                        <option value="kyrgyz">Kyrgyz</option>
+                        <option value="lao">Lao</option>
+                        <option value="ladakhi">Ladakhi</option>
+                        <option value="lahu">Lahu</option>
+                        <option value="latvian">Latvian</option>
+                        <option value="lisu">Lisu</option>
+                        <option value="lithuanian">Lithuanian</option>
+                        <option value="luxembourgish">Luxembourgish</option>
+                        <option value="maithili">Maithili</option>
+                        <option value="malagasy">Malagasy</option>
+                        <option value="malay">Malay</option>
+                        <option value="malayalam">Malayalam</option>
+                        <option value="maltese">Maltese</option>
+                        <option value="mankidi">Mankidi</option>
+                        <option value="marathi">Marathi</option>
+                        <option value="maria">Maria</option>
+                        <option value="moldovan">Moldovan</option>
+                        <option value="mongolian">Mongolian</option>
+                        <option value="montenegrin">Montenegrin</option>
+                        <option value="mro">Mro</option>
+                        <option value="mru">Mru</option>
+                        <option value="munda">Munda</option>
+                        <option value="mundari">Mundari</option>
+                        <option value="muria">Muria</option>
+                        <option value="naiki">Naiki</option>
+                        <option value="nepalbhasa">Nepal Bhasa (Newari)</option>
+                        <option value="nepali">Nepali</option>
+                        <option value="ndebele">Ndebele</option>
+                        <option value="norwegian">Norwegian</option>
+                        <option value="odia">Odia</option>
+                        <option value="pahari">Pahari</option>
+                        <option value="palaung">Palaung</option>
+                        <option value="pali">Pali</option>
+                        <option value="pankhu">Pankhu</option>
+                        <option value="pashto">Pashto</option>
+                        <option value="pando">Pando</option>
+                        <option value="persian">Persian (Farsi)</option>
+                        <option value="polish">Polish</option>
+                        <option value="portuguese">Portuguese</option>
+                        <option value="prkrit">Prakrit</option>
+                        <option value="punjabi">Punjabi</option>
+                        <option value="raj">Raj</option>
+                        <option value="rajasthani">Rajasthani</option>
+                        <option value="rakhine">Rakhine</option>
+                        <option value="rawang">Rawang</option>
+                        <option value="remo">Remo</option>
+                        <option value="romanian">Romanian</option>
+                        <option value="rumai">Rumai</option>
+                        <option value="russian">Russian</option>
+                        <option value="sanskrit">Sanskrit</option>
+                        <option value="santali">Santali</option>
+                        <option value="scottish-gaelic">Scottish Gaelic</option>
+                        <option value="serbian">Serbian</option>
+                        <option value="shona">Shona</option>
+                        <option value="sherpa">Sherpa</option>
+                        <option value="sindhi">Sindhi</option>
+                        <option value="sinhala">Sinhala</option>
+                        <option value="slovak">Slovak</option>
+                        <option value="slovenian">Slovenian</option>
+                        <option value="somali">Somali</option>
+                        <option value="sotho">Sotho</option>
+                        <option value="spanish">Spanish</option>
+                        <option value="swahili">Swahili</option>
+                        <option value="swati">Swati</option>
+                        <option value="swedish">Swedish</option>
+                        <option value="tagalog">Tagalog (Filipino)</option>
+                        <option value="tajik">Tajik</option>
+                        <option value="tamil">Tamil</option>
+                        <option value="tamang">Tamang</option>
+                        <option value="tanchangya">Tanchangya</option>
+                        <option value="telugu">Telugu</option>
+                        <option value="thai">Thai</option>
+                        <option value="thakali">Thakali</option>
+                        <option value="tharu">Tharu</option>
+                        <option value="tibetan">Tibetan</option>
+                        <option value="tongan">Tongan</option>
+                        <option value="tripuri">Tripuri</option>
+                        <option value="tsonga">Tsonga</option>
+                        <option value="turkish">Turkish</option>
+                        <option value="turkmen">Turkmen</option>
+                        <option value="ukrainian">Ukrainian</option>
+                        <option value="urdu">Urdu</option>
+                        <option value="uzbek">Uzbek</option>
+                        <option value="venda">Venda</option>
+                        <option value="vietnamese">Vietnamese</option>
+                        <option value="wa">Wa</option>
+                        <option value="welsh">Welsh</option>
+                        <option value="xhosa">Xhosa</option>
+                        <option value="yoruba">Yoruba</option>
+                        <option value="zulu">Zulu</option>
+                      </select>
+                    </div>
+                    <Button variant="outline" className="w-full">+ Add Translation</Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
 
@@ -522,22 +1053,748 @@ export default function CreateForm() {
                           onOpenSettings={() => openSettingsDialog(element.id)}
                         />
                       ))
-                    : formElements.map((element, index) => (
-                      <QuestionCard
-                        key={element.id}
+                    : formElements.map((element) => (
+                    <div key={element.id} className="border rounded-md p-4 bg-white shadow-sm relative">
+                      <div className="absolute right-2 top-2 flex flex-col space-y-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteFormElement(element.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyFormElement(element)}><Copy className="h-4 w-4 text-blue-500" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openSettingsDialog(element.id)}><Settings className="h-4 w-4 text-gray-500" /></Button>
+                      </div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-sm font-medium text-gray-500">{formElements.indexOf(element) + 1}</span>
+                        <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                        <span className="text-sm font-medium">{element.label}</span>
+                      </div>
+                      <QuestionAddonsToolbar
                         element={element}
-                        index={index}
                         formElements={formElements}
                         setFormElements={setFormElements}
-                        onDelete={() => deleteFormElement(element.id)}
-                        onDuplicate={() => copyFormElement(element)}
-                        onOpenSettings={() => openSettingsDialog(element.id)}
                         processWithTags={processWithTags}
                         questionTags={questionTags}
-                        processWithReview={processProperties.processWithReview}
                       />
-                    ))
-                  }
+                      <div className="flex items-center gap-2 mb-2">
+                        <Input placeholder="Type Question Here" className="flex-grow" />
+                        <Input value="0" className="w-16 text-center" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500"><Pen className="h-4 w-4" /></Button>
+                      </div>
+                      {element.type === 'short-answer' && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm text-gray-600">Validation Type:</span>
+                          <select
+                            className="border rounded px-2 py-1 text-sm"
+                            value={element.config?.validationType || 'text'}
+                            onChange={(e) => {
+                              const newElements = formElements.map(el => {
+                                if (el.id === element.id) {
+                                  return {
+                                    ...el,
+                                    config: { ...el.config, validationType: e.target.value as any }
+                                  };
+                                }
+                                return el;
+                              });
+                              setFormElements(newElements);
+                            }}
+                          >
+                            <option value="text">Text</option>
+                            <option value="alphanumeric">Alphanumeric</option>
+                            <option value="number">Number</option>
+                            <option value="email">Email</option>
+                            <option value="phone">Phone</option>
+                          </select>
+                        </div>
+                      )}
+                      {element.type === 'single-answer' && (
+                        <div className="mb-2">
+                          <span className="text-sm text-gray-600 mb-2 block">Options (Compliant → 100%, Non-Compliant → 0%):</span>
+                          <div className="space-y-2">
+                            {element.config?.options?.map((option: any, idx: number) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <Input
+                                  value={option.label}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newOptions = [...(el.config?.options || [])];
+                                        newOptions[idx] = { ...newOptions[idx], label: e.target.value };
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, options: newOptions }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="flex-grow"
+                                />
+                                <Input
+                                  type="number"
+                                  value={option.score}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newOptions = [...(el.config?.options || [])];
+                                        newOptions[idx] = { ...newOptions[idx], score: parseInt(e.target.value) };
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, options: newOptions }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="w-20 text-center"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-500"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newOptions = (el.config?.options || []).filter((_: any, i: number) => i !== idx);
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, options: newOptions }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newElements = formElements.map(el => {
+                                  if (el.id === element.id) {
+                                    return {
+                                      ...el,
+                                      config: {
+                                        ...el.config,
+                                        options: [...(el.config?.options || []), { label: '', score: 0 }]
+                                      }
+                                    };
+                                  }
+                                  return el;
+                                });
+                                setFormElements(newElements);
+                              }}
+                            >
+                              + Add Option
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      {element.type === 'multiple-answers' && (
+                        <div className="mb-2">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm text-gray-600">Marks:</span>
+                            <Input
+                              type="number"
+                              value={element.config?.marks || 5}
+                              onChange={(e) => {
+                                const newElements = formElements.map(el => {
+                                  if (el.id === element.id) {
+                                    return {
+                                      ...el,
+                                      config: { ...el.config, marks: parseInt(e.target.value) }
+                                    };
+                                  }
+                                  return el;
+                                });
+                                setFormElements(newElements);
+                              }}
+                              className="w-20"
+                            />
+                          </div>
+                          <span className="text-sm text-gray-600 mb-2 block">Options with percentage scores:</span>
+                          <div className="space-y-2">
+                            {element.config?.options?.map((option: any, idx: number) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <Input
+                                  value={option.label}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newOptions = [...(el.config?.options || [])];
+                                        newOptions[idx] = { ...newOptions[idx], label: e.target.value };
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, options: newOptions }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="flex-grow"
+                                />
+                                <Input
+                                  type="number"
+                                  value={option.score}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newOptions = [...(el.config?.options || [])];
+                                        newOptions[idx] = { ...newOptions[idx], score: parseInt(e.target.value) };
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, options: newOptions }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="w-20 text-center"
+                                  placeholder="%"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-500"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newOptions = (el.config?.options || []).filter((_: any, i: number) => i !== idx);
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, options: newOptions }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newElements = formElements.map(el => {
+                                  if (el.id === element.id) {
+                                    return {
+                                      ...el,
+                                      config: {
+                                        ...el.config,
+                                        options: [...(el.config?.options || []), { label: '', score: 0 }]
+                                      }
+                                    };
+                                  }
+                                  return el;
+                                });
+                                setFormElements(newElements);
+                              }}
+                            >
+                              + Add Option
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      {element.type === 'dropdown' && (
+                        <div className="mb-2">
+                          <span className="text-sm text-gray-600 mb-2 block">Options:</span>
+                          <div className="space-y-2">
+                            {element.config?.options?.map((option: any, idx: number) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <Input
+                                  value={option.label}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newOptions = [...(el.config?.options || [])];
+                                        newOptions[idx] = { ...newOptions[idx], label: e.target.value };
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, options: newOptions }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="flex-grow"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-500"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newOptions = (el.config?.options || []).filter((_: any, i: number) => i !== idx);
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, options: newOptions }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const newElements = formElements.map(el => {
+                                    if (el.id === element.id) {
+                                      return {
+                                        ...el,
+                                        config: {
+                                          ...el.config,
+                                          options: [...(el.config?.options || []), { label: '' }]
+                                        }
+                                      };
+                                  }
+                                  return el;
+                                });
+                                setFormElements(newElements);
+                              }}
+                              >
+                                + Add New
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const input = prompt('Enter comma-separated options (e.g., Morning, Afternoon, Night):');
+                                  if (input) {
+                                    const newOptions = input.split(',').map(opt => ({ label: opt.trim() }));
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: {
+                                            ...el.config,
+                                            options: [...(el.config?.options || []), ...newOptions]
+                                          }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }
+                                }}
+                              >
+                                Set Options
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {element.type === 'adv-dropdown' && (
+                        <div className="mb-2">
+                          <span className="text-sm text-gray-600 mb-2 block">Select Pre-configured Tag:</span>
+                          <select
+                            className="border rounded px-2 py-1 text-sm w-full"
+                            value={element.config?.selectedTag || ''}
+                            onChange={(e) => {
+                              const newElements = formElements.map(el => {
+                                if (el.id === element.id) {
+                                  return {
+                                    ...el,
+                                    config: { ...el.config, selectedTag: e.target.value }
+                                  };
+                                }
+                                return el;
+                              });
+                              setFormElements(newElements);
+                            }}
+                          >
+                            <option value="">Select a tag...</option>
+                            <option value="product-category">Product Category</option>
+                            <option value="store-zone">Store Zone</option>
+                            <option value="department">Department</option>
+                            <option value="shift">Shift</option>
+                          </select>
+                        </div>
+                      )}
+                      {element.type === 'grid' && (
+                        <div className="mb-2">
+                          <span className="text-sm text-gray-600 mb-2 block">Columns:</span>
+                          <div className="space-y-2 mb-4">
+                            {element.config?.columns?.map((col: string, idx: number) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <Input
+                                  value={col}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newColumns = [...(el.config?.columns || [])];
+                                        newColumns[idx] = e.target.value;
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, columns: newColumns }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="flex-grow"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-500"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newColumns = (el.config?.columns || []).filter((_: any, i: number) => i !== idx);
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, columns: newColumns }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newElements = formElements.map(el => {
+                                  if (el.id === element.id) {
+                                    return {
+                                      ...el,
+                                      config: {
+                                        ...el.config,
+                                        columns: [...(el.config?.columns || []), '']
+                                      }
+                                    };
+                                  }
+                                  return el;
+                                });
+                                setFormElements(newElements);
+                              }}
+                            >
+                              + Add Column
+                            </Button>
+                          </div>
+                          <span className="text-sm text-gray-600 mb-2 block">Rows:</span>
+                          <div className="space-y-2">
+                            {element.config?.rows?.map((row: string, idx: number) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <Input
+                                  value={row}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newRows = [...(el.config?.rows || [])];
+                                        newRows[idx] = e.target.value;
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, rows: newRows }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="flex-grow"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-500"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newRows = (el.config?.rows || []).filter((_: any, i: number) => i !== idx);
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, rows: newRows }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newElements = formElements.map(el => {
+                                  if (el.id === element.id) {
+                                    return {
+                                      ...el,
+                                      config: {
+                                        ...el.config,
+                                        rows: [...(el.config?.rows || []), '']
+                                      }
+                                    };
+                                  }
+                                  return el;
+                                });
+                                setFormElements(newElements);
+                              }}
+                            >
+                              + Add Row
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      {element.type === 'calculation-grid' && (
+                        <div className="mb-2">
+                          <span className="text-sm text-gray-600 mb-2 block">Columns with Data Types:</span>
+                          <div className="space-y-2 mb-4">
+                            {element.config?.columns?.map((col: string, idx: number) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <Input
+                                  value={col}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newColumns = [...(el.config?.columns || [])];
+                                        newColumns[idx] = e.target.value;
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, columns: newColumns }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="flex-grow"
+                                />
+                                <select
+                                  className="border rounded px-2 py-1 text-sm w-32"
+                                  value={element.config?.dataType || 'text'}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, dataType: e.target.value as any }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  <option value="text">Text</option>
+                                  <option value="alphanumeric">Alphanumeric</option>
+                                  <option value="number">Number</option>
+                                  <option value="date">Date</option>
+                                  <option value="time">Time</option>
+                                  <option value="dropdown">Dropdown</option>
+                                  <option value="barcode">Barcode</option>
+                                  <option value="attachment">Attachment</option>
+                                </select>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-500"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newColumns = (el.config?.columns || []).filter((_: any, i: number) => i !== idx);
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, columns: newColumns }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newElements = formElements.map(el => {
+                                  if (el.id === element.id) {
+                                    return {
+                                      ...el,
+                                      config: {
+                                        ...el.config,
+                                        columns: [...(el.config?.columns || []), '']
+                                      }
+                                    };
+                                  }
+                                  return el;
+                                });
+                                setFormElements(newElements);
+                              }}
+                            >
+                              + Add Column
+                            </Button>
+                          </div>
+                          <span className="text-sm text-gray-600 mb-2 block">Rows:</span>
+                          <div className="space-y-2">
+                            {element.config?.rows?.map((row: string, idx: number) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <Input
+                                  value={row}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newRows = [...(el.config?.rows || [])];
+                                        newRows[idx] = e.target.value;
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, rows: newRows }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="flex-grow"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-500"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        const newRows = (el.config?.rows || []).filter((_: any, i: number) => i !== idx);
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, rows: newRows }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newElements = formElements.map(el => {
+                                  if (el.id === element.id) {
+                                    return {
+                                      ...el,
+                                      config: {
+                                        ...el.config,
+                                        rows: [...(el.config?.rows || []), '']
+                                      }
+                                    };
+                                  }
+                                  return el;
+                                });
+                                setFormElements(newElements);
+                              }}
+                            >
+                              + Add Row
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      <Button variant="outline" className="w-full border-dashed text-sm mb-4">
+                        + ADD NEW
+                      </Button>
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <Switch id={`option-image-${element.id}`} />
+                          <label htmlFor={`option-image-${element.id}`} className="text-gray-600">Option Image</label>
+                        </div>
+                        <span className="text-red-500 text-xs">This field is required</span>
+                      </div>
+
+                      {/* Review Configuration - show when process with review is enabled */}
+                      {processProperties.processWithReview && (
+                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                          <span className="text-sm font-medium text-blue-800 mb-2 block">Review Configuration</span>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-600">Review Type:</span>
+                              <select
+                                className="border rounded px-2 py-1 text-sm flex-grow"
+                                value={element.config?.reviewType || 'none'}
+                                onChange={(e) => {
+                                  const newElements = formElements.map(el => {
+                                    if (el.id === element.id) {
+                                      return {
+                                        ...el,
+                                        config: { ...el.config, reviewType: e.target.value as any }
+                                      };
+                                    }
+                                    return el;
+                                  });
+                                  setFormElements(newElements);
+                                }}
+                              >
+                                <option value="none">No Review</option>
+                                <option value="review-existing">Review Existing Question</option>
+                                <option value="independent-review">Independent Review Question</option>
+                              </select>
+                            </div>
+
+                            {element.config?.reviewType === 'independent-review' && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-600">Assign to Reviewer Level:</span>
+                                <select
+                                  className="border rounded px-2 py-1 text-sm flex-grow"
+                                  value={element.config?.reviewerLevel || 'L1'}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, reviewerLevel: e.target.value as any }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  <option value="L1">L1 Reviewer</option>
+                                  <option value="L2">L2 Reviewer</option>
+                                  <option value="L3">L3 Reviewer</option>
+                                  <option value="L4">L4 Reviewer</option>
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -548,17 +1805,827 @@ export default function CreateForm() {
                 <DialogHeader>
                   <DialogTitle>Question Settings</DialogTitle>
                 </DialogHeader>
-                <div className="py-2">
+                <div className="space-y-4 py-4">
                   {selectedElementId && (() => {
                     const element = formElements.find(el => el.id === selectedElementId);
                     if (!element) return null;
+
                     return (
-                      <QuestionSettingsContent
-                        element={element}
-                        formElements={formElements}
-                        setFormElements={setFormElements}
-                        isAuditMode={isAuditMode}
-                      />
+                      <div>
+                        <div className="mb-4">
+                          <span className="text-sm font-medium">Question Type: {element.label}</span>
+                        </div>
+
+                        {/* Common settings for all types */}
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">Required Field</span>
+                            <Switch
+                              checked={element.config?.required || false}
+                              onCheckedChange={(checked) => {
+                                const newElements = formElements.map(el => {
+                                  if (el.id === element.id) {
+                                    return {
+                                      ...el,
+                                      config: { ...el.config, required: checked }
+                                    };
+                                  }
+                                  return el;
+                                });
+                                setFormElements(newElements);
+                              }}
+                            />
+                          </div>
+
+                          {/* Scoring configuration */}
+                          <div className="space-y-4 pt-4 border-t">
+                            <span className="text-sm font-medium">Scoring Configuration</span>
+                            <div className="space-y-2">
+                              <label className="text-sm">Scoring Type:</label>
+                              <select
+                                className="border rounded px-2 py-1 text-sm w-full"
+                                value={element.config?.scoringType || 'none'}
+                                onChange={(e) => {
+                                  const newElements = formElements.map(el => {
+                                    if (el.id === element.id) {
+                                      return {
+                                        ...el,
+                                        config: { ...el.config, scoringType: e.target.value as any }
+                                      };
+                                    }
+                                    return el;
+                                  });
+                                  setFormElements(newElements);
+                                }}
+                              >
+                                <option value="none">No Scoring</option>
+                                <option value="weightage">Weightage-Based Scoring</option>
+                                <option value="input">Input-Based Scoring (BODMAS)</option>
+                              </select>
+                            </div>
+
+                            {element.config?.scoringType === 'weightage' && (
+                              <div className="space-y-2">
+                                <label className="text-sm">Weightage (Marks):</label>
+                                <Input
+                                  type="number"
+                                  value={element.config?.weightage || 0}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, weightage: parseInt(e.target.value) }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="w-20"
+                                />
+                              </div>
+                            )}
+
+                            {element.config?.scoringType === 'input' && (
+                              <div className="space-y-2">
+                                <label className="text-sm">Calculator Function:</label>
+                                <select
+                                  className="border rounded px-2 py-1 text-sm w-full"
+                                  value={element.config?.calculatorFunction || 'none'}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, calculatorFunction: e.target.value as any }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  <option value="none">None</option>
+                                  <option value="average">AVERAGE()</option>
+                                  <option value="sum-na">Σ NA Count</option>
+                                  <option value="sum-weightage">Σ Weightage</option>
+                                </select>
+                              </div>
+                            )}
+
+                            <div className="space-y-2">
+                              <label className="text-sm">Range Validation (for number answers):</label>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  placeholder="Min"
+                                  value={element.config?.rangeValidation?.min || ''}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: {
+                                            ...el.config,
+                                            rangeValidation: {
+                                              ...el.config?.rangeValidation,
+                                              min: e.target.value ? parseInt(e.target.value) : undefined
+                                            }
+                                          }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="w-24"
+                                />
+                                <span className="text-sm">to</span>
+                                <Input
+                                  type="number"
+                                  placeholder="Max"
+                                  value={element.config?.rangeValidation?.max || ''}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: {
+                                            ...el.config,
+                                            rangeValidation: {
+                                              ...el.config?.rangeValidation,
+                                              max: e.target.value ? parseInt(e.target.value) : undefined
+                                            }
+                                          }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="w-24"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Type-specific settings */}
+                          {element.type === 'short-answer' && (
+                            <div>
+                              <span className="text-sm font-medium mb-2 block">Validation Type:</span>
+                              <select
+                                className="border rounded px-2 py-1 text-sm w-full"
+                                value={element.config?.validationType || 'text'}
+                                onChange={(e) => {
+                                  const newElements = formElements.map(el => {
+                                    if (el.id === element.id) {
+                                      return {
+                                        ...el,
+                                        config: { ...el.config, validationType: e.target.value as any }
+                                      };
+                                    }
+                                    return el;
+                                  });
+                                  setFormElements(newElements);
+                                }}
+                              >
+                                <option value="text">Text</option>
+                                <option value="alphanumeric">Alphanumeric</option>
+                                <option value="number">Number</option>
+                                <option value="email">Email</option>
+                                <option value="phone">Phone</option>
+                              </select>
+                            </div>
+                          )}
+
+                          {element.type === 'single-answer' && (
+                            <div>
+                              <span className="text-sm font-medium mb-2 block">Options:</span>
+                              <div className="space-y-2">
+                                {element.config?.options?.map((option: any, idx: number) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <Input
+                                      value={option.label}
+                                      onChange={(e) => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newOptions = [...(el.config?.options || [])];
+                                            newOptions[idx] = { ...newOptions[idx], label: e.target.value };
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, options: newOptions }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                      className="flex-grow"
+                                    />
+                                    <Input
+                                      type="number"
+                                      value={option.score}
+                                      onChange={(e) => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newOptions = [...(el.config?.options || [])];
+                                            newOptions[idx] = { ...newOptions[idx], score: parseInt(e.target.value) };
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, options: newOptions }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                      className="w-20 text-center"
+                                    />
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-red-500"
+                                      onClick={() => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newOptions = (el.config?.options || []).filter((_: any, i: number) => i !== idx);
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, options: newOptions }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: {
+                                            ...el.config,
+                                            options: [...(el.config?.options || []), { label: '', score: 0 }]
+                                          }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  + Add Option
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {element.type === 'multiple-answers' && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm font-medium">Marks:</span>
+                                <Input
+                                  type="number"
+                                  value={element.config?.marks || 5}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, marks: parseInt(e.target.value) }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                  className="w-20"
+                                />
+                              </div>
+                              <span className="text-sm font-medium mb-2 block">Options:</span>
+                              <div className="space-y-2">
+                                {element.config?.options?.map((option: any, idx: number) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <Input
+                                      value={option.label}
+                                      onChange={(e) => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newOptions = [...(el.config?.options || [])];
+                                            newOptions[idx] = { ...newOptions[idx], label: e.target.value };
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, options: newOptions }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                      className="flex-grow"
+                                    />
+                                    <Input
+                                      type="number"
+                                      value={option.score}
+                                      onChange={(e) => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newOptions = [...(el.config?.options || [])];
+                                            newOptions[idx] = { ...newOptions[idx], score: parseInt(e.target.value) };
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, options: newOptions }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                      className="w-20 text-center"
+                                      placeholder="%"
+                                    />
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-red-500"
+                                      onClick={() => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newOptions = (el.config?.options || []).filter((_: any, i: number) => i !== idx);
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, options: newOptions }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: {
+                                            ...el.config,
+                                            options: [...(el.config?.options || []), { label: '', score: 0 }]
+                                          }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  + Add Option
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {element.type === 'dropdown' && (
+                            <div>
+                              <span className="text-sm font-medium mb-2 block">Options:</span>
+                              <div className="space-y-2">
+                                {element.config?.options?.map((option: any, idx: number) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <Input
+                                      value={option.label}
+                                      onChange={(e) => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newOptions = [...(el.config?.options || [])];
+                                            newOptions[idx] = { ...newOptions[idx], label: e.target.value };
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, options: newOptions }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                      className="flex-grow"
+                                    />
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-red-500"
+                                      onClick={() => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newOptions = (el.config?.options || []).filter((_: any, i: number) => i !== idx);
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, options: newOptions }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newElements = formElements.map(el => {
+                                        if (el.id === element.id) {
+                                          return {
+                                            ...el,
+                                            config: {
+                                              ...el.config,
+                                              options: [...(el.config?.options || []), { label: '' }]
+                                            }
+                                          };
+                                        }
+                                        return el;
+                                      });
+                                      setFormElements(newElements);
+                                    }}
+                                  >
+                                    + Add New
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const input = prompt('Enter comma-separated options (e.g., Morning, Afternoon, Night):');
+                                      if (input) {
+                                        const newOptions = input.split(',').map(opt => ({ label: opt.trim() }));
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            return {
+                                              ...el,
+                                              config: {
+                                                ...el.config,
+                                                options: [...(el.config?.options || []), ...newOptions]
+                                              }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }
+                                    }}
+                                  >
+                                    Set Options
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {element.type === 'adv-dropdown' && (
+                            <div>
+                              <span className="text-sm font-medium mb-2 block">Select Pre-configured Tag:</span>
+                              <select
+                                className="border rounded px-2 py-1 text-sm w-full"
+                                value={element.config?.selectedTag || ''}
+                                onChange={(e) => {
+                                  const newElements = formElements.map(el => {
+                                    if (el.id === element.id) {
+                                      return {
+                                        ...el,
+                                        config: { ...el.config, selectedTag: e.target.value }
+                                      };
+                                    }
+                                    return el;
+                                  });
+                                  setFormElements(newElements);
+                                }}
+                              >
+                                <option value="">Select a tag...</option>
+                                <option value="product-category">Product Category</option>
+                                <option value="store-zone">Store Zone</option>
+                                <option value="department">Department</option>
+                                <option value="shift">Shift</option>
+                              </select>
+                            </div>
+                          )}
+
+                          {element.type === 'grid' && (
+                            <div>
+                              <span className="text-sm font-medium mb-2 block">Columns:</span>
+                              <div className="space-y-2 mb-4">
+                                {element.config?.columns?.map((col: string, idx: number) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <Input
+                                      value={col}
+                                      onChange={(e) => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newColumns = [...(el.config?.columns || [])];
+                                            newColumns[idx] = e.target.value;
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, columns: newColumns }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                      className="flex-grow"
+                                    />
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-red-500"
+                                      onClick={() => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newColumns = (el.config?.columns || []).filter((_: any, i: number) => i !== idx);
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, columns: newColumns }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: {
+                                            ...el.config,
+                                            columns: [...(el.config?.columns || []), '']
+                                          }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  + Add Column
+                                </Button>
+                              </div>
+                              <span className="text-sm font-medium mb-2 block">Rows:</span>
+                              <div className="space-y-2">
+                                {element.config?.rows?.map((row: string, idx: number) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <Input
+                                      value={row}
+                                      onChange={(e) => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newRows = [...(el.config?.rows || [])];
+                                            newRows[idx] = e.target.value;
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, rows: newRows }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                      className="flex-grow"
+                                    />
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-red-500"
+                                      onClick={() => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newRows = (el.config?.rows || []).filter((_: any, i: number) => i !== idx);
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, rows: newRows }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: {
+                                            ...el.config,
+                                            rows: [...(el.config?.rows || []), '']
+                                          }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  + Add Row
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {element.type === 'calculation-grid' && (
+                            <div>
+                              <span className="text-sm font-medium mb-2 block">Columns with Data Types:</span>
+                              <div className="space-y-2 mb-4">
+                                {element.config?.columns?.map((col: string, idx: number) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <Input
+                                      value={col}
+                                      onChange={(e) => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newColumns = [...(el.config?.columns || [])];
+                                            newColumns[idx] = e.target.value;
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, columns: newColumns }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                      className="flex-grow"
+                                    />
+                                    <select
+                                      className="border rounded px-2 py-1 text-sm w-32"
+                                      value={element.config?.dataType || 'text'}
+                                      onChange={(e) => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, dataType: e.target.value as any }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                    >
+                                      <option value="text">Text</option>
+                                      <option value="alphanumeric">Alphanumeric</option>
+                                      <option value="number">Number</option>
+                                      <option value="date">Date</option>
+                                      <option value="time">Time</option>
+                                      <option value="dropdown">Dropdown</option>
+                                      <option value="barcode">Barcode</option>
+                                      <option value="attachment">Attachment</option>
+                                    </select>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-red-500"
+                                      onClick={() => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newColumns = (el.config?.columns || []).filter((_: any, i: number) => i !== idx);
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, columns: newColumns }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: {
+                                            ...el.config,
+                                            columns: [...(el.config?.columns || []), '']
+                                          }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  + Add Column
+                                </Button>
+                              </div>
+                              <span className="text-sm font-medium mb-2 block">Rows:</span>
+                              <div className="space-y-2">
+                                {element.config?.rows?.map((row: string, idx: number) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <Input
+                                      value={row}
+                                      onChange={(e) => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newRows = [...(el.config?.rows || [])];
+                                            newRows[idx] = e.target.value;
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, rows: newRows }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                      className="flex-grow"
+                                    />
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-red-500"
+                                      onClick={() => {
+                                        const newElements = formElements.map(el => {
+                                          if (el.id === element.id) {
+                                            const newRows = (el.config?.rows || []).filter((_: any, i: number) => i !== idx);
+                                            return {
+                                              ...el,
+                                              config: { ...el.config, rows: newRows }
+                                            };
+                                          }
+                                          return el;
+                                        });
+                                        setFormElements(newElements);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: {
+                                            ...el.config,
+                                            rows: [...(el.config?.rows || []), '']
+                                          }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                >
+                                  + Add Row
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     );
                   })()}
                 </div>
@@ -684,55 +2751,9 @@ export default function CreateForm() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="settings" className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {isAuditMode && (
-                    <>
-                      <div>
-                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Audit Settings</span>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Pass Threshold (%)</label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            className="w-24"
-                            value={(processDraft as any)?.passThreshold ?? 70}
-                            onChange={(e) => {
-                              if (processDraft) {
-                                setProcessDraft({ ...processDraft, passThreshold: Number(e.target.value) } as any);
-                              }
-                            }}
-                          />
-                          <span className="text-sm text-gray-500">%</span>
-                        </div>
-                        <p className="text-xs text-gray-400">Submissions below this score are marked as failed.</p>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Scoring Mode</label>
-                        <select
-                          className="w-full rounded border px-2 py-1.5 text-sm"
-                          value={(processDraft as any)?.scoringConfig?.mode ?? 'weighted'}
-                          onChange={(e) => {
-                            if (processDraft) {
-                              setProcessDraft({ ...processDraft, scoringConfig: { ...((processDraft as any).scoringConfig ?? {}), mode: e.target.value } } as any);
-                            }
-                          }}
-                        >
-                          <option value="weighted">Weighted (per-question scores)</option>
-                          <option value="equal">Equal (all questions same weight)</option>
-                          <option value="section">Section-based scoring</option>
-                        </select>
-                      </div>
-                      <div className="h-px bg-gray-200" />
-                    </>
-                  )}
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Form Settings</span>
-                  </div>
+                <TabsContent value="settings" className="flex-1 p-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">{isAuditMode ? 'Audit' : 'Process'} with tags</span>
+                    <span className="text-sm">Process with tags</span>
                     <Switch
                       checked={processWithTags}
                       onCheckedChange={setProcessWithTags}
@@ -740,35 +2761,17 @@ export default function CreateForm() {
                   </div>
                   {processWithTags && (
                     <p className="text-xs text-muted-foreground rounded-md border bg-sky-50 p-3">
-                      Question tag dropdowns appear on each question. Tags come from Manage Tags - Question Tag.
+                      Question tag dropdowns appear on each question. Tags come from Manage Tags → Question Tag.
                       Enable Visual Report View in Advanced Settings to filter submission photos by tag.
                     </p>
                   )}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">{isAuditMode ? 'Audit' : 'Process'} with review</span>
+                    <span className="text-sm">Process with review</span>
                     <Switch
                       checked={processProperties.processWithReview}
                       onCheckedChange={(checked) => setProcessProperties({ ...processProperties, processWithReview: checked })}
                     />
                   </div>
-                  {isAuditMode && processProperties.processWithReview && (
-                    <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                      <label className="text-sm font-medium text-blue-800">Review Levels</label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={4}
-                        className="w-20"
-                        value={(processDraft as any)?.reviewLevels ?? 1}
-                        onChange={(e) => {
-                          if (processDraft) {
-                            setProcessDraft({ ...processDraft, reviewLevels: Number(e.target.value) } as any);
-                          }
-                        }}
-                      />
-                      <p className="text-xs text-blue-600">Configure reviewers in Properties - Review tab.</p>
-                    </div>
-                  )}
                 </TabsContent>
               </Tabs>
             </div>
@@ -776,12 +2779,8 @@ export default function CreateForm() {
         </TabsContent>
 
         <TabsContent value="properties">
-          <div className="h-[calc(100vh-73px)]">
-            <PropertiesPanel
-              properties={processProperties}
-              onChange={setProcessProperties}
-              processTitle={fieldValues.field1}
-            />
+          <div className="text-center py-12 text-muted-foreground">
+            <p>Properties content</p>
           </div>
         </TabsContent>
 
