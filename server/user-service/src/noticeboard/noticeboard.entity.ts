@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { UserProfile } from '../profiles/user-profile.entity';
 
 @Entity('noticeboard_posts')
@@ -40,7 +40,7 @@ export class NoticeboardPost {
   createdBy: string;
 
   @ManyToOne(() => UserProfile)
-  @JoinColumn({ name: 'createdBy' })
+  @JoinColumn({ name: 'created_by' })
   creator: UserProfile;
 
   @Column()

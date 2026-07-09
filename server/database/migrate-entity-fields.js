@@ -84,10 +84,23 @@ async function addColumns(client, table, columns) {
   }
 }
 
+async function tableExists(client, tableName) {
+  const res = await client.query(
+    `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1`,
+    [tableName]
+  );
+  return res.rowCount > 0;
+}
+
 const client = await pool.connect();
 try {
   await addColumns(client, 'entities', entityColumns);
-  await addColumns(client, 'removed_entities', removedColumns);
+  // Only migrate removed_entities if it exists (not present on fresh DB)
+  if (await tableExists(client, 'removed_entities')) {
+    await addColumns(client, 'removed_entities', removedColumns);
+  } else {
+    console.log('removed_entities table not found — skipping (fresh install).');
+  }
   console.log('Entity profile columns migration completed.');
 } finally {
   client.release();

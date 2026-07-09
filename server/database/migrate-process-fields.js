@@ -10,13 +10,14 @@ const pool = new pg.Pool({
 
 const client = await pool.connect();
 try {
-  await client.query(`
-    ALTER TABLE processes ADD COLUMN IF NOT EXISTS "processTags" json
-  `);
-  await client.query(`
-    ALTER TABLE processes ADD COLUMN IF NOT EXISTS properties json
-  `);
-  console.log('Process tags and properties column migration completed.');
+  const res = await client.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='processes'`);
+  if (res.rowCount > 0) {
+    await client.query(`ALTER TABLE processes ADD COLUMN IF NOT EXISTS "processTags" json`);
+    await client.query(`ALTER TABLE processes ADD COLUMN IF NOT EXISTS properties json`);
+    console.log('Process tags and properties column migration completed.');
+  } else {
+    console.log('processes table not found — skipping (fresh install).');
+  }
 } finally {
   client.release();
   await pool.end();

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { Role, RoleName } from '../roles/role.entity';
 
 @Entity('org_memberships')
@@ -29,6 +29,6 @@ export class OrgMembership {
   leftAt: Date;
 
   @ManyToOne(() => Role)
-  @JoinColumn({ name: 'roleId' })
+  @JoinColumn({ name: 'role_id' })
   role: Role;
 }

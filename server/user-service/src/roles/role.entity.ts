@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 
 // Taqtics-style role hierarchy
 export enum RoleName {
@@ -59,7 +59,7 @@ export class Role {
   updatedAt: Date;
 
   @ManyToOne(() => Role, { nullable: true })
-  @JoinColumn({ name: 'parentRoleId' })
+  @JoinColumn({ name: 'parent_role_id' })
   parentRole: Role;
 
   @OneToMany(() => Role, role => role.parentRole)

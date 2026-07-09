@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 
 @Entity('locations')
 export class Location {
@@ -60,6 +60,6 @@ export class Location {
   updatedAt: Date;
 
   @ManyToOne(() => Location, { nullable: true })
-  @JoinColumn({ name: 'regionId' })
+  @JoinColumn({ name: 'region_id' })
   region: Location;
 }

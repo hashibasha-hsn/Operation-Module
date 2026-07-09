@@ -49,6 +49,13 @@ export type CreateEntityFormValues = {
   regionId: string;
   cityId: string;
   districtId: string;
+  // Generic country / state / city
+  countryId: string;
+  stateId: string;
+  locationCityId: string;
+  countryName: string;
+  stateName: string;
+  locationCityName: string;
   staff: string;
   status: boolean;
   storeStatus: string;
@@ -98,6 +105,13 @@ export const initialCreateEntityFormValues: CreateEntityFormValues = {
   regionId: "",
   cityId: "",
   districtId: "",
+  // Generic country / state / city
+  countryId: "",
+  stateId: "",
+  locationCityId: "",
+  countryName: "",
+  stateName: "",
+  locationCityName: "",
   staff: "",
   status: true,
   storeStatus: "Functional",

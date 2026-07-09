@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { Designation } from '../designations/designation.entity';
 import { SystemRole } from '../system-roles/system-role.entity';
 
@@ -24,10 +24,10 @@ export class DesignationRoleMapping {
   mappedBy: string;
 
   @ManyToOne(() => Designation)
-  @JoinColumn({ name: 'designationId' })
+  @JoinColumn({ name: 'designation_id' })
   designation: Designation;
 
   @ManyToOne(() => SystemRole)
-  @JoinColumn({ name: 'systemRoleId' })
+  @JoinColumn({ name: 'system_role_id' })
   systemRole: SystemRole;
 }

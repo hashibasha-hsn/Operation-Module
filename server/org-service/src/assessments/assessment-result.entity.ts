@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Assessment } from './assessment.entity';
 
 @Entity('assessment_results')
@@ -52,7 +52,7 @@ export class AssessmentResult {
   organizationId: string;
 
   @ManyToOne(() => Assessment)
-  @JoinColumn({ name: 'assessmentId' })
+  @JoinColumn({ name: 'assessment_id' })
   assessment: Assessment;
 
   @CreateDateColumn()

@@ -29,8 +29,18 @@ export class BusinessEntity {
   @Column({ length: 36, nullable: true })
   cityId: string;
 
+  // 1. entity.entity.ts — add countryId, stateId, locationCityId columns
   @Column({ length: 36, nullable: true })
   districtId: string;
+
+  @Column({ name: 'country_id', length: 36, nullable: true })
+  countryId: string;
+
+  @Column({ name: 'state_id', length: 36, nullable: true })
+  stateId: string;
+
+  @Column({ name: 'location_city_id', length: 36, nullable: true })
+  locationCityId: string;
 
   @Column({ nullable: true, type: 'integer' })
   staff: number;

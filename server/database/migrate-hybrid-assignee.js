@@ -10,31 +10,33 @@ const pool = new pg.Pool({
 
 const client = await pool.connect();
 try {
-  await client.query(`
-    ALTER TABLE hybrid_assignee_assignments
-    DROP CONSTRAINT IF EXISTS hybrid_assignee_assignments_assignmenttype_check
-  `);
-
-  await client.query(`
-    ALTER TABLE hybrid_assignee_assignments
-    ADD CONSTRAINT hybrid_assignee_assignments_assignmenttype_check
-    CHECK (assignmenttype IN (
-      'process_approval',
-      'action_point_assignee',
-      'action_point_closure',
-      'individual',
-      'bulk',
-      'designation',
-      'common'
-    ))
-  `);
-
-  await client.query(`
-    ALTER TABLE hybrid_assignee_assignments
-    ALTER COLUMN userid TYPE character varying USING userid::text
-  `);
-
-  console.log('Hybrid assignee schema migration completed.');
+  const res = await client.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='hybrid_assignee_assignments'`);
+  if (res.rowCount > 0) {
+    await client.query(`
+      ALTER TABLE hybrid_assignee_assignments
+      DROP CONSTRAINT IF EXISTS hybrid_assignee_assignments_assignmenttype_check
+    `);
+    await client.query(`
+      ALTER TABLE hybrid_assignee_assignments
+      ADD CONSTRAINT hybrid_assignee_assignments_assignmenttype_check
+      CHECK (assignmenttype IN (
+        'process_approval',
+        'action_point_assignee',
+        'action_point_closure',
+        'individual',
+        'bulk',
+        'designation',
+        'common'
+      ))
+    `);
+    await client.query(`
+      ALTER TABLE hybrid_assignee_assignments
+      ALTER COLUMN userid TYPE character varying USING userid::text
+    `);
+    console.log('Hybrid assignee schema migration completed.');
+  } else {
+    console.log('hybrid_assignee_assignments table not found — skipping (fresh install).');
+  }
 } finally {
   client.release();
   await pool.end();

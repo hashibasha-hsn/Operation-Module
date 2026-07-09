@@ -107,6 +107,9 @@ export default function Entities() {
     latitude: "0.00000000",
     longitude: "0.00000000",
     storeRadius: "100",
+    countryId: "",
+    stateId: "",
+    locationCityId: "",
   });
   const [entities, setEntities] = useState<any[]>([]);
   const [totalEntityCount, setTotalEntityCount] = useState(0);
@@ -256,6 +259,9 @@ export default function Entities() {
       latitude: entity.latitude?.toString() || "0.00000000",
       longitude: entity.longitude?.toString() || "0.00000000",
       storeRadius: entity.storeRadius?.toString() || "100",
+      countryId: entity.countryId || "",
+      stateId: entity.stateId || "",
+      locationCityId: entity.locationCityId || "",
     });
     setSelectedTags(entity.tags || {});
     setIsEditEntityDialogOpen(true);
@@ -284,6 +290,9 @@ export default function Entities() {
         latitude: "0.00000000",
         longitude: "0.00000000",
         storeRadius: "100",
+        countryId: "",
+        stateId: "",
+        locationCityId: "",
       });
       setSelectedTags({});
       setEditingEntity(null);
@@ -291,6 +300,7 @@ export default function Entities() {
       loadEntities();
     } catch (err) {
       console.error('Error updating entity:', err);
+      toast.error(t('entityUpdateFailed') || 'Failed to update entity');
     }
   };
 
@@ -719,6 +729,7 @@ export default function Entities() {
                       />
                     </div>
                   </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="edit-staff">{t('staff')}</Label>

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { SnakeNamingStrategy } from './snake-naming.strategy';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { RegionsModule } from './regions/regions.module';
 import { LocationsModule } from './locations/locations.module';
@@ -25,13 +26,21 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT) || 5432,
-      username: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'Rasika',
-      database: process.env.DB_NAME || 'hashibasha_org',
+      ...(process.env.DATABASE_URL
+        ? { url: process.env.DATABASE_URL }
+        : {
+            host: process.env.DB_HOST || 'localhost',
+            port: parseInt(process.env.DB_PORT || '5432', 10),
+            username: process.env.DB_USER || 'postgres',
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME || 'hashibasha_org',
+          }),
+      schema: process.env.DB_SCHEMA,
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      extra: process.env.DB_SSL === 'true' ? { family: 4 } : undefined,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: false,
+      synchronize: true,
+      namingStrategy: new SnakeNamingStrategy(),
     }),
     OrganizationsModule,
     RegionsModule,

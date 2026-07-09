@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 
 @Entity('designations')
 export class Designation {
@@ -30,7 +30,7 @@ export class Designation {
   updatedAt: Date;
 
   @ManyToOne(() => Designation, { nullable: true })
-  @JoinColumn({ name: 'reportingDesignationId' })
+  @JoinColumn({ name: 'reporting_designation_id' })
   reportingDesignation: Designation;
 
   @OneToMany(() => Designation, designation => designation.reportingDesignation)

@@ -5,18 +5,11 @@
 const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
-const { Client } = require('pg');
+const { getPgClient, findSaLocationExcel, useLocationSchema } = require('./location-import-config.cjs');
 
-const EXCEL_FILE = path.join(__dirname, '..', '..', 'أحياء_مدن_السعودية_العنوان_الوطني.xlsx');
+const EXCEL_FILE = findSaLocationExcel();
+
 const IMPORT_USER = process.env.IMPORT_USER || 'excel-import';
-
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'Rasika',
-  database: process.env.LOCATION_DB_NAME || 'hashibasha_location',
-};
 
 function clean(value) {
   return String(value ?? '')
@@ -42,18 +35,36 @@ function parseRegionCell(cell) {
   return { nameAr: text, nameEn: text };
 }
 
-async function main() {
-  if (!fs.existsSync(EXCEL_FILE)) {
-    throw new Error(`Excel file not found: ${EXCEL_FILE}`);
+async function batchInsert(client, table, columns, rows, batchSize = 250) {
+  if (!rows.length) return;
+  const colList = columns.join(', ');
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const chunk = rows.slice(i, i + batchSize);
+    const values = [];
+    const params = [];
+    let paramIndex = 1;
+    for (const row of chunk) {
+      values.push(`(${row.map(() => `$${paramIndex++}`).join(', ')})`);
+      params.push(...row);
+    }
+    await client.query(`INSERT INTO ${table} (${colList}) VALUES ${values.join(', ')}`, params);
   }
+}
+
+async function main() {
+  if (!EXCEL_FILE) {
+    throw new Error('Excel file not found in project root (أحياء_مدن_السعودية_العنوان_الوطني.xlsx)');
+  }
+  console.log('Reading Excel:', EXCEL_FILE);
 
   const workbook = xlsx.readFile(EXCEL_FILE);
   const regionRows = xlsx.utils.sheet_to_json(workbook.Sheets['المناطق Regions'], { header: 1 }).slice(2);
   const cityRows = xlsx.utils.sheet_to_json(workbook.Sheets['فهرس المدن Cities'], { header: 1 }).slice(2);
   const districtRows = xlsx.utils.sheet_to_json(workbook.Sheets['الأحياء Districts'], { header: 1 }).slice(2);
 
-  const client = new Client(dbConfig);
+  const client = getPgClient();
   await client.connect();
+  await useLocationSchema(client);
 
   await client.query('BEGIN');
   try {
@@ -102,8 +113,6 @@ async function main() {
       const result = await client.query(
         `INSERT INTO sa_cities (region_id, name, name_ar, code, created_by, updated_by)
          VALUES ($1, $2, $3, $4, $5, $5)
-         ON CONFLICT (region_id, name_ar) DO UPDATE
-           SET name = EXCLUDED.name, code = EXCLUDED.code, updated_by = EXCLUDED.updated_by
          RETURNING id`,
         [regionId, nameEn || nameAr, nameAr, code, IMPORT_USER],
       );
@@ -113,7 +122,7 @@ async function main() {
     }
 
     let districtIndex = 0;
-    let insertedDistricts = 0;
+    const districtBatch = [];
 
     for (const row of districtRows) {
       const regionAr = clean(row[1]);
@@ -133,8 +142,6 @@ async function main() {
         const cityResult = await client.query(
           `INSERT INTO sa_cities (region_id, name, name_ar, code, created_by, updated_by)
            VALUES ($1, $2, $3, $4, $5, $5)
-           ON CONFLICT (region_id, name_ar) DO UPDATE
-             SET name = EXCLUDED.name, updated_by = EXCLUDED.updated_by
            RETURNING id`,
           [regionId, cityEn || cityAr, cityAr, code, IMPORT_USER],
         );
@@ -143,15 +150,17 @@ async function main() {
       }
 
       const code = makeCode('D', districtEn || districtAr, districtIndex++);
-      await client.query(
-        `INSERT INTO sa_districts (city_id, name, name_ar, code, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $5)
-         ON CONFLICT (city_id, name_ar) DO UPDATE
-           SET name = EXCLUDED.name, code = EXCLUDED.code, updated_by = EXCLUDED.updated_by`,
-        [cityId, districtEn || districtAr, districtAr, code, IMPORT_USER],
-      );
-      insertedDistricts += 1;
+      districtBatch.push([cityId, districtEn || districtAr, districtAr, code, IMPORT_USER, IMPORT_USER]);
     }
+
+    console.log(`Inserting ${districtBatch.length} districts...`);
+    await batchInsert(
+      client,
+      'sa_districts',
+      ['city_id', 'name', 'name_ar', 'code', 'created_by', 'updated_by'],
+      districtBatch,
+    );
+    const insertedDistricts = districtBatch.length;
 
     await client.query('COMMIT');
 

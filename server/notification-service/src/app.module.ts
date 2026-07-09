@@ -11,11 +11,18 @@ import { EmailModule } from './email/email.module';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT) || 5432,
-      username: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'Rasika',
-      database: process.env.DB_NAME || 'hashibasha_notification',
+      ...(process.env.DATABASE_URL
+        ? { url: process.env.DATABASE_URL }
+        : {
+            host: process.env.DB_HOST || 'localhost',
+            port: parseInt(process.env.DB_PORT || '5432', 10),
+            username: process.env.DB_USER || 'postgres',
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME || 'hashibasha_notification',
+          }),
+      schema: process.env.DB_SCHEMA,
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      extra: process.env.DB_SSL === 'true' ? { family: 4 } : undefined,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true,
     }),

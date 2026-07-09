@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Audit } from './audit.entity';
 
 @Entity('audit_sections')
@@ -29,7 +29,7 @@ export class AuditSection {
   auditId: string;
 
   @ManyToOne(() => Audit, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'auditId' })
+  @JoinColumn({ name: 'audit_id' })
   audit: Audit;
 
   @CreateDateColumn()

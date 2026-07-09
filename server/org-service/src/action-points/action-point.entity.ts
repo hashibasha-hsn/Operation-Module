@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Submission } from '../submissions/submission.entity';
 
 @Entity('action_points')
@@ -67,7 +67,7 @@ export class ActionPoint {
   organizationId: string;
 
   @ManyToOne(() => Submission, { nullable: true })
-  @JoinColumn({ name: 'submissionId' })
+  @JoinColumn({ name: 'submission_id' })
   submission: Submission;
 
   @CreateDateColumn()

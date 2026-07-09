@@ -11,19 +11,24 @@ const pool = new pg.Pool({
 async function main() {
   const client = await pool.connect();
   try {
-    await client.query(`
-      ALTER TABLE assessments ADD COLUMN IF NOT EXISTS assigneeids JSONB DEFAULT '[]';
-      ALTER TABLE assessments ADD COLUMN IF NOT EXISTS storeids JSONB DEFAULT '[]';
-      ALTER TABLE assessments ADD COLUMN IF NOT EXISTS properties JSONB;
-      ALTER TABLE assessments ADD COLUMN IF NOT EXISTS certificatesettings JSONB;
-      ALTER TABLE assessments ADD COLUMN IF NOT EXISTS startdate TIMESTAMP;
-      ALTER TABLE assessments ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT true;
-      ALTER TABLE assessments ADD COLUMN IF NOT EXISTS showresult BOOLEAN DEFAULT false;
-      ALTER TABLE assessments ADD COLUMN IF NOT EXISTS showcorrectanswer BOOLEAN DEFAULT false;
-      ALTER TABLE assessments ADD COLUMN IF NOT EXISTS dynamicassignment BOOLEAN DEFAULT false;
-      ALTER TABLE assessments ADD COLUMN IF NOT EXISTS generatecertificate BOOLEAN DEFAULT false;
-    `);
-    console.log('Assessment columns migration completed.');
+    const res = await client.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='assessments'`);
+    if (res.rowCount > 0) {
+      await client.query(`
+        ALTER TABLE assessments ADD COLUMN IF NOT EXISTS assigneeids JSONB DEFAULT '[]';
+        ALTER TABLE assessments ADD COLUMN IF NOT EXISTS storeids JSONB DEFAULT '[]';
+        ALTER TABLE assessments ADD COLUMN IF NOT EXISTS properties JSONB;
+        ALTER TABLE assessments ADD COLUMN IF NOT EXISTS certificatesettings JSONB;
+        ALTER TABLE assessments ADD COLUMN IF NOT EXISTS startdate TIMESTAMP;
+        ALTER TABLE assessments ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT true;
+        ALTER TABLE assessments ADD COLUMN IF NOT EXISTS showresult BOOLEAN DEFAULT false;
+        ALTER TABLE assessments ADD COLUMN IF NOT EXISTS showcorrectanswer BOOLEAN DEFAULT false;
+        ALTER TABLE assessments ADD COLUMN IF NOT EXISTS dynamicassignment BOOLEAN DEFAULT false;
+        ALTER TABLE assessments ADD COLUMN IF NOT EXISTS generatecertificate BOOLEAN DEFAULT false;
+      `);
+      console.log('Assessment columns migration completed.');
+    } else {
+      console.log('assessments table not found — skipping (fresh install).');
+    }
   } finally {
     client.release();
     await pool.end();

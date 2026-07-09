@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 
 @Entity('bi_dashboards')
 export class BIDashboard {
@@ -84,7 +84,7 @@ export class BIChart {
   height: number;
 
   @ManyToOne(() => BIDashboard, (dashboard) => dashboard.charts, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'dashboardId' })
+  @JoinColumn({ name: 'dashboard_id' })
   dashboard: BIDashboard;
 
   @Column()

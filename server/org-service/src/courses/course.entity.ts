@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { CourseCategory } from './course-category.entity';
 
 @Entity('courses')
@@ -16,7 +16,7 @@ export class Course {
   categoryId: string;
 
   @ManyToOne(() => CourseCategory)
-  @JoinColumn({ name: 'categoryId' })
+  @JoinColumn({ name: 'category_id' })
   category: CourseCategory;
 
   @Column({ type: 'json', nullable: true })
