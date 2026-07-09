@@ -104,7 +104,7 @@ async function applyBaseSchemas() {
     },
     { database: DATABASES.notification, files: ['notification-schema.sql'] },
     { database: DATABASES.permission, files: ['permission-schema.sql'] },
-    { database: DATABASES.location, files: ['sa-location-schema.sql'] },
+    { database: DATABASES.location, files: ['sa-location-schema.sql', 'location-country-state-city-schema.sql'] },
     { database: DATABASES.language, files: ['language-schema.sql'] },
   ];
 
@@ -127,6 +127,7 @@ async function runMigrations() {
     'server/database/migrate-submissions-table.js',
     'server/database/migrate-hybrid-assignee.js',
     'server/database/migrate-noticeboard-display-order.cjs',
+    'server/database/migrate-entity-location-columns.cjs',
   ];
 
   for (const migration of migrations) {
@@ -140,6 +141,7 @@ async function runModuleSetups() {
   runNodeScript('server/database/setup-tickets.cjs', 'Tickets schema + defaults');
   runNodeScript('server/database/setup-reporting-modules.cjs', 'Reporting modules schema + defaults');
   runNodeScript('server/database/setup-audit-logs.cjs', 'Audit logs schema');
+  runNodeScript('server/database/fix-sa-location-constraints.cjs', 'Location DB unique constraints');
 }
 
 async function runOptionalImports() {
@@ -151,9 +153,14 @@ async function runOptionalImports() {
   log('6/6', 'Importing reference data...');
   runNodeScript('server/database/import-language-data.cjs', 'UI translations (EN/AR)');
 
-  const excelPath = path.join(ROOT, 'أحياء_مدن_السعودية_العنوان_الوطني.xlsx');
-  if (fs.existsSync(excelPath)) {
-    runNodeScript('server/database/import-sa-location-from-excel.cjs', 'SA location data from Excel');
+  const excelVariants = [
+    path.join(ROOT, 'أحياء_مدن_السعودية_العنوان_الوطني (1).xlsx'),
+    path.join(ROOT, 'أحياء_مدن_السعودية_العنوان_الوطني.xlsx'),
+  ];
+  const excelPath = excelVariants.find(p => fs.existsSync(p));
+  if (excelPath) {
+    runNodeScript('server/database/import-sa-location-from-excel.cjs', 'SA location data (sa_region/cities/districts)');
+    runNodeScript('server/database/import-location-country-data.cjs', 'SA country/state/city data');
   } else {
     console.log('  - SA location Excel not found; skip import (optional file in project root)');
   }

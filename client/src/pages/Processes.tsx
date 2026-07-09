@@ -62,7 +62,7 @@ export default function Processes() {
 
   const fetchProcesses = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/org/processes?organizationId=default-org');
+      const response = await fetch('http://localhost:3009/api/org/processes?organizationId=default-org');
       const data = await response.json();
       setProcesses(data || []);
     } catch (err) {
@@ -92,7 +92,7 @@ export default function Processes() {
 
   const handleCreateProcess = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/org/processes', {
+      const response = await fetch('http://localhost:3009/api/org/processes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ export default function Processes() {
 
   const handlePublishProcess = async (id: string) => {
     try {
-      await fetch(`http://localhost:3000/api/org/processes/${id}/publish`, {
+      await fetch(`http://localhost:3009/api/org/processes/${id}/publish`, {
         method: 'PUT',
       });
       fetchProcesses();
@@ -140,7 +140,7 @@ export default function Processes() {
     if (!confirm('Are you sure you want to archive this process?')) return;
 
     try {
-      await fetch(`http://localhost:3000/api/org/processes/${id}/archive`, {
+      await fetch(`http://localhost:3009/api/org/processes/${id}/archive`, {
         method: 'PUT',
       });
       fetchProcesses();
@@ -153,7 +153,7 @@ export default function Processes() {
     if (!confirm('Are you sure you want to delete this process?')) return;
 
     try {
-      await fetch(`http://localhost:3000/api/org/processes/${id}`, {
+      await fetch(`http://localhost:3009/api/org/processes/${id}`, {
         method: 'DELETE',
       });
       fetchProcesses();

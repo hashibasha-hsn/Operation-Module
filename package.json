@@ -14,9 +14,15 @@
     "start:location": "npm run start:dev --prefix server/location-service",
     "setup:db": "node server/database/setup-all.cjs",
     "setup:db:sample": "node server/database/setup-all.cjs --with-sample-data",
+    "migrate:supabase": "node server/database/migrate-to-supabase.cjs",
+    "reset:auth-user": "node server/database/reset-auth-user-data.cjs",
     "seed:admin": "node server/database/seed-admin-user.js",
     "setup:location-db": "node server/database/setup-sa-location-db.cjs",
     "import:location-data": "node server/database/import-sa-location-from-excel.cjs",
+    "setup:location-country-db": "node server/database/setup-location-country-state-city.cjs",
+    "import:location-country-data": "node server/database/import-location-country-data.cjs",
+    "migrate:entity-location": "node server/database/migrate-entity-location-columns.cjs",
+    "import:all-location-data": "node server/database/import-sa-location-from-excel.cjs && node server/database/import-location-country-data.cjs",
     "setup:language-db": "node server/database/setup-language-db.cjs",
     "import:language-data": "node server/database/import-language-data.cjs",
     "setup:reporting-modules": "node server/database/setup-reporting-modules.cjs",
@@ -115,13 +121,5 @@
     "vite-plugin-manus-runtime": "^0.0.57",
     "vitest": "^2.1.4"
   },
-  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
-  "pnpm": {
-    "patchedDependencies": {
-      "wouter@3.7.1": "patches/wouter@3.7.1.patch"
-    },
-    "overrides": {
-      "tailwindcss>nanoid": "3.3.7"
-    }
-  }
+  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af"
 }

@@ -130,3 +130,6 @@ test-admin-setup.json
 
 # Loose local screenshots
 /image.png
+
+# Local Kafka installer archives (not needed for npm install)
+server/kafka_*.tgz

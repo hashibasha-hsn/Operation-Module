@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { Designation } from '../designations/designation.entity';
 
 @Entity('user_designations')
@@ -26,6 +26,6 @@ export class UserDesignation {
   isPrimary: boolean;
 
   @ManyToOne(() => Designation)
-  @JoinColumn({ name: 'designationId' })
+  @JoinColumn({ name: 'designation_id' })
   designation: Designation;
 }

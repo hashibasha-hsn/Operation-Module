@@ -19,14 +19,21 @@ const userPool = new pg.Pool({
 });
 
 async function getUserEmailMap() {
-  const { rows } = await userPool.query(
-    `SELECT userid, email, name FROM user_profiles WHERE isremoved = FALSE`,
-  );
-  const map = new Map();
-  for (const row of rows) {
-    map.set(row.userid, { email: row.email, name: row.name });
+  try {
+    // Try users table first (has email), fall back gracefully
+    const { rows } = await userPool.query(
+      `SELECT user_id, email, name FROM user_profiles WHERE isremoved = FALSE`,
+    );
+    const map = new Map();
+    for (const row of rows) {
+      map.set(row.user_id, { email: row.email, name: row.name });
+    }
+    return map;
+  } catch (e) {
+    // On fresh DB the columns may differ — return empty map
+    console.log('  Note: Could not load user email map, using empty map (fresh install).');
+    return new Map();
   }
-  return map;
 }
 
 async function backfillFromSubmissions(emailMap) {
@@ -126,12 +133,15 @@ async function run() {
   await orgPool.query(schema);
   console.log('✓ Audit logs schema applied');
 
-  const emailMap = await getUserEmailMap();
-  const fromSubmissions = await backfillFromSubmissions(emailMap);
-  const fromUsers = await backfillFromUsers(emailMap);
-
-  console.log(`✓ Backfilled ${fromSubmissions} submission log(s)`);
-  console.log(`✓ Backfilled ${fromUsers} user update log(s)`);
+  try {
+    const emailMap = await getUserEmailMap();
+    const fromSubmissions = await backfillFromSubmissions(emailMap);
+    const fromUsers = await backfillFromUsers(emailMap);
+    console.log(`✓ Backfilled ${fromSubmissions} submission log(s)`);
+    console.log(`✓ Backfilled ${fromUsers} user update log(s)`);
+  } catch (e) {
+    console.log(`  Note: Backfill skipped on fresh install (${e.message})`);
+  }
 
   const { rows } = await orgPool.query('SELECT COUNT(*)::int AS count FROM audit_logs');
   console.log(`✓ Total audit logs in DB: ${rows[0].count}`);

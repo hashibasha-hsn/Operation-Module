@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
 import { AdvDropdownTag } from './adv-dropdown-tag.entity';
 import { UserProfile } from '../profiles/user-profile.entity';
 
@@ -17,7 +17,7 @@ export class AdvDropdownValue {
   tagId: string;
 
   @ManyToOne(() => AdvDropdownTag, (tag) => tag.values, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'tagId' })
+  @JoinColumn({ name: 'tag_id' })
   tag: AdvDropdownTag;
 
   @ManyToMany(() => UserProfile)

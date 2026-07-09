@@ -53,11 +53,9 @@ export class Submission {
   organizationId: string;
 
   @ManyToOne(() => Process, { nullable: true })
-  @JoinColumn({ name: 'workflowId' })
   process: Process;
 
   @ManyToOne(() => Audit, { nullable: true })
-  @JoinColumn({ name: 'workflowId' })
   audit: Audit;
 
   @CreateDateColumn()

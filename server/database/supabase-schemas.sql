@@ -1,0 +1,42 @@
+-- Run this once in Supabase SQL Editor before starting services.
+-- Maps each microservice database to a PostgreSQL schema in the single Supabase DB.
+
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE SCHEMA IF NOT EXISTS "user";
+CREATE SCHEMA IF NOT EXISTS org;
+CREATE SCHEMA IF NOT EXISTS notification;
+CREATE SCHEMA IF NOT EXISTS permission;
+CREATE SCHEMA IF NOT EXISTS location;
+CREATE SCHEMA IF NOT EXISTS language;
+
+GRANT USAGE ON SCHEMA auth TO postgres;
+GRANT USAGE ON SCHEMA "user" TO postgres;
+GRANT USAGE ON SCHEMA org TO postgres;
+GRANT USAGE ON SCHEMA notification TO postgres;
+GRANT USAGE ON SCHEMA permission TO postgres;
+GRANT USAGE ON SCHEMA location TO postgres;
+GRANT USAGE ON SCHEMA language TO postgres;
+
+GRANT ALL ON SCHEMA auth TO postgres;
+GRANT ALL ON SCHEMA "user" TO postgres;
+GRANT ALL ON SCHEMA org TO postgres;
+GRANT ALL ON SCHEMA notification TO postgres;
+GRANT ALL ON SCHEMA permission TO postgres;
+GRANT ALL ON SCHEMA location TO postgres;
+GRANT ALL ON SCHEMA language TO postgres;
+
+GRANT CREATE, USAGE ON SCHEMA auth TO postgres;
+GRANT CREATE, USAGE ON SCHEMA "user" TO postgres;
+GRANT CREATE, USAGE ON SCHEMA org TO postgres;
+GRANT CREATE, USAGE ON SCHEMA notification TO postgres;
+GRANT CREATE, USAGE ON SCHEMA permission TO postgres;
+GRANT CREATE, USAGE ON SCHEMA location TO postgres;
+GRANT CREATE, USAGE ON SCHEMA language TO postgres;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA auth GRANT ALL ON TABLES TO postgres;
+ALTER DEFAULT PRIVILEGES IN SCHEMA "user" GRANT ALL ON TABLES TO postgres;
+ALTER DEFAULT PRIVILEGES IN SCHEMA org GRANT ALL ON TABLES TO postgres;
+ALTER DEFAULT PRIVILEGES IN SCHEMA notification GRANT ALL ON TABLES TO postgres;
+ALTER DEFAULT PRIVILEGES IN SCHEMA permission GRANT ALL ON TABLES TO postgres;
+ALTER DEFAULT PRIVILEGES IN SCHEMA location GRANT ALL ON TABLES TO postgres;
+ALTER DEFAULT PRIVILEGES IN SCHEMA language GRANT ALL ON TABLES TO postgres;

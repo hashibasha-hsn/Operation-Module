@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { AuditSection } from './audit-section.entity';
 
 @Entity('audit_questions')
@@ -44,7 +44,7 @@ export class AuditQuestion {
   sectionId: string;
 
   @ManyToOne(() => AuditSection, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'sectionId' })
+  @JoinColumn({ name: 'section_id' })
   section: AuditSection;
 
   @CreateDateColumn()

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { SystemRole } from '../system-roles/system-role.entity';
 import { Feature } from '../features/feature.entity';
 
@@ -21,10 +21,10 @@ export class RoleFeaturePermission {
   grantedAt: Date;
 
   @ManyToOne(() => SystemRole)
-  @JoinColumn({ name: 'roleId' })
+  @JoinColumn({ name: 'role_id' })
   role: SystemRole;
 
   @ManyToOne(() => Feature)
-  @JoinColumn({ name: 'featureId' })
+  @JoinColumn({ name: 'feature_id' })
   feature: Feature;
 }

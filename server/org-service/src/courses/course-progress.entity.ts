@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Course } from './course.entity';
 
 @Entity('course_progress')
@@ -31,7 +31,7 @@ export class CourseProgress {
   organizationId: string;
 
   @ManyToOne(() => Course)
-  @JoinColumn({ name: 'courseId' })
+  @JoinColumn({ name: 'course_id' })
   course: Course;
 
   @CreateDateColumn()

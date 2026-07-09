@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { ProcessSection } from './process-section.entity';
 
 @Entity('process_questions')
@@ -34,7 +34,7 @@ export class ProcessQuestion {
   sectionId: string;
 
   @ManyToOne(() => ProcessSection, (section) => section.questions, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'sectionId' })
+  @JoinColumn({ name: 'section_id' })
   section: ProcessSection;
 
   @CreateDateColumn()
