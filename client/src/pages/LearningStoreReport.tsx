@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Download, ArrowLeft, Building2, Users, Clock, Eye } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ORG_API } from "@/lib/apiConfig";
 
 export default function LearningStoreReport() {
   const { t } = useLanguage();
@@ -41,7 +42,7 @@ export default function LearningStoreReport() {
       if (endDate) params.append("endDate", endDate);
 
       const response = await fetch(
-        `http://localhost:3001/courses/reports/store-report?${params.toString()}`
+        `${ORG_API}/courses/reports/store-report?${params.toString()}`
       );
       const result = await response.json();
       setData(result);

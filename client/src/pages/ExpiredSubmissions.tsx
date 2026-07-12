@@ -15,6 +15,7 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import { Search, AlertTriangle, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ORG_API } from "@/lib/apiConfig";
 
 export default function ExpiredSubmissions() {
   const { t } = useLanguage();
@@ -33,7 +34,7 @@ export default function ExpiredSubmissions() {
       const organizationId = user.organizationId;
 
       const response = await fetch(
-        `http://localhost:3001/submissions/reports/expired-submissions?organizationId=${organizationId}`
+        `${ORG_API}/submissions/reports/expired-submissions?organizationId=${organizationId}`
       );
       const data = await response.json();
       setSubmissions(data);

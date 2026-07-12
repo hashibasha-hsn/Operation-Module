@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Download, ArrowLeft, Trash2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ORG_API } from "@/lib/apiConfig";
 
 export default function AssessmentOrgReport() {
   const { t } = useLanguage();
@@ -38,7 +39,7 @@ export default function AssessmentOrgReport() {
       if (endDate) params.append("endDate", endDate);
 
       const response = await fetch(
-        `http://localhost:3001/assessments/reports/org-report?${params.toString()}`
+        `${ORG_API}/assessments/reports/org-report?${params.toString()}`
       );
       const data = await response.json();
       setAssessments(data);
@@ -56,7 +57,7 @@ export default function AssessmentOrgReport() {
       const organizationId = user.organizationId;
 
       const response = await fetch(
-        `http://localhost:3001/assessments/reports/submission-list/${assessmentId}?organizationId=${organizationId}`
+        `${ORG_API}/assessments/reports/submission-list/${assessmentId}?organizationId=${organizationId}`
       );
       const data = await response.json();
       setSubmissions(data);
@@ -72,7 +73,7 @@ export default function AssessmentOrgReport() {
     if (!confirm("Are you sure you want to delete this submission?")) return;
     
     try {
-      await fetch(`http://localhost:3001/assessments/reports/submission/${submissionId}`, {
+      await fetch(`${ORG_API}/assessments/reports/submission/${submissionId}`, {
         method: 'DELETE',
       });
       if (selectedAssessment) {

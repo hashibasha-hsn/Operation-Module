@@ -22,6 +22,7 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import { Search, Download, FileText } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ORG_API } from "@/lib/apiConfig";
 
 export default function AssessmentReport() {
   const { t } = useLanguage();
@@ -60,7 +61,7 @@ export default function AssessmentReport() {
       }
 
       const response = await fetch(
-        `http://localhost:3001/assessments/reports/assessment-report?assessmentId=${assessmentId}&organizationId=${organizationId}${startDate ? `&startDate=${startDate}` : ''}${endDate ? `&endDate=${endDate}` : ''}`
+        `${ORG_API}/assessments/reports/assessment-report?assessmentId=${assessmentId}&organizationId=${organizationId}${startDate ? `&startDate=${startDate}` : '`}${endDate ? `&endDate=${endDate}` : `'}`
       );
       const data = await response.json();
       setResults(data);

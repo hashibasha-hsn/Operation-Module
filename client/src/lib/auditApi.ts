@@ -1,4 +1,5 @@
 import {
+import { ORG_API } from './apiConfig';
   apiAuditToDraft,
   AuditDraftState,
   buildAuditDraftPayload,
@@ -7,7 +8,7 @@ import {
 } from './auditDraft';
 import { propertiesFromApiProcess } from './processProperties';
 
-const ORG_API = 'http://localhost:3009/api/org';
+
 
 export async function saveAuditDraft(draft: AuditDraftState) {
   const response = await fetch(`${ORG_API}/audits/draft`, {

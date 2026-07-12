@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Plus, Search, MoreVertical, ChevronDown, Edit, Trash2, MessageSquare, ThumbsUp, ThumbsDown, Image as ImageIcon, Video } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { USER_API } from "@/lib/apiConfig";
 
 export default function Noticeboard() {
   const { t } = useLanguage();
@@ -60,7 +61,7 @@ export default function Noticeboard() {
 
   const fetchPosts = async () => {
     try {
-      const response = await fetch('http://localhost:3002/noticeboard?organizationId=default-org');
+      const response = await fetch(`${USER_API}/noticeboard?organizationId=default-org`);
       const data = await response.json();
       setPosts(data || []);
     } catch (err) {
@@ -70,7 +71,7 @@ export default function Noticeboard() {
 
   const handleCreatePost = async () => {
     try {
-      const response = await fetch('http://localhost:3002/noticeboard', {
+      const response = await fetch(`${USER_API}/noticeboard`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +117,7 @@ export default function Noticeboard() {
     if (!editingPost) return;
 
     try {
-      const response = await fetch(`http://localhost:3002/noticeboard/${editingPost.id}`, {
+      const response = await fetch(`${USER_API}/noticeboard/${editingPost.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +148,7 @@ export default function Noticeboard() {
     if (!confirm(t('areYouSureDeletePost'))) return;
 
     try {
-      const response = await fetch(`http://localhost:3002/noticeboard/${id}`, {
+      const response = await fetch(`${USER_API}/noticeboard/${id}`, {
         method: 'DELETE',
       });
 
@@ -163,7 +164,7 @@ export default function Noticeboard() {
 
   const handleToggleStatus = async (id: string) => {
     try {
-      await fetch(`http://localhost:3002/noticeboard/${id}/toggle-status`, {
+      await fetch(`${USER_API}/noticeboard/${id}/toggle-status`, {
         method: 'PUT',
       });
       fetchPosts();
@@ -174,7 +175,7 @@ export default function Noticeboard() {
 
   const handleLike = async (id: string) => {
     try {
-      await fetch(`http://localhost:3002/noticeboard/${id}/like`, {
+      await fetch(`${USER_API}/noticeboard/${id}/like`, {
         method: 'PUT',
       });
       fetchPosts();
@@ -185,7 +186,7 @@ export default function Noticeboard() {
 
   const handleDislike = async (id: string) => {
     try {
-      await fetch(`http://localhost:3002/noticeboard/${id}/dislike`, {
+      await fetch(`${USER_API}/noticeboard/${id}/dislike`, {
         method: 'PUT',
       });
       fetchPosts();

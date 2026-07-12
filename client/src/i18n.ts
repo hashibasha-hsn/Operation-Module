@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import { LANGUAGE_API, TRANSLATIONS_API } from "@/lib/apiConfig";
 
 // Fallback translations used when API is unavailable or keys are missing from cache
 const fallbackTranslations = {
@@ -272,8 +273,6 @@ const fallbackTranslations = {
   },
 };
 
-const LANGUAGE_API = import.meta.env.VITE_LANGUAGE_API || 'http://localhost:3009/api/language';
-const TRANSLATIONS_API = import.meta.env.VITE_TRANSLATIONS_API || 'http://localhost:3009/api/translations';
 
 // Custom backend to fetch translations from language service
 const CustomBackend = {

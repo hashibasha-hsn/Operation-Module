@@ -1,4 +1,7 @@
-const BASE_URL = 'http://localhost:3002/hybrid-assignee-profiles';
+import { USER_API } from './apiConfig';
+
+const BASE_URL = `${USER_API}/hybrid-assignee-profiles`;
+
 const ORG_ID = 'default-org';
 
 export type HybridDashboardStats = {

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Download, User, Trophy, Clock, BookOpen, Eye } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ORG_API } from "@/lib/apiConfig";
 
 export default function LearningMyReport() {
   const { t } = useLanguage();
@@ -37,7 +38,7 @@ export default function LearningMyReport() {
       if (endDate) params.append("endDate", endDate);
 
       const response = await fetch(
-        `http://localhost:3001/courses/reports/my-report?${params.toString()}`
+        `${ORG_API}/courses/reports/my-report?${params.toString()}`
       );
       const result = await response.json();
       setData(result);

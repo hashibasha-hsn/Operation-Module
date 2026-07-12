@@ -1,4 +1,5 @@
-const ORG_API = import.meta.env.VITE_ORG_API || 'http://localhost:3009/api/org';
+import { ORG_API } from './apiConfig';
+
 const DEFAULT_ORGANIZATION_ID = 'default-org';
 
 export type EntityRecord = Record<string, unknown> & {

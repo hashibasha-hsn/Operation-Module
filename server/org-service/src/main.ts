@@ -22,7 +22,7 @@ async function bootstrap() {
   });
   
   const port = process.env.PORT || 3012;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`Organization Service running on http://localhost:${port}`);
 }
 

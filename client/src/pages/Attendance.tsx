@@ -27,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Search, Clock, Download, Calendar, MapPin, User, Filter, Settings, CheckCircle, XCircle, AlertCircle, ChevronDown, Upload } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ORG_API, USER_API, API_GATEWAY_URL } from "@/lib/apiConfig";
 
 interface AttendanceRecord {
   id: string;
@@ -84,7 +85,7 @@ export default function Attendance() {
   useEffect(() => {
     const fetchAttendanceConfig = async () => {
       try {
-        const response = await fetch('http://localhost:3009/api/attendance/config');
+        const response = await fetch(`${API_GATEWAY_URL}/api/attendance/config`);
         if (response.ok) {
           const data = await response.json();
           setAttendanceConfig(data);
@@ -101,7 +102,7 @@ export default function Attendance() {
   useEffect(() => {
     const fetchStores = async () => {
       try {
-        const response = await fetch('http://localhost:3009/api/org/entities');
+        const response = await fetch(`${ORG_API}/entities`);
         if (response.ok) {
           const data = await response.json();
           // Map the API response to match the expected format
@@ -125,7 +126,7 @@ export default function Attendance() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch('http://localhost:3009/api/user/users');
+        const response = await fetch(`${USER_API}/users`);
         if (response.ok) {
           const data = await response.json();
           // Map the API response to match the expected format
@@ -151,7 +152,7 @@ export default function Attendance() {
   useEffect(() => {
     const fetchAttendanceRecords = async () => {
       try {
-        const response = await fetch('http://localhost:3009/api/attendance/records');
+        const response = await fetch(`${API_GATEWAY_URL}/api/attendance/records`);
         if (response.ok) {
           const data = await response.json();
           setAttendanceRecords(data);
@@ -388,7 +389,7 @@ export default function Attendance() {
                     </Button>
                     <Button onClick={async () => {
                       try {
-                        const response = await fetch('http://localhost:3009/api/attendance/config', {
+                        const response = await fetch(`${API_GATEWAY_URL}/api/attendance/config`, {
                           method: 'POST',
                           headers: {
                             'Content-Type': 'application/json',

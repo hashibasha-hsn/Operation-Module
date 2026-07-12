@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Download, Clock, ChevronDown } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ORG_API } from "@/lib/apiConfig";
 
 export default function ActionPointsAdvanceReport() {
   const { t } = useLanguage();
@@ -43,7 +44,7 @@ export default function ActionPointsAdvanceReport() {
       if (actionPointIdSearch) params.append("actionPointId", actionPointIdSearch);
 
       const response = await fetch(
-        `http://localhost:3001/action-points/reports/advance-report?${params.toString()}`
+        `${ORG_API}/action-points/reports/advance-report?${params.toString()}`
       );
       const result = await response.json();
       setData(result);

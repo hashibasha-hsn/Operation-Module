@@ -1,4 +1,5 @@
 import {
+import { ORG_API, USER_API } from './apiConfig';
   apiAssessmentToDraft,
   AssessmentDraftState,
   buildAssessmentDraftPayload,
@@ -7,7 +8,7 @@ import {
   saveAssessmentDraftLocal,
 } from './assessmentDraft';
 
-const ORG_API = 'http://localhost:3009/api/org';
+
 
 export async function saveAssessmentDraft(draft: AssessmentDraftState) {
   const response = await fetch(`${ORG_API}/assessments/draft`, {
@@ -43,13 +44,13 @@ export async function fetchAssessments(organizationId = 'default-org', status?: 
 }
 
 export async function fetchDesignations(organizationId = 'default-org') {
-  const response = await fetch(`http://localhost:3002/designations?organizationId=${organizationId}`);
+  const response = await fetch(`${USER_API}/designations?organizationId=${organizationId}`);
   if (!response.ok) return [];
   return response.json();
 }
 
 export async function fetchAssigneeProfiles(organizationId = 'default-org') {
-  const response = await fetch(`http://localhost:3002/tags/assignee-profile?organizationId=${organizationId}`);
+  const response = await fetch(`${USER_API}/tags/assignee-profile?organizationId=${organizationId}`);
   if (!response.ok) return [];
   return response.json();
 }

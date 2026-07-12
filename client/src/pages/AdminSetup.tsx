@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Shield, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
+import { AUTH_API } from "@/lib/apiConfig";
 
-const API_BASE = "http://localhost:3009/api/auth";
+const API_BASE = `${AUTH_API}`;
 
 export default function AdminSetup() {
   const [, navigate] = useLocation();

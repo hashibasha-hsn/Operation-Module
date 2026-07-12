@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Download, Search, Filter, ChevronDown, Settings } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ORG_API } from "@/lib/apiConfig";
 
 export default function ActionPointsOrgReport() {
   const { t } = useLanguage();
@@ -32,7 +33,7 @@ export default function ActionPointsOrgReport() {
       if (searchTerm) params.append("search", searchTerm);
 
       const response = await fetch(
-        `http://localhost:3001/action-points/reports/org-report?${params.toString()}`
+        `${ORG_API}/action-points/reports/org-report?${params.toString()}`
       );
       const result = await response.json();
       setData(result);

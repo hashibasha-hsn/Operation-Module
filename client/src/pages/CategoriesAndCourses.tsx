@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { API_GATEWAY_URL } from "@/lib/apiConfig";
 
 interface Category {
   id: string;
@@ -71,7 +72,7 @@ export default function CategoriesAndCourses() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch('http://localhost:3009/api/categories');
+        const response = await fetch(`${API_GATEWAY_URL}/api/categories`);
         if (response.ok) {
           const data = await response.json();
           setCategories(data);
@@ -92,7 +93,7 @@ export default function CategoriesAndCourses() {
     const fetchQuizzes = async () => {
       try {
         setLoadingQuizzes(true);
-        const response = await fetch('http://localhost:3009/api/quizzes');
+        const response = await fetch(`${API_GATEWAY_URL}/api/quizzes`);
         if (response.ok) {
           const data = await response.json();
           setQuizzes(data);
@@ -114,7 +115,7 @@ export default function CategoriesAndCourses() {
     }
 
     try {
-      const response = await fetch('http://localhost:3009/api/categories', {
+      const response = await fetch(`${API_GATEWAY_URL}/api/categories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +154,7 @@ export default function CategoriesAndCourses() {
     }
 
     try {
-      const response = await fetch('http://localhost:3009/api/courses', {
+      const response = await fetch(`${API_GATEWAY_URL}/api/courses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -188,7 +189,7 @@ export default function CategoriesAndCourses() {
 
   const handleDeleteCategory = async (categoryId: string) => {
     try {
-      const response = await fetch(`http://localhost:3009/api/categories/${categoryId}`, {
+      const response = await fetch(`${API_GATEWAY_URL}/api/categories/${categoryId}`, {
         method: 'DELETE',
       });
 
@@ -206,7 +207,7 @@ export default function CategoriesAndCourses() {
 
   const handleDeleteCourse = async (categoryId: string, courseId: string) => {
     try {
-      const response = await fetch(`http://localhost:3009/api/courses/${courseId}`, {
+      const response = await fetch(`${API_GATEWAY_URL}/api/courses/${courseId}`, {
         method: 'DELETE',
       });
 
@@ -248,7 +249,7 @@ export default function CategoriesAndCourses() {
 
     if (editingCategory) {
       try {
-        const response = await fetch(`http://localhost:3009/api/categories/${editingCategory.id}`, {
+        const response = await fetch(`${API_GATEWAY_URL}/api/categories/${editingCategory.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -293,7 +294,7 @@ export default function CategoriesAndCourses() {
 
     if (editingCourse) {
       try {
-        const response = await fetch(`http://localhost:3009/api/courses/${editingCourse.course.id}`, {
+        const response = await fetch(`${API_GATEWAY_URL}/api/courses/${editingCourse.course.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -365,7 +366,7 @@ export default function CategoriesAndCourses() {
     }
 
     try {
-      const response = await fetch('http://localhost:3009/api/quizzes', {
+      const response = await fetch(`${API_GATEWAY_URL}/api/quizzes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -410,7 +411,7 @@ export default function CategoriesAndCourses() {
     if (!selectedQuizForAssign) return;
 
     try {
-      const response = await fetch('http://localhost:3009/api/quiz-assignments', {
+      const response = await fetch(`${API_GATEWAY_URL}/api/quiz-assignments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -439,7 +440,7 @@ export default function CategoriesAndCourses() {
     if (!selectedQuizForPublish) return;
 
     try {
-      const response = await fetch(`http://localhost:3009/api/quizzes/${selectedQuizForPublish.id}/publish`, {
+      const response = await fetch(`${API_GATEWAY_URL}/api/quizzes/${selectedQuizForPublish.id}/publish`, {
         method: 'POST',
       });
 
@@ -448,7 +449,7 @@ export default function CategoriesAndCourses() {
         setShowPublishDialog(false);
         setSelectedQuizForPublish(null);
         // Refresh quizzes
-        const quizResponse = await fetch('http://localhost:3009/api/quizzes');
+        const quizResponse = await fetch(`${API_GATEWAY_URL}/api/quizzes`);
         if (quizResponse.ok) {
           const data = await quizResponse.json();
           setQuizzes(data);

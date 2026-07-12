@@ -1,4 +1,6 @@
-export const LOCATION_API = import.meta.env.VITE_LOCATION_API || 'http://localhost:3009/api/location';
+import { LOCATION_API } from './apiConfig';
+export { LOCATION_API };
+
 
 // ── SA-specific types (regions / cities / districts) ────────────────────────
 

@@ -1,5 +1,5 @@
-export const MEDIA_BASE = import.meta.env.VITE_MEDIA_BASE || 'http://localhost:3009';
-export const ORG_API = import.meta.env.VITE_ORG_API || 'http://localhost:3009/api/org';
+import { MEDIA_BASE, ORG_API } from './apiConfig';
+export { MEDIA_BASE, ORG_API };
 export const NOTICEboard_API = `${ORG_API}/noticeboard`;
 
 export type NoticeboardPost = {

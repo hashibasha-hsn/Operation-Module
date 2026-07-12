@@ -1,4 +1,5 @@
-const ORG_API = 'http://localhost:3009/api/org';
+import { ORG_API } from './apiConfig';
+
 
 export {
   getCurrentUser,

@@ -85,6 +85,7 @@ import {
   resolveHierarchyUser,
 } from "@/lib/userHierarchy";
 import type { HierarchyUser } from "@/components/users/UserHierarchyTree";
+import { AUTH_API, ORG_API, USER_API } from "@/lib/apiConfig";
 
 const COUNTRY_PHONE_OPTIONS = [
   { code: "+966", label: "+966 (Saudi Arabia)", maxLength: 9, pattern: /^5\d{8}$/ },
@@ -261,7 +262,7 @@ export default function UsersPage() {
 
   const fetchEntities = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/org/entities?organizationId=default-org');
+      const response = await fetch(`${ORG_API}/entities?organizationId=default-org`);
       const data = await response.json();
       setEntities(data || []);
     } catch (err) {
@@ -271,7 +272,7 @@ export default function UsersPage() {
 
   const fetchUserTags = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/user/user-tags?organizationId=default-org');
+      const response = await fetch(`${USER_API}/user-tags?organizationId=default-org`);
       const data = await response.json();
       // Transform database response to match frontend structure
       const transformedTags = Array.isArray(data) ? data.map((tag: any) => ({
@@ -289,7 +290,7 @@ export default function UsersPage() {
 
   const fetchUserTeams = async () => {
     try {
-      const response = await fetch('http://localhost:3002/user-teams?organizationId=default-org');
+      const response = await fetch(`${USER_API}/user-teams?organizationId=default-org`);
       const data = await response.json();
       setUserTeams(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -348,7 +349,7 @@ export default function UsersPage() {
 
   const fetchDesignations = async () => {
     try {
-      const response = await fetch('http://localhost:3002/designations?organizationId=default-org');
+      const response = await fetch(`${USER_API}/designations?organizationId=default-org`);
       const data = await response.json();
 
       const designationsWithDetails = await Promise.all(
@@ -357,7 +358,7 @@ export default function UsersPage() {
           let reportingDesignationName = null;
 
           try {
-            const mappingResponse = await fetch(`http://localhost:3002/designation-role-mapping/designation/${designation.id}`);
+            const mappingResponse = await fetch(`${USER_API}/designation-role-mapping/designation/${designation.id}`);
             const mapping = await mappingResponse.json();
             if (mapping && mapping.systemRole) {
               systemRole = mapping.systemRole;
@@ -368,7 +369,7 @@ export default function UsersPage() {
 
           if (designation.reportingDesignationId) {
             try {
-              const reportingResponse = await fetch(`http://localhost:3002/designations/${designation.reportingDesignationId}`);
+              const reportingResponse = await fetch(`${USER_API}/designations/${designation.reportingDesignationId}`);
               const reportingDesignation = await reportingResponse.json();
               if (reportingDesignation) {
                 reportingDesignationName = reportingDesignation.name;
@@ -394,7 +395,7 @@ export default function UsersPage() {
 
   const fetchSystemRoles = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/user/system-roles');
+      const response = await fetch(`${USER_API}/system-roles`);
       const data = await response.json();
       setSystemRoles(sortSystemRolesByHierarchy(data || []));
     } catch (err) {
@@ -407,7 +408,7 @@ export default function UsersPage() {
       let reportingDesignationId = null;
       if (designationData.reportingDesignation) {
         try {
-          const designationsResponse = await fetch('http://localhost:3002/designations?organizationId=default-org');
+          const designationsResponse = await fetch(`${USER_API}/designations?organizationId=default-org`);
           const designations = await designationsResponse.json();
           const reportingDesignation = designations.find((d: any) => d.name === designationData.reportingDesignation);
           if (reportingDesignation) {
@@ -418,7 +419,7 @@ export default function UsersPage() {
         }
       }
 
-      const response = await fetch('http://localhost:3002/designations', {
+      const response = await fetch(`${USER_API}/designations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -434,7 +435,7 @@ export default function UsersPage() {
         const createdDesignation = await response.json();
 
         if (designationData.systemRole) {
-          await fetch('http://localhost:3002/designation-role-mapping', {
+          await fetch(`${USER_API}/designation-role-mapping`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -474,7 +475,7 @@ export default function UsersPage() {
       let reportingDesignationId = null;
       if (designationData.reportingDesignation) {
         try {
-          const designationsResponse = await fetch('http://localhost:3002/designations?organizationId=default-org');
+          const designationsResponse = await fetch(`${USER_API}/designations?organizationId=default-org`);
           const designations = await designationsResponse.json();
           const reportingDesignation = designations.find((d: any) => d.name === designationData.reportingDesignation);
           if (reportingDesignation) {
@@ -485,7 +486,7 @@ export default function UsersPage() {
         }
       }
 
-      const response = await fetch(`http://localhost:3002/designations/${editingDesignation.id}`, {
+      const response = await fetch(`${USER_API}/designations/${editingDesignation.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -498,11 +499,11 @@ export default function UsersPage() {
 
       if (response.ok) {
         if (designationData.systemRole) {
-          await fetch(`http://localhost:3002/designation-role-mapping/designation/${editingDesignation.id}`, {
+          await fetch(`${USER_API}/designation-role-mapping/designation/${editingDesignation.id}`, {
             method: 'DELETE',
           });
 
-          await fetch('http://localhost:3002/designation-role-mapping', {
+          await fetch(`${USER_API}/designation-role-mapping`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -530,7 +531,7 @@ export default function UsersPage() {
 
     try {
       console.log('Attempting to delete designation with ID:', id);
-      const response = await fetch(`http://localhost:3002/designations/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${USER_API}/designations/${id}`, { method: 'DELETE' });
       console.log('Delete response status:', response.status);
       
       if (response.ok) {
@@ -547,7 +548,7 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3002/users?limit=1000');
+      const response = await fetch(`${USER_API}/users?limit=1000`);
       const data = await response.json();
       // Parse tags if they come as JSON strings from the database
       const usersWithParsedTags = (data.users || []).map((user: any) => ({
@@ -565,7 +566,7 @@ export default function UsersPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:3002/users/stats/overview');
+      const response = await fetch(`${USER_API}/users/stats/overview`);
       const data = await response.json();
       setStats(data);
     } catch (err) {
@@ -575,7 +576,7 @@ export default function UsersPage() {
 
   const fetchRemovedUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3002/users/removed');
+      const response = await fetch(`${USER_API}/users/removed`);
       if (!response.ok) {
         console.error('Failed to fetch removed users:', response.statusText);
         setRemovedUsers([]);
@@ -596,7 +597,7 @@ export default function UsersPage() {
 
   const handleToggleValidEmail = async (userId: string) => {
     try {
-      const response = await fetch(`http://localhost:3002/users/${userId}/toggle-valid-email`, {
+      const response = await fetch(`${USER_API}/users/${userId}/toggle-valid-email`, {
         method: 'POST',
       });
       if (response.ok) {
@@ -612,7 +613,7 @@ export default function UsersPage() {
 
   const handleToggleUserStatus = async (userId: string) => {
     try {
-      const response = await fetch(`http://localhost:3002/users/${userId}/toggle-status`, {
+      const response = await fetch(`${USER_API}/users/${userId}/toggle-status`, {
         method: 'POST',
       });
       if (response.ok) {
@@ -654,7 +655,7 @@ export default function UsersPage() {
     try {
       setPhoneError("");
       setCreateError("");
-      const response = await fetch('http://localhost:3002/users', {
+      const response = await fetch(`${USER_API}/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -679,7 +680,7 @@ export default function UsersPage() {
         const userData = await response.json();
 
         try {
-          await fetch('http://localhost:3009/api/auth/users', {
+          await fetch(`${AUTH_API}/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -740,7 +741,7 @@ export default function UsersPage() {
 
   const handleCreateUserTag = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/user/user-tags', {
+      const response = await fetch(`${USER_API}/user-tags`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -781,7 +782,7 @@ export default function UsersPage() {
     if (!editingUserTag) return;
 
     try {
-      const response = await fetch(`http://localhost:3009/api/user/user-tags/${editingUserTag.id}`, {
+      const response = await fetch(`${USER_API}/user-tags/${editingUserTag.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -812,7 +813,7 @@ export default function UsersPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3009/api/user/user-tags/${id}`, {
+      const response = await fetch(`${USER_API}/user-tags/${id}`, {
         method: 'DELETE',
       });
 
@@ -833,7 +834,7 @@ export default function UsersPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:3002/user-teams', {
+      const response = await fetch(`${USER_API}/user-teams`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -860,7 +861,7 @@ export default function UsersPage() {
 
   const handleEditTeam = async (team: any) => {
     try {
-      const response = await fetch(`http://localhost:3002/user-teams/${team.id}`);
+      const response = await fetch(`${USER_API}/user-teams/${team.id}`);
       const data = await response.json();
       setEditingTeam(data);
       setUserTeamData({
@@ -877,7 +878,7 @@ export default function UsersPage() {
     if (!editingTeam) return;
 
     try {
-      const response = await fetch(`http://localhost:3002/user-teams/${editingTeam.id}`, {
+      const response = await fetch(`${USER_API}/user-teams/${editingTeam.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -903,7 +904,7 @@ export default function UsersPage() {
     if (!confirm('Are you sure you want to delete this team?')) return;
 
     try {
-      const response = await fetch(`http://localhost:3002/user-teams/${teamId}`, {
+      const response = await fetch(`${USER_API}/user-teams/${teamId}`, {
         method: 'DELETE',
       });
 
@@ -1040,7 +1041,7 @@ export default function UsersPage() {
     }
 
     try {
-      const userResponse = await fetch(`http://localhost:3002/users/${userId}`, {
+      const userResponse = await fetch(`${USER_API}/users/${userId}`, {
         method: 'DELETE',
       });
 
@@ -1068,7 +1069,7 @@ export default function UsersPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3002/users/${editingUser.userId}`, {
+      const response = await fetch(`${USER_API}/users/${editingUser.userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1198,7 +1199,7 @@ export default function UsersPage() {
     if (!confirm(`Remove all advance mapping for ${user.name}?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:3002/users/${user.userId}/advance-mapping`, {
+      const response = await fetch(`${USER_API}/users/${user.userId}/advance-mapping`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1246,7 +1247,7 @@ export default function UsersPage() {
     if (sanitizedStores.length === 0) return;
 
     try {
-      const response = await fetch(`http://localhost:3002/users/${user.userId}/advance-mapping`, {
+      const response = await fetch(`${USER_API}/users/${user.userId}/advance-mapping`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1284,7 +1285,7 @@ export default function UsersPage() {
 
   const fetchFeatures = async () => {
     try {
-      const response = await fetch('http://localhost:3002/features');
+      const response = await fetch(`${USER_API}/features`);
       const data = await response.json();
       setFeatures(data || []);
     } catch (err) {
@@ -1294,7 +1295,7 @@ export default function UsersPage() {
 
   const fetchDesignationPermissions = async (designationId: string) => {
     try {
-      const response = await fetch(`http://localhost:3002/role-feature-permissions/role/${designationId}`);
+      const response = await fetch(`${USER_API}/role-feature-permissions/role/${designationId}`);
       const data = await response.json();
       setDesignationPermissions(data || []);
     } catch (err) {
@@ -1322,14 +1323,14 @@ export default function UsersPage() {
       if (existingPermission) {
         // Remove permission
         console.log('Removing existing permission');
-        const response = await fetch(`http://localhost:3002/role-feature-permissions/${selectedDesignationForPermissions.id}/${featureId}`, {
+        const response = await fetch(`${USER_API}/role-feature-permissions/${selectedDesignationForPermissions.id}/${featureId}`, {
           method: 'DELETE',
         });
         console.log('Delete response:', response.status);
       } else {
         // Add permission
         console.log('Adding new permission');
-        const response = await fetch('http://localhost:3002/role-feature-permissions', {
+        const response = await fetch(`${USER_API}/role-feature-permissions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1418,7 +1419,7 @@ export default function UsersPage() {
         tags: {},
       }));
 
-      const response = await fetch('http://localhost:3002/users/bulk', {
+      const response = await fetch(`${USER_API}/users/bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ users: usersToCreate }),
@@ -2221,7 +2222,7 @@ export default function UsersPage() {
                       <TableRow>
                         <TableCell colSpan={userTableColumnCount} className="text-center py-12 text-muted-foreground">
                           {searchTerm.trim()
-                            ? `No users match "${searchTerm.trim()}"`
+                            ? `No users match `${searchTerm.trim()}``
                             : appliedEmailFilter.trim() || appliedValidEmailFilter !== "all"
                               ? "No users match the selected filters"
                               : t("noUsersAvailable")}

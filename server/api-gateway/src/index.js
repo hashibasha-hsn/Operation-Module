@@ -4,7 +4,8 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.GATEWAY_PORT || 3009;
+// Azure App Service / most PaaS inject PORT. Keep GATEWAY_PORT as a local override.
+const PORT = process.env.PORT || process.env.GATEWAY_PORT || 3009;
 
 // Middleware
 app.use(cors({
@@ -214,10 +215,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server — bind 0.0.0.0 for Azure App Service / containers
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`API Gateway running on port ${PORT}`);
   console.log('Service URLs:', SERVICES);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-  console.log(`Service status: http://localhost:${PORT}/api/status`);
+  console.log(`Health check: /health`);
+  console.log(`Service status: /api/status`);
 });

@@ -17,6 +17,7 @@ import { useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PLATFORM_NAME, PLATFORM_SHORT_NAME } from "@/lib/branding";
 import PlatformMark from "@/components/PlatformMark";
+import { AUTH_API } from "@/lib/apiConfig";
 
 const HIGHLIGHTS = [
   { icon: CheckSquare, titleKey: "tasks", desc: "Track daily operations and approvals" },
@@ -39,7 +40,7 @@ export default function Login() {
 
   const checkSetupStatus = async () => {
     try {
-      const response = await fetch("http://localhost:3009/api/auth/check-setup");
+      const response = await fetch(`${AUTH_API}/check-setup`);
       const data = await response.json();
 
       if (!data.isSetup) {
@@ -61,7 +62,7 @@ export default function Login() {
     const trimmedPassword = password.trim();
 
     try {
-      const response = await fetch("http://localhost:3009/api/auth/login", {
+      const response = await fetch(`${AUTH_API}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

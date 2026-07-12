@@ -33,6 +33,7 @@ import {
 import { Plus, Search, FileText, Settings, Users, Building2, Edit, Trash2, Play, Archive } from "lucide-react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TableActionsMenu } from "@/components/ui/table-actions-menu";
+import { ORG_API, USER_API } from "@/lib/apiConfig";
 
 export default function Processes() {
   const [processes, setProcesses] = useState<any[]>([]);
@@ -62,7 +63,7 @@ export default function Processes() {
 
   const fetchProcesses = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/org/processes?organizationId=default-org');
+      const response = await fetch(`${ORG_API}/processes?organizationId=default-org`);
       const data = await response.json();
       setProcesses(data || []);
     } catch (err) {
@@ -72,7 +73,7 @@ export default function Processes() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3002/users?organizationId=default-org');
+      const response = await fetch(`${USER_API}/users?organizationId=default-org`);
       const data = await response.json();
       setUsers(data || []);
     } catch (err) {
@@ -82,7 +83,7 @@ export default function Processes() {
 
   const fetchEntities = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/org/entities?organizationId=default-org');
+      const response = await fetch(`${ORG_API}/entities?organizationId=default-org`);
       const data = await response.json();
       setEntities(data || []);
     } catch (err) {
@@ -92,7 +93,7 @@ export default function Processes() {
 
   const handleCreateProcess = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/org/processes', {
+      const response = await fetch(`${ORG_API}/processes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +128,7 @@ export default function Processes() {
 
   const handlePublishProcess = async (id: string) => {
     try {
-      await fetch(`http://localhost:3009/api/org/processes/${id}/publish`, {
+      await fetch(`${ORG_API}/processes/${id}/publish`, {
         method: 'PUT',
       });
       fetchProcesses();
@@ -140,7 +141,7 @@ export default function Processes() {
     if (!confirm('Are you sure you want to archive this process?')) return;
 
     try {
-      await fetch(`http://localhost:3009/api/org/processes/${id}/archive`, {
+      await fetch(`${ORG_API}/processes/${id}/archive`, {
         method: 'PUT',
       });
       fetchProcesses();
@@ -153,7 +154,7 @@ export default function Processes() {
     if (!confirm('Are you sure you want to delete this process?')) return;
 
     try {
-      await fetch(`http://localhost:3009/api/org/processes/${id}`, {
+      await fetch(`${ORG_API}/processes/${id}`, {
         method: 'DELETE',
       });
       fetchProcesses();

@@ -339,7 +339,8 @@ export class AuthService {
     // Also delete from user-service database
     try {
       const axios = require('axios');
-      await axios.delete(`http://localhost:3002/users/${userId}`);
+      const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3002';
+      await axios.delete(`${userServiceUrl}/users/${userId}`);
     } catch (error) {
       console.error('Error deleting user from user-service:', error.message);
     }

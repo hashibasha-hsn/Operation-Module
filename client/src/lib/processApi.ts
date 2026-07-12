@@ -1,7 +1,7 @@
 import { buildDraftPayload, ProcessDraftState, saveProcessDraftLocal } from './processDraft';
 import { mergeProcessProperties, propertiesFromApiProcess, propertiesToApiPayload } from './processProperties';
+import { ORG_API, USER_API } from './apiConfig';
 
-const ORG_API = 'http://localhost:3009/api/org';
 
 export async function saveProcessDraft(draft: ProcessDraftState) {
   const response = await fetch(`${ORG_API}/processes/draft`, {
@@ -60,7 +60,7 @@ export async function deleteProcess(id: string) {
 
 export async function fetchProcessTags(organizationId = 'default-org') {
   const response = await fetch(
-    `http://localhost:3009/api/user/tags/process?organizationId=${organizationId}`,
+    `${USER_API}/tags/process?organizationId=${organizationId}`,
   );
   if (!response.ok) {
     return [];
@@ -71,7 +71,7 @@ export async function fetchProcessTags(organizationId = 'default-org') {
 
 export async function fetchQuestionTags(organizationId = 'default-org') {
   const response = await fetch(
-    `http://localhost:3009/api/user/tags/question?organizationId=${organizationId}`,
+    `${USER_API}/tags/question?organizationId=${organizationId}`,
   );
   if (!response.ok) {
     return [];
@@ -81,7 +81,7 @@ export async function fetchQuestionTags(organizationId = 'default-org') {
 }
 
 export async function fetchUsers(limit = 50) {
-  const response = await fetch(`http://localhost:3009/api/user/users?limit=${limit}`);
+  const response = await fetch(`${USER_API}/users?limit=${limit}`);
   if (!response.ok) {
     return [];
   }

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { USER_API } from "@/lib/apiConfig";
 
 interface PermissionContextType {
   hasPermission: (featureId: string) => boolean;
@@ -125,7 +126,7 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
       if (user.email === 'admin@gmail.com') {
         console.log('User is admin, giving full access to ALL features');
         // Fetch all features to give admin full access
-        const featuresResponse = await fetch('http://localhost:3002/features');
+        const featuresResponse = await fetch(`${USER_API}/features`);
         const features = await featuresResponse.json();
         const allFeatureIds = features.map((f: any) => f.name);
         setPermissions(allFeatureIds);
@@ -136,7 +137,7 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
       }
       
       // Get user's designation
-      const response = await fetch(`http://localhost:3002/users?email=${user.email}`);
+      const response = await fetch(`${USER_API}/users?email=${user.email}`);
       const data = await response.json();
       
       console.log('User data:', data);
@@ -149,7 +150,7 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
           console.log('User designation:', userProfile.designation);
           
           // Get designation details to find the system role mapping
-          const designationResponse = await fetch(`http://localhost:3002/designations?name=${userProfile.designation}`);
+          const designationResponse = await fetch(`${USER_API}/designations?name=${userProfile.designation}`);
           const designationData = await designationResponse.json();
           
           console.log('Designation data:', designationData);
@@ -159,7 +160,7 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
             console.log('Designation:', designation);
             
             // Get system role mapping
-            const mappingResponse = await fetch(`http://localhost:3002/designation-role-mapping/designation/${designation.id}`);
+            const mappingResponse = await fetch(`${USER_API}/designation-role-mapping/designation/${designation.id}`);
             const mapping = await mappingResponse.json();
             
             console.log('System role mapping:', mapping);
@@ -181,7 +182,7 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
             setHasCreatorAccess(hasCreator);
             
             // Fetch permissions from database based on system role
-            const permissionsResponse = await fetch(`http://localhost:3002/role-feature-permissions/role/${mapping.systemRole.id}`);
+            const permissionsResponse = await fetch(`${USER_API}/role-feature-permissions/role/${mapping.systemRole.id}`);
             const permissionsData = await permissionsResponse.json();
             
             console.log('Permissions from database:', permissionsData);

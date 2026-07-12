@@ -33,6 +33,7 @@ import {
   Table,
   Gauge,
 } from "lucide-react";
+import { ORG_API } from "@/lib/apiConfig";
 
 export default function BIDashboard() {
   const [activeTab, setActiveTab] = useState<"process-workflow" | "ticket" | "action-point">("process-workflow");
@@ -69,7 +70,7 @@ export default function BIDashboard() {
       const organizationId = user.organizationId;
 
       const response = await fetch(
-        `http://localhost:3001/bi-dashboard?organizationId=${organizationId}&type=${activeTab}`
+        `${ORG_API}/bi-dashboard?organizationId=${organizationId}&type=${activeTab}`
       );
       const data = await response.json();
       setDashboards(data);
@@ -88,7 +89,7 @@ export default function BIDashboard() {
       if (endDate) params.append("endDate", endDate);
 
       const response = await fetch(
-        `http://localhost:3001/bi-dashboard/${dashboardId}/data?${params.toString()}`
+        `${ORG_API}/bi-dashboard/${dashboardId}/data?${params.toString()}`
       );
       const data = await response.json();
       setDashboardData(data);
@@ -104,7 +105,7 @@ export default function BIDashboard() {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const organizationId = user.organizationId;
 
-      const response = await fetch("http://localhost:3001/bi-dashboard", {
+      const response = await fetch(`${ORG_API}/bi-dashboard`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -136,7 +137,7 @@ export default function BIDashboard() {
   const handleDeleteDashboard = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this dashboard?")) {
       try {
-        await fetch(`http://localhost:3001/bi-dashboard/${id}`, {
+        await fetch(`${ORG_API}/bi-dashboard/${id}`, {
           method: "DELETE",
         });
         fetchDashboards();

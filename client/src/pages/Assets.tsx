@@ -47,6 +47,7 @@ import {
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { API_GATEWAY_URL } from "@/lib/apiConfig";
 
 export default function Assets() {
   const [activeTab, setActiveTab] = useState("Active");
@@ -72,7 +73,7 @@ export default function Assets() {
   useEffect(() => {
     const fetchAssets = async () => {
       try {
-        const response = await fetch('http://localhost:3009/api/assets');
+        const response = await fetch(`${API_GATEWAY_URL}/api/assets`);
         if (response.ok) {
           const data = await response.json();
           setAssets(data);
@@ -98,7 +99,7 @@ export default function Assets() {
 
   const handleCreateAsset = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/assets', {
+      const response = await fetch(`${API_GATEWAY_URL}/api/assets`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +130,7 @@ export default function Assets() {
     if (!selectedAsset) return;
 
     try {
-      const response = await fetch(`http://localhost:3009/api/assets/${selectedAsset.id}`, {
+      const response = await fetch(`${API_GATEWAY_URL}/api/assets/${selectedAsset.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +152,7 @@ export default function Assets() {
 
   const handleDeleteAsset = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:3009/api/assets/${id}`, {
+      const response = await fetch(`${API_GATEWAY_URL}/api/assets/${id}`, {
         method: 'DELETE',
       });
 
@@ -169,7 +170,7 @@ export default function Assets() {
 
   const handleRestoreAsset = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:3009/api/assets/${id}/restore`, {
+      const response = await fetch(`${API_GATEWAY_URL}/api/assets/${id}/restore`, {
         method: 'POST',
       });
 
