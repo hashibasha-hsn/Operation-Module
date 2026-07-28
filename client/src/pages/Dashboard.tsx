@@ -35,6 +35,7 @@ import {
   getLatestResultForAssessment,
 } from "@/lib/assessmentSubmission";
 import { fetchTicketsAssignedToMe } from "@/lib/ticketApi";
+import { GATEWAY } from "@/lib/apiConfig";
 import HomeNoticeboard from "@/components/HomeNoticeboard";
 import { toast } from "sonner";
 
@@ -96,6 +97,7 @@ export default function Dashboard() {
   const [learningCounts, setLearningCounts] = useState<WorkstreamCounts>(EMPTY_COUNTS);
   const [ticketCounts, setTicketCounts] = useState<WorkstreamCounts>(EMPTY_COUNTS);
   const [queueTasks, setQueueTasks] = useState<QueueTask[]>([]);
+  const [activityLogs, setActivityLogs] = useState<{ id: string; action: string; timestamp: string }[]>([]);
 
   const currentDate = new Date();
   const daysOfWeek: Date[] = [];
@@ -110,7 +112,26 @@ export default function Dashboard() {
 
   useEffect(() => {
     void loadPendingTasksOverview();
+    void fetchRecentActivity();
   }, []);
+
+  const fetchRecentActivity = async () => {
+    try {
+      const res = await fetch(`${GATEWAY}/api/org/audit-logs?limit=10`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const logs = Array.isArray(data) ? data : data.data ?? [];
+      setActivityLogs(
+        logs.map((log: { id: string; action?: string; description?: string; createdAt?: string }) => ({
+          id: log.id,
+          action: log.action || log.description || "",
+          timestamp: log.createdAt ? new Date(log.createdAt).toLocaleDateString() : "",
+        })),
+      );
+    } catch {
+      // silently fail
+    }
+  };
 
   const loadPendingTasksOverview = async () => {
     const userId = getCurrentUserId();
@@ -537,21 +558,23 @@ export default function Dashboard() {
             ))}
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-          >
-            <HomeNoticeboard />
-          </motion.div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="h-full"
+            >
+              <HomeNoticeboard />
+            </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
+              className="h-full"
             >
-              <Card className="hover:shadow-2xl transition-all duration-500 hover:scale-102 hover:-translate-y-1 gradient-card">
+              <Card className="h-full hover:shadow-2xl transition-all duration-500 gradient-card">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div>
@@ -562,144 +585,52 @@ export default function Dashboard() {
                         </p>
                       )}
                     </div>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs"
-                            onClick={() => navigate("/tasks")}
-                          >
-                            {t("seeAll")}
-                          </Button>
-                        </motion.div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{t("viewAllTasksInQueue")}</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => navigate("/tasks")}
+                    >
+                      {t("seeAll")}
+                    </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={handlePreviousDates}
-                          >
-                            <ChevronLeft className="w-4 h-4" />
-                          </Button>
-                        </motion.div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{t("previousDates")}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <div className="flex gap-2">
-                      {daysOfWeek.map((date, idx) => (
-                        <Tooltip key={idx}>
-                          <TooltipTrigger asChild>
-                            <motion.div
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => setSelectedDayIndex(idx)}
-                              className={`text-center p-2 rounded-lg cursor-pointer transition-all duration-300 min-w-[60px] ${
-                                idx === selectedDayIndex
-                                  ? "bg-primary text-primary-foreground shadow-sm"
-                                  : "bg-white text-gray-700 hover:bg-gray-50 shadow-sm border border-gray-200"
-                              }`}
-                            >
-                              <div className="text-xs font-medium">
-                                {date.toLocaleDateString("en-US", { weekday: "short" })}
-                              </div>
-                              <div className="text-lg font-bold">{date.getDate()}</div>
-                              <div className="text-xs">
-                                {date.toLocaleDateString("en-US", { month: "short" })}
-                              </div>
-                            </motion.div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              {date.toLocaleDateString("en-US", {
-                                weekday: "long",
-                                month: "long",
-                                day: "numeric",
-                              })}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ))}
-                    </div>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={handleNextDates}
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </Button>
-                        </motion.div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{t("nextDates")}</p>
-                      </TooltipContent>
-                    </Tooltip>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between gap-1">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handlePreviousDates}>
+                      <ChevronLeft className="w-3 h-3" />
+                    </Button>
+                    <span className="text-xs font-medium">
+                      {daysOfWeek[selectedDayIndex]?.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                    </span>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNextDates}>
+                      <ChevronRight className="w-3 h-3" />
+                    </Button>
                   </div>
-
-                  <div className="space-y-3">
+                  <div className="overflow-y-auto max-h-48 space-y-1.5">
                     {loadingTasks ? (
-                      <div className="flex justify-center py-8">
-                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                       </div>
                     ) : filteredQueueTasks.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 text-sm">
-                        {t("noPendingTasksInQueue") || "No pending tasks for this day"}
-                      </div>
+                      <p className="text-center py-4 text-gray-500 text-xs">
+                        {t("noPendingTasksInQueue") || "No pending tasks"}
+                      </p>
                     ) : (
-                      filteredQueueTasks.map((task, idx) => (
-                        <Tooltip key={task.id}>
-                          <TooltipTrigger asChild>
-                            <motion.div
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.05 * idx }}
-                              whileHover={{ scale: 1.02, x: 4 }}
-                              whileTap={{ scale: 0.98 }}
-                              className="p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200"
-                              onClick={() => navigate(task.href)}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium text-gray-800 truncate">
-                                    {task.title}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    {task.typeLabel}
-                                  </p>
-                                </div>
-                                <Badge
-                                  variant={task.statusKey === "pending" ? "outline" : "secondary"}
-                                  className="shrink-0 text-[10px]"
-                                >
-                                  {t(task.statusKey)}
-                                </Badge>
-                              </div>
-                            </motion.div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              {(t("viewTaskDetails") || "View {task}").replace("{task}", task.title)}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
+                      filteredQueueTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className="p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 border border-gray-200"
+                          onClick={() => navigate(task.href)}
+                        >
+                          <div className="flex items-start justify-between gap-1">
+                            <p className="text-xs font-medium text-gray-800 truncate">{task.title}</p>
+                            <Badge variant={task.statusKey === "pending" ? "outline" : "secondary"} className="shrink-0 text-[9px] px-1">
+                              {t(task.statusKey)}
+                            </Badge>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">{task.typeLabel}</p>
+                        </div>
                       ))
                     )}
                   </div>
@@ -710,72 +641,67 @@ export default function Dashboard() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.4 }}
+              className="h-full"
             >
-              <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="text-base text-gray-800">{t("alertsAndActivity")}</CardTitle>
+              <Card className="h-full bg-white shadow-md">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-gray-800">{t("alerts") || "Alerts"}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {loadingTasks ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                     </div>
                   ) : totalPending + processCounts.inProgress + actionPointCounts.inProgress + learningCounts.inProgress + ticketCounts.inProgress === 0 ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-center py-8 text-gray-500"
-                    >
-                      <p className="text-sm">{t("noData")}</p>
-                    </motion.div>
+                    <p className="text-center py-4 text-gray-500 text-xs">{t("noData")}</p>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {[
-                        {
-                          label: t("processAndWorkflow"),
-                          pending: processCounts.pending,
-                          inProgress: processCounts.inProgress,
-                        },
-                        {
-                          label: t("actionPoint"),
-                          pending: actionPointCounts.pending,
-                          inProgress: actionPointCounts.inProgress,
-                        },
-                        {
-                          label: t("learning"),
-                          pending: learningCounts.pending,
-                          inProgress: learningCounts.inProgress,
-                        },
-                        {
-                          label: t("ticket"),
-                          pending: ticketCounts.pending,
-                          inProgress: ticketCounts.inProgress,
-                        },
+                        { label: t("processAndWorkflow"), pending: processCounts.pending, inProgress: processCounts.inProgress },
+                        { label: t("actionPoint"), pending: actionPointCounts.pending, inProgress: actionPointCounts.inProgress },
+                        { label: t("learning"), pending: learningCounts.pending, inProgress: learningCounts.inProgress },
+                        { label: t("ticket"), pending: ticketCounts.pending, inProgress: ticketCounts.inProgress },
                       ]
                         .filter((row) => row.pending + row.inProgress > 0)
                         .map((row) => (
-                          <div
-                            key={row.label}
-                            className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-3 py-2"
-                          >
-                            <span className="text-sm font-medium text-gray-800">{row.label}</span>
-                            <div className="flex gap-2 text-xs">
-                              {row.pending > 0 && (
-                                <Badge variant="outline">
-                                  {row.pending} {t("pending")}
-                                </Badge>
-                              )}
-                              {row.inProgress > 0 && (
-                                <Badge variant="secondary">
-                                  {row.inProgress} {t("inProgress")}
-                                </Badge>
-                              )}
+                          <div key={row.label} className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-2.5 py-1.5">
+                            <span className="text-xs font-medium text-gray-800">{row.label}</span>
+                            <div className="flex gap-1.5 text-[10px]">
+                              {row.pending > 0 && <Badge variant="outline" className="px-1.5">{row.pending}</Badge>}
+                              {row.inProgress > 0 && <Badge variant="secondary" className="px-1.5">{row.inProgress}</Badge>}
                             </div>
                           </div>
                         ))}
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="h-full"
+            >
+              <Card className="h-full bg-white shadow-md">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-gray-800">{t("activity") || "Activity"}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-y-auto max-h-60 space-y-2">
+                    {activityLogs.length === 0 ? (
+                      <p className="text-center py-4 text-gray-500 text-xs">{t("noRecentActivity") || "No recent activity"}</p>
+                    ) : (
+                      activityLogs.slice(0, 10).map((log) => (
+                        <div key={log.id} className="border-l-2 border-primary/30 pl-2.5 py-0.5">
+                          <p className="text-xs text-gray-800">{log.action}</p>
+                          <p className="text-[10px] text-muted-foreground">{log.timestamp}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
