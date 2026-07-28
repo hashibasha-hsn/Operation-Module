@@ -122,7 +122,7 @@ export default function HomeNoticeboard({ limit = HOME_POST_LIMIT }: Props) {
     [currentUserId, currentUserName, posts],
   );
 
-  const visiblePosts = posts.slice(0, limit);
+  const visiblePosts = [...posts].reverse().slice(0, limit);
 
   const handleLikePost = async (postId: string) => {
     if (!currentUserId) {
