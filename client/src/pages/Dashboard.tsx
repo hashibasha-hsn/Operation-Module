@@ -558,14 +558,16 @@ export default function Dashboard() {
             ))}
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
               className="h-full"
             >
-              <HomeNoticeboard />
+              <div className="max-h-[24rem] overflow-hidden">
+                <HomeNoticeboard />
+              </div>
             </motion.div>
 
             <motion.div
@@ -575,61 +577,54 @@ export default function Dashboard() {
               className="h-full"
             >
               <Card className="h-full hover:shadow-2xl transition-all duration-500 gradient-card">
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-base">{t("tasksInQueue")}</CardTitle>
+                      <CardTitle className="text-sm">{t("tasksInQueue")}</CardTitle>
                       {!loadingTasks && (
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
                           {totalPending} {t("pending").toLowerCase()}
                         </p>
                       )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs"
-                      onClick={() => navigate("/tasks")}
-                    >
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/tasks")}>
                       {t("seeAll")}
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-2 p-3">
                   <div className="flex items-center justify-between gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handlePreviousDates}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handlePreviousDates}>
                       <ChevronLeft className="w-3 h-3" />
                     </Button>
-                    <span className="text-xs font-medium">
+                    <span className="text-[11px] font-medium">
                       {daysOfWeek[selectedDayIndex]?.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                     </span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNextDates}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleNextDates}>
                       <ChevronRight className="w-3 h-3" />
                     </Button>
                   </div>
-                  <div className="overflow-y-auto max-h-48 space-y-1.5">
+                  <div className="overflow-y-auto max-h-36 space-y-1">
                     {loadingTasks ? (
-                      <div className="flex justify-center py-4">
+                      <div className="flex justify-center py-3">
                         <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                       </div>
                     ) : filteredQueueTasks.length === 0 ? (
-                      <p className="text-center py-4 text-gray-500 text-xs">
-                        {t("noPendingTasksInQueue") || "No pending tasks"}
-                      </p>
+                      <p className="text-center py-3 text-gray-500 text-xs">{t("noPendingTasksInQueue") || "No pending tasks"}</p>
                     ) : (
                       filteredQueueTasks.map((task) => (
                         <div
                           key={task.id}
-                          className="p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 border border-gray-200"
+                          className="p-1.5 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 border border-gray-200"
                           onClick={() => navigate(task.href)}
                         >
                           <div className="flex items-start justify-between gap-1">
-                            <p className="text-xs font-medium text-gray-800 truncate">{task.title}</p>
-                            <Badge variant={task.statusKey === "pending" ? "outline" : "secondary"} className="shrink-0 text-[9px] px-1">
+                            <p className="text-[11px] font-medium text-gray-800 truncate">{task.title}</p>
+                            <Badge variant={task.statusKey === "pending" ? "outline" : "secondary"} className="shrink-0 text-[8px] px-1 py-0">
                               {t(task.statusKey)}
                             </Badge>
                           </div>
-                          <p className="text-[10px] text-muted-foreground">{task.typeLabel}</p>
+                          <p className="text-[9px] text-muted-foreground">{task.typeLabel}</p>
                         </div>
                       ))
                     )}
@@ -644,63 +639,54 @@ export default function Dashboard() {
               transition={{ delay: 0.4 }}
               className="h-full"
             >
-              <Card className="h-full bg-white shadow-md">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-gray-800">{t("alerts") || "Alerts"}</CardTitle>
+              <Card className="h-full bg-white shadow-md flex flex-col">
+                <CardHeader className="pb-1">
+                  <CardTitle className="text-sm text-gray-800">{t("alertsAndActivity")}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {loadingTasks ? (
-                    <div className="flex justify-center py-4">
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : totalPending + processCounts.inProgress + actionPointCounts.inProgress + learningCounts.inProgress + ticketCounts.inProgress === 0 ? (
-                    <p className="text-center py-4 text-gray-500 text-xs">{t("noData")}</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {[
-                        { label: t("processAndWorkflow"), pending: processCounts.pending, inProgress: processCounts.inProgress },
-                        { label: t("actionPoint"), pending: actionPointCounts.pending, inProgress: actionPointCounts.inProgress },
-                        { label: t("learning"), pending: learningCounts.pending, inProgress: learningCounts.inProgress },
-                        { label: t("ticket"), pending: ticketCounts.pending, inProgress: ticketCounts.inProgress },
-                      ]
-                        .filter((row) => row.pending + row.inProgress > 0)
-                        .map((row) => (
-                          <div key={row.label} className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-2.5 py-1.5">
-                            <span className="text-xs font-medium text-gray-800">{row.label}</span>
-                            <div className="flex gap-1.5 text-[10px]">
-                              {row.pending > 0 && <Badge variant="outline" className="px-1.5">{row.pending}</Badge>}
-                              {row.inProgress > 0 && <Badge variant="secondary" className="px-1.5">{row.inProgress}</Badge>}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="h-full"
-            >
-              <Card className="h-full bg-white shadow-md">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-gray-800">{t("activity") || "Activity"}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-y-auto max-h-60 space-y-2">
-                    {activityLogs.length === 0 ? (
-                      <p className="text-center py-4 text-gray-500 text-xs">{t("noRecentActivity") || "No recent activity"}</p>
+                <CardContent className="flex-1 overflow-hidden p-3 pt-0 space-y-3">
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{t("alerts") || "Alerts"}</p>
+                    {loadingTasks ? (
+                      <div className="flex justify-center py-2">
+                        <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : totalPending + processCounts.inProgress + actionPointCounts.inProgress + learningCounts.inProgress + ticketCounts.inProgress === 0 ? (
+                      <p className="text-center py-2 text-gray-500 text-[10px]">{t("noData")}</p>
                     ) : (
-                      activityLogs.slice(0, 10).map((log) => (
-                        <div key={log.id} className="border-l-2 border-primary/30 pl-2.5 py-0.5">
-                          <p className="text-xs text-gray-800">{log.action}</p>
-                          <p className="text-[10px] text-muted-foreground">{log.timestamp}</p>
-                        </div>
-                      ))
+                      <div className="space-y-1">
+                        {[
+                          { label: t("processAndWorkflow"), pending: processCounts.pending, inProgress: processCounts.inProgress },
+                          { label: t("actionPoint"), pending: actionPointCounts.pending, inProgress: actionPointCounts.inProgress },
+                          { label: t("learning"), pending: learningCounts.pending, inProgress: learningCounts.inProgress },
+                          { label: t("ticket"), pending: ticketCounts.pending, inProgress: ticketCounts.inProgress },
+                        ]
+                          .filter((row) => row.pending + row.inProgress > 0)
+                          .map((row) => (
+                            <div key={row.label} className="flex items-center justify-between rounded border border-border/60 bg-muted/20 px-2 py-1">
+                              <span className="text-[11px] font-medium text-gray-800">{row.label}</span>
+                              <div className="flex gap-1 text-[9px]">
+                                {row.pending > 0 && <Badge variant="outline" className="px-1 py-0">{row.pending}</Badge>}
+                                {row.inProgress > 0 && <Badge variant="secondary" className="px-1 py-0">{row.inProgress}</Badge>}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
                     )}
+                  </div>
+                  <div className="border-t border-border/40 pt-1.5">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("activity") || "Activity"}</p>
+                    <div className="overflow-y-auto max-h-28 space-y-1">
+                      {activityLogs.length === 0 ? (
+                        <p className="text-center py-2 text-gray-500 text-[10px]">{t("noRecentActivity") || "No recent activity"}</p>
+                      ) : (
+                        activityLogs.slice(0, 6).map((log) => (
+                          <div key={log.id} className="border-l-2 border-primary/30 pl-2 py-0.5">
+                            <p className="text-[11px] text-gray-800 leading-tight">{log.action}</p>
+                            <p className="text-[9px] text-muted-foreground">{log.timestamp}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
