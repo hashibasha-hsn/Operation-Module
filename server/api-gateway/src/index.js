@@ -59,7 +59,7 @@ app.use('/uploads', proxy(SERVICES.ORG));
 app.use('/api/location', proxy(SERVICES.LOCATION, { '^/api/location': '' }));
 app.use('/api/language', proxy(SERVICES.LANGUAGE, { '^/api/language': '' }));
 app.use('/api/translations', proxy(SERVICES.LANGUAGE, { '^/api/translations': '/translations' }));
-app.use('/api/audit-logs', proxy(SERVICES.AUDIT, { '^/api/audit-logs': '/audit-logs' }));
+app.use('/api/audit-logs', proxy(SERVICES.ORG, { '^/api/audit-logs': '/audit-logs' }));
 
 app.get('/health', (req, res) => {
   res.json({
