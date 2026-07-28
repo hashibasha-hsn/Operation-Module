@@ -17,6 +17,8 @@ import { useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PLATFORM_NAME, PLATFORM_SHORT_NAME } from "@/lib/branding";
 import PlatformMark from "@/components/PlatformMark";
+
+const GATEWAY = import.meta.env.VITE_USER_API?.replace('/api/user', '') || 'http://localhost:3009';
 import { Checkbox } from "@/components/ui/checkbox";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { getRememberMePreference, setAuthSession, isProfileSetupComplete, syncProfileCompletionToSession } from "@/lib/authStorage";
@@ -49,7 +51,7 @@ export default function Login() {
 
   const checkSetupStatus = async () => {
     try {
-      const response = await fetch("http://localhost:3009/api/auth/check-setup");
+      const response = await fetch(`${GATEWAY}/api/auth/check-setup`);
       const data = await response.json();
 
       if (!data.isSetup) {
@@ -94,13 +96,13 @@ export default function Login() {
       const userId = userRecord.userId;
       let profile: any = null;
       if (userId) {
-        const profileRes = await fetch(`http://localhost:3009/api/user/users/${userId}`);
+        const profileRes = await fetch(`${GATEWAY}/api/user/users/${userId}`);
         if (profileRes.ok) {
           profile = await profileRes.json();
         }
       }
       if (!profile) {
-        const listRes = await fetch("http://localhost:3009/api/user/users?limit=1000");
+        const listRes = await fetch(`${GATEWAY}/api/user/users?limit=1000`);
         if (listRes.ok) {
           const listData = await listRes.json();
           profile = (listData?.users || []).find(
@@ -165,7 +167,7 @@ export default function Login() {
     const trimmedPassword = password.trim();
 
     try {
-      const response = await fetch("http://localhost:3009/api/auth/login", {
+      const response = await fetch(`${GATEWAY}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

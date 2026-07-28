@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AUTH_API } from "@/lib/apiConfig";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -117,7 +118,7 @@ export default function PasswordChangeForm({ className, onSuccess }: PasswordCha
 
     setIsSubmitting(true);
     try {
-      const response = await fetch("http://localhost:3009/api/auth/change-password", {
+      const response = await fetch(`${AUTH_API}/change-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

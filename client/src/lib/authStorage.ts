@@ -3,6 +3,8 @@ import {
   type ProfileCompletionStatus,
 } from "@/lib/profileCompletion";
 
+const GATEWAY = (import.meta.env.VITE_USER_API || 'http://localhost:3009/api/user').replace('/api/user', '').replace(/\/$/, '');
+
 const AUTH_KEYS = [
   "isAuthenticated",
   "accessToken",
@@ -198,7 +200,7 @@ export async function logoutAuthSession() {
   if (!refreshToken) return;
 
   try {
-    await fetch("http://localhost:3009/api/auth/logout", {
+    await fetch(`${GATEWAY}/api/auth/logout`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),

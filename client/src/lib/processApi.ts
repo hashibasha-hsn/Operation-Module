@@ -4,6 +4,7 @@ import { mergeProcessProperties, propertiesFromApiProcess, propertiesToApiPayloa
 import { humanLabel } from './displayLabels';
 import { getReportContext } from './reportApi';
 
+import { USER_API } from './apiConfig';
 const ORG_API = import.meta.env.VITE_ORG_API || 'http://localhost:3009/api/org';
 
 export async function saveProcessDraft(draft: ProcessDraftState) {
@@ -64,7 +65,7 @@ export async function deleteProcess(id: string) {
 
 export async function fetchProcessTags(organizationId = getOrganizationId()) {
   const response = await fetch(
-    `http://localhost:3009/api/user/tags/process?organizationId=${organizationId}`,
+    `${USER_API}/tags/process?organizationId=${organizationId}`,
   );
   if (!response.ok) {
     return [];
@@ -75,7 +76,7 @@ export async function fetchProcessTags(organizationId = getOrganizationId()) {
 
 export async function fetchQuestionTags(organizationId = getOrganizationId()) {
   const response = await fetch(
-    `http://localhost:3009/api/user/tags/question?organizationId=${organizationId}`,
+    `${USER_API}/tags/question?organizationId=${organizationId}`,
   );
   if (!response.ok) {
     return [];
@@ -85,7 +86,7 @@ export async function fetchQuestionTags(organizationId = getOrganizationId()) {
 }
 
 export async function fetchUsers(limit = 50) {
-  const response = await fetch(`http://localhost:3009/api/user/users?limit=${limit}`);
+  const response = await fetch(`${USER_API}/users?limit=${limit}`);
   if (!response.ok) {
     return [];
   }
@@ -115,7 +116,7 @@ export async function fetchEntities(organizationId = getOrganizationId()) {
 export async function fetchAssigneeProfiles(organizationId = getOrganizationId()) {
   try {
     const response = await fetch(
-      `http://localhost:3009/api/user/tags/assignee-profile?organizationId=${organizationId}`,
+      `${USER_API}/tags/assignee-profile?organizationId=${organizationId}`,
     );
     if (!response.ok) return [];
     const data = await response.json();

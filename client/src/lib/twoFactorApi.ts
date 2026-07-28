@@ -1,6 +1,7 @@
 import { getAuthItem } from "@/lib/authStorage";
 
-const AUTH_BASE = "http://localhost:3009/api/auth";
+import { AUTH_API } from './apiConfig';
+const AUTH_BASE = AUTH_API;
 
 export type TwoFactorSettings = {
   enabled: boolean;

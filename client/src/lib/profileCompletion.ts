@@ -1,3 +1,5 @@
+import { USER_API } from './apiConfig';
+
 export type ProfileCompletionItem = {
   key: "name" | "store" | "manager";
   label: string;
@@ -64,7 +66,7 @@ export async function fetchProfileCompletion(
 ): Promise<ProfileCompletionStatus | null> {
   try {
     const res = await fetch(
-      `http://localhost:3009/api/user/users/${userId}/profile-completion`,
+      `${USER_API}/users/${userId}/profile-completion`,
     );
     if (!res.ok) return null;
     return (await res.json()) as ProfileCompletionStatus;

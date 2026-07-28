@@ -1,6 +1,7 @@
 import { getAuthItem } from "@/lib/authStorage";
 
-const NOTIFICATION_BASE = "http://localhost:3009/api/notification";
+import { NOTIFICATION_API } from './apiConfig';
+const NOTIFICATION_BASE = NOTIFICATION_API;
 
 export type EmailConfig = {
   smtpHost: string;
