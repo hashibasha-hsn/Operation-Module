@@ -1,0 +1,155 @@
+export const CERTIFICATE_ISSUED_TYPE = 'certificate_issued';
+export const LEARNING_ASSIGNMENT_TYPE = 'learning_assignment';
+export const COURSE_COMPLETION_REMINDER_TYPE = 'course_completion_reminder';
+
+const NOTIFICATION_SERVICE_URL =
+  process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004';
+
+type NotificationPayload = {
+  userId: string;
+  type: string;
+  title: string;
+  content?: string;
+  data?: Record<string, unknown>;
+  priority?: 'HIGH' | 'NORMAL' | 'LOW';
+  deliveryMethod?: 'IN_APP' | 'EMAIL' | 'PUSH' | 'SMS';
+};
+
+async function sendUserNotification(payload: NotificationPayload): Promise<void> {
+  try {
+    const response = await fetch(`${NOTIFICATION_SERVICE_URL}/notifications`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...payload,
+        priority: payload.priority ?? 'NORMAL',
+        deliveryMethod: payload.deliveryMethod ?? 'IN_APP',
+        status: 'PENDING',
+      }),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      console.warn('[notification-client] failed', payload.type, response.status, text);
+    }
+  } catch (error) {
+    console.warn('[notification-client] error', payload.type, error);
+  }
+}
+
+export async function notifyCertificateIssued(input: {
+  userId: string;
+  itemTitle: string;
+  itemType: 'assessment' | 'course';
+  itemId: string;
+  resultId?: string;
+  score?: number;
+  percentage?: number;
+}): Promise<void> {
+  const link =
+    input.itemType === 'assessment'
+      ? `/learning/assessment/${input.itemId}`
+      : `/learning/courses/${input.itemId}`;
+
+  await sendUserNotification({
+    userId: input.userId,
+    type: CERTIFICATE_ISSUED_TYPE,
+    title: 'Certificate issued',
+    content: `Your certificate for "${input.itemTitle}" is ready.`,
+    data: {
+      itemType: input.itemType,
+      itemId: input.itemId,
+      resultId: input.resultId ?? null,
+      score: input.score ?? null,
+      percentage: input.percentage ?? null,
+      link,
+    },
+    deliveryMethod: 'IN_APP',
+    priority: 'NORMAL',
+  });
+}
+
+export async function notifyLearningAssignment(input: {
+  userId: string;
+  itemTitle: string;
+  itemType: 'assessment' | 'course';
+  itemId: string;
+  dueAt?: Date | string | null;
+}): Promise<void> {
+  const link =
+    input.itemType === 'assessment'
+      ? `/learning/assessment/${input.itemId}`
+      : `/learning/courses/${input.itemId}`;
+
+  const dueText = input.dueAt
+    ? ` Due date: ${new Date(input.dueAt).toLocaleDateString()}.`
+    : '';
+
+  await sendUserNotification({
+    userId: input.userId,
+    type: LEARNING_ASSIGNMENT_TYPE,
+    title: input.itemType === 'assessment' ? 'New assessment assigned' : 'New learning assignment',
+    content:
+      input.itemType === 'assessment'
+        ? `You have been assigned the assessment "${input.itemTitle}".${dueText}`
+        : `You have been assigned "${input.itemTitle}".${dueText}`,
+    data: {
+      itemType: input.itemType,
+      itemId: input.itemId,
+      dueAt: input.dueAt ?? null,
+      link,
+    },
+    deliveryMethod: 'IN_APP',
+    priority: 'NORMAL',
+  });
+}
+
+export async function notifyAssessmentAssignment(input: {
+  userId: string;
+  assessmentTitle: string;
+  assessmentId: string;
+  dueAt?: Date | string | null;
+}): Promise<void> {
+  return notifyLearningAssignment({
+    userId: input.userId,
+    itemTitle: input.assessmentTitle,
+    itemType: 'assessment',
+    itemId: input.assessmentId,
+    dueAt: input.dueAt,
+  });
+}
+
+export async function notifyCourseCompletionReminder(input: {
+  userId: string;
+  courseTitle: string;
+  courseId: string;
+  progressId: string;
+  progressPercent: number;
+  dueAt?: Date | string | null;
+  reminderKind: 'due_soon' | 'overdue' | 'incomplete';
+}): Promise<void> {
+  const dueLabel = input.dueAt ? new Date(input.dueAt).toLocaleDateString() : null;
+  let content = `Reminder: complete "${input.courseTitle}" (${input.progressPercent}% done).`;
+  if (input.reminderKind === 'overdue' && dueLabel) {
+    content = `"${input.courseTitle}" was due on ${dueLabel}. You are ${input.progressPercent}% complete.`;
+  } else if (input.reminderKind === 'due_soon' && dueLabel) {
+    content = `"${input.courseTitle}" is due on ${dueLabel}. Current progress: ${input.progressPercent}%.`;
+  }
+
+  await sendUserNotification({
+    userId: input.userId,
+    type: COURSE_COMPLETION_REMINDER_TYPE,
+    title: 'Course completion reminder',
+    content,
+    data: {
+      itemType: 'course',
+      itemId: input.courseId,
+      progressId: input.progressId,
+      progressPercent: input.progressPercent,
+      dueAt: input.dueAt ?? null,
+      reminderKind: input.reminderKind,
+      link: `/learning/courses/${input.courseId}`,
+    },
+    deliveryMethod: 'IN_APP',
+    priority: input.reminderKind === 'overdue' ? 'HIGH' : 'NORMAL',
+  });
+}

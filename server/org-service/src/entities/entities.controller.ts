@@ -1,0 +1,49 @@
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { EntitiesService } from './entities.service';
+import { BusinessEntity } from './entity.entity';
+
+@Controller('entities')
+export class EntitiesController {
+  constructor(private readonly entitiesService: EntitiesService) {}
+
+  @Post()
+  create(@Body() createEntityDto: Partial<BusinessEntity>) {
+    return this.entitiesService.create(createEntityDto);
+  }
+
+  @Get()
+  findAll(
+    @Query('organizationId') organizationId: string,
+    @Query('search') search?: string,
+  ) {
+    return this.entitiesService.findAll(organizationId, search);
+  }
+
+  @Get('entity-id/:entityId')
+  findByEntityId(@Param('entityId') entityId: string) {
+    return this.entitiesService.findByEntityId(entityId);
+  }
+
+  @Get('status/:storeStatus')
+  findByStoreStatus(
+    @Param('storeStatus') storeStatus: string,
+    @Query('organizationId') organizationId: string,
+  ) {
+    return this.entitiesService.findByStoreStatus(storeStatus, organizationId);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.entitiesService.findOne(id);
+  }
+
+  @Put(':id')
+  update(@Param('id') id: string, @Body() updateEntityDto: Partial<BusinessEntity>) {
+    return this.entitiesService.update(id, updateEntityDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.entitiesService.remove(id);
+  }
+}
