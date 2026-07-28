@@ -558,25 +558,21 @@ export default function Dashboard() {
             ))}
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
-              className="h-full"
             >
-              <div className="max-h-[24rem] overflow-hidden">
-                <HomeNoticeboard />
-              </div>
+              <HomeNoticeboard limit={4} />
             </motion.div>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="h-full"
             >
-              <Card className="h-full hover:shadow-2xl transition-all duration-500 gradient-card">
+              <Card className="hover:shadow-2xl transition-all duration-500 gradient-card">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div>
@@ -637,13 +633,12 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="h-full"
             >
-              <Card className="h-full bg-white shadow-md flex flex-col">
+              <Card className="bg-white shadow-md">
                 <CardHeader className="pb-1">
                   <CardTitle className="text-sm text-gray-800">{t("alertsAndActivity")}</CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 overflow-hidden p-3 pt-0 space-y-3">
+                <CardContent className="p-3 pt-0 space-y-3">
                   <div className="space-y-1.5">
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{t("alerts") || "Alerts"}</p>
                     {loadingTasks ? (
