@@ -11,7 +11,7 @@ export class AuditLog {
   @Column({ length: 50 })
   operation: string;
 
-  @Column()
+  @Column({ nullable: true })
   performedBy: string;
 
   @Column({ type: 'json', nullable: true })
@@ -25,6 +25,7 @@ export class AuditLog {
 
   @CreateDateColumn()
   createdAt: Date;
+
   @Column({ length: 255, nullable: true })
   createdBy: string;
 
