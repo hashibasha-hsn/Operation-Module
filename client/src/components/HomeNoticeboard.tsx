@@ -195,7 +195,7 @@ export default function HomeNoticeboard({ limit = HOME_POST_LIMIT }: Props) {
         <div className="relative w-full bg-muted">
           <NoticeboardMedia
             post={post}
-            className="w-full object-contain max-h-96"
+            className="w-full object-contain max-h-72"
           />
           {!post.hasRead && (
             <span className="absolute top-2 left-2 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-semibold text-white">
@@ -307,7 +307,7 @@ export default function HomeNoticeboard({ limit = HOME_POST_LIMIT }: Props) {
   );
 
   return (
-    <Card className="bg-white shadow-md border-border/60 overflow-hidden">
+    <Card className="bg-white shadow-md border-border/60 overflow-hidden max-w-md">
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -388,7 +388,7 @@ export default function HomeNoticeboard({ limit = HOME_POST_LIMIT }: Props) {
             </p>
           </div>
         ) : (
-          <div className="max-h-96 overflow-y-auto space-y-3 pr-1">
+          <div className="max-h-[36rem] overflow-y-auto space-y-3 pr-1">
             {visiblePosts.map((post) => (
               <div key={post.id}>
                 {renderPostCard(post)}
