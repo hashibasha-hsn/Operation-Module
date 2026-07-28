@@ -1,23 +1,7 @@
-import { existsSync, mkdirSync } from 'fs';
-import { extname, join } from 'path';
-import { diskStorage } from 'multer';
-
-export const NOTICEboard_UPLOAD_DIR = join(process.cwd(), 'uploads', 'noticeboard');
-
-if (!existsSync(NOTICEboard_UPLOAD_DIR)) {
-  mkdirSync(NOTICEboard_UPLOAD_DIR, { recursive: true });
-}
+import { memoryStorage } from 'multer';
 
 export const noticeboardUploadOptions = {
-  storage: diskStorage({
-    destination: (_req, _file, cb) => {
-      cb(null, NOTICEboard_UPLOAD_DIR);
-    },
-    filename: (_req, file, cb) => {
-      const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-      cb(null, `${unique}${extname(file.originalname)}`);
-    },
-  }),
+  storage: memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
@@ -28,6 +12,7 @@ export const noticeboardUploadOptions = {
   },
 };
 
-export function buildNoticeboardFileUrl(filename: string): string {
-  return `/uploads/noticeboard/${filename}`;
+export function buildNoticeboardFilename(originalname: string): string {
+  const ext = originalname.split('.').pop() || 'bin';
+  return `${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
 }

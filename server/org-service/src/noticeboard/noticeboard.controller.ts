@@ -9,11 +9,13 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { NoticeboardService } from './noticeboard.service';
+import { SupabaseStorageService } from './supabase-storage.service';
 import { NoticeboardPost } from './noticeboard.entity';
-import { buildNoticeboardFileUrl } from './noticeboard-upload.config';
+import { buildNoticeboardFilename } from './noticeboard-upload.config';
 
 interface MulterFile {
   fieldname: string;
@@ -21,15 +23,17 @@ interface MulterFile {
   encoding: string;
   mimetype: string;
   size: number;
-  destination: string;
-  filename: string;
-  path: string;
   buffer: Buffer;
 }
 
 @Controller('noticeboard')
 export class NoticeboardController {
-  constructor(private readonly noticeboardService: NoticeboardService) {}
+  private readonly logger = new Logger(NoticeboardController.name);
+
+  constructor(
+    private readonly noticeboardService: NoticeboardService,
+    private readonly storageService: SupabaseStorageService,
+  ) {}
 
   private parseOptionalDate(value: unknown): Date | null | undefined {
     if (value === undefined) return undefined;
@@ -60,7 +64,7 @@ export class NoticeboardController {
     return [];
   }
 
-  private mapBodyToPost(body: Record<string, unknown>, file?: MulterFile): Partial<NoticeboardPost> {
+  private async mapBodyToPost(body: Record<string, unknown>, file?: MulterFile): Promise<Partial<NoticeboardPost>> {
     const postData: Partial<NoticeboardPost> = {
       title: String(body.title ?? ''),
       description: String(body.description ?? ''),
@@ -88,9 +92,20 @@ export class NoticeboardController {
     postData.targetUserIds = [];
 
     if (file) {
-      postData.fileUrl = buildNoticeboardFileUrl(file.filename);
-      postData.fileName = file.originalname;
-      postData.fileType = file.mimetype;
+      const filename = buildNoticeboardFilename(file.originalname);
+      const publicUrl = await this.storageService.uploadFile(
+        file.buffer,
+        filename,
+        file.mimetype,
+      );
+
+      if (publicUrl) {
+        postData.fileUrl = publicUrl;
+        postData.fileName = file.originalname;
+        postData.fileType = file.mimetype;
+      } else {
+        this.logger.error('Failed to upload file to Supabase storage');
+      }
     }
 
     return postData;
@@ -99,7 +114,7 @@ export class NoticeboardController {
   @Post()
   @UseInterceptors(FileInterceptor('file'))
   async create(@Body() body: Record<string, unknown>, @UploadedFile() file?: MulterFile) {
-    return this.noticeboardService.create(this.mapBodyToPost(body, file));
+    return this.noticeboardService.create(await this.mapBodyToPost(body, file));
   }
 
   @Get()
@@ -178,7 +193,7 @@ export class NoticeboardController {
     @Body() body: Record<string, unknown>,
     @UploadedFile() file?: MulterFile,
   ) {
-    const postData = this.mapBodyToPost(body, file);
+    const postData = await this.mapBodyToPost(body, file);
     delete postData.organizationId;
     delete postData.createdBy;
     return this.noticeboardService.update(id, postData);
