@@ -307,7 +307,7 @@ export default function HomeNoticeboard({ limit = HOME_POST_LIMIT }: Props) {
   );
 
   return (
-    <Card className="bg-white shadow-md border-border/60 overflow-hidden max-w-md">
+    <Card className="bg-white shadow-md border-border/60 overflow-hidden">
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
