@@ -5,14 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-  type CarouselApi,
-} from "@/components/ui/carousel";
-import {
   Flame,
   MessageCircle,
   Loader2,
@@ -38,7 +30,6 @@ import { toast } from "sonner";
 
 const REFRESH_MS = 60_000;
 const HOME_POST_LIMIT = 6;
-const AUTO_READ_DELAY_MS = 800;
 
 type Props = {
   /** Max posts to show on home; default 6 */
@@ -60,8 +51,6 @@ export default function HomeNoticeboard({ limit = HOME_POST_LIMIT }: Props) {
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [postComments, setPostComments] = useState<Record<string, NoticeboardComment[]>>({});
-  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
-  const [currentIndex, setCurrentIndex] = useState(0);
   const markingReadRef = useRef<Set<string>>(new Set());
 
   const loadPosts = useCallback(async () => {
@@ -135,32 +124,6 @@ export default function HomeNoticeboard({ limit = HOME_POST_LIMIT }: Props) {
 
   const visiblePosts = posts.slice(0, limit);
 
-  useEffect(() => {
-    if (!carouselApi) return;
-
-    const onSelect = () => {
-      setCurrentIndex(carouselApi.selectedScrollSnap());
-    };
-
-    onSelect();
-    carouselApi.on("select", onSelect);
-    return () => {
-      carouselApi.off("select", onSelect);
-    };
-  }, [carouselApi]);
-
-  useEffect(() => {
-    if (!currentUserId || loading || visiblePosts.length === 0) return;
-    const activePost = visiblePosts[currentIndex];
-    if (!activePost || activePost.hasRead) return;
-
-    const timer = window.setTimeout(() => {
-      void markPostRead(activePost.id);
-    }, AUTO_READ_DELAY_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [currentIndex, visiblePosts, loading, currentUserId, markPostRead]);
-
   const handleLikePost = async (postId: string) => {
     if (!currentUserId) {
       toast.error(t("pleaseLoginToLike") || "Please log in to like posts");
@@ -223,16 +186,16 @@ export default function HomeNoticeboard({ limit = HOME_POST_LIMIT }: Props) {
 
   const renderPostCard = (post: NoticeboardPost) => (
     <div
-      className={`mx-auto w-full max-w-lg rounded-xl border bg-card overflow-hidden flex flex-col ${
+      className={`w-full rounded-xl border bg-card overflow-hidden flex flex-col ${
         post.hasRead ? "" : "ring-1 ring-amber-300/70"
       }`}
       onClick={() => void markPostRead(post.id)}
     >
       {post.fileUrl ? (
-        <div className="relative h-44 w-full overflow-hidden bg-muted">
+        <div className="relative w-full bg-muted">
           <NoticeboardMedia
             post={post}
-            className="h-full w-full object-cover"
+            className="w-full object-contain max-h-96"
           />
           {!post.hasRead && (
             <span className="absolute top-2 left-2 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-semibold text-white">
@@ -254,9 +217,7 @@ export default function HomeNoticeboard({ limit = HOME_POST_LIMIT }: Props) {
             )}
           </div>
           {post.description ? (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-3">
-              {post.description}
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">{post.description}</p>
           ) : null}
           {(post.startDate || post.endDate) && (
             <p className="text-[11px] text-muted-foreground mt-1.5">
@@ -427,41 +388,12 @@ export default function HomeNoticeboard({ limit = HOME_POST_LIMIT }: Props) {
             </p>
           </div>
         ) : (
-          <div className="mx-auto w-full max-w-lg">
-            <Carousel
-              setApi={setCarouselApi}
-              opts={{ loop: false, align: "start", watchDrag: true }}
-              className="w-full"
-            >
-              <CarouselContent className="-ml-0">
-                {visiblePosts.map((post) => (
-                  <CarouselItem key={post.id} className="pl-0 basis-full">
-                    {renderPostCard(post)}
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              {visiblePosts.length > 1 && (
-                <>
-                  <CarouselPrevious className="left-0 top-1/2 -translate-y-1/2" />
-                  <CarouselNext className="right-0 top-1/2 -translate-y-1/2" />
-                  <div className="flex items-center justify-center gap-1.5 pt-3">
-                    {visiblePosts.map((post, index) => (
-                      <button
-                        key={post.id}
-                        type="button"
-                        aria-label={`Go to notice ${index + 1}`}
-                        className={`h-1.5 rounded-full transition-all ${
-                          index === currentIndex
-                            ? "w-5 bg-primary"
-                            : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                        }`}
-                        onClick={() => carouselApi?.scrollTo(index)}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </Carousel>
+          <div className="max-h-96 overflow-y-auto space-y-3 pr-1">
+            {visiblePosts.map((post) => (
+              <div key={post.id}>
+                {renderPostCard(post)}
+              </div>
+            ))}
           </div>
         )}
       </CardContent>
