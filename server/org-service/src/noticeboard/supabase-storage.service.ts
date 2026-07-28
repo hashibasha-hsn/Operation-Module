@@ -47,14 +47,19 @@ export class SupabaseStorageService {
         });
 
       if (error) {
-        if (error.message?.includes('bucket') && error.message?.includes('not found')) {
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('bucket') && msg.includes('not found')) {
           const { error: createError } = await supabase.storage.createBucket(
             this.bucketName,
             { public: true },
           );
           if (createError) {
-            this.logger.error('Failed to create bucket', createError.message);
-            return null;
+            if ((createError.message || '').toLowerCase().includes('already exists')) {
+              await supabase.storage.updateBucket(this.bucketName, { public: true });
+            } else {
+              this.logger.error('Failed to create bucket', createError.message);
+              return null;
+            }
           }
           return this.uploadFile(buffer, filename, mimetype);
         }
