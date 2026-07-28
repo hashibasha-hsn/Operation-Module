@@ -558,7 +558,7 @@ export default function Dashboard() {
             ))}
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -571,8 +571,9 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
+              className="h-full"
             >
-              <Card className="hover:shadow-2xl transition-all duration-500 gradient-card">
+              <Card className="h-full hover:shadow-2xl transition-all duration-500 gradient-card">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div>
@@ -633,8 +634,9 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
+              className="h-full"
             >
-              <Card className="bg-white shadow-md">
+              <Card className="h-full bg-white shadow-md">
                 <CardHeader className="pb-1">
                   <CardTitle className="text-sm text-gray-800">{t("alertsAndActivity")}</CardTitle>
                 </CardHeader>
