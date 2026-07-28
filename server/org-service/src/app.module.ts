@@ -25,12 +25,14 @@ import { TranslationsModule } from './domains/language/translations/translations
 import { SharedModule } from './shared/shared.module';
 import { AuditContextMiddleware } from './shared/audit-context.middleware';
 import { CrudAuditSubscriber } from './shared/crud-audit.subscriber';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { ensurePostgresSchema } from './ensure-schema';
 
 const ORG_ENTITY_FOLDERS = [
   'organizations',
   'regions',
   'locations',
+  'audit-logs',
   'entities',
   'processes',
   'audits',
@@ -168,6 +170,7 @@ async function buildConnection(
     AttendanceModule,
     TranslationsModule,
     SharedModule,
+    AuditLogsModule,
   ],
 })
 export class AppModule implements NestModule {

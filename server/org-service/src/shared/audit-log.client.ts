@@ -1,14 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 @Injectable()
 export class AuditLogClient {
-  private baseUrl(): string {
-    return (
-      process.env.AUDIT_LOG_SERVICE_URL ||
-      process.env.GATEWAY_URL ||
-      'http://localhost:3015'
-    ).replace(/\/$/, '');
-  }
+  constructor(private readonly auditLogsService: AuditLogsService) {}
 
   async log(payload: {
     target: string;
@@ -19,8 +14,7 @@ export class AuditLogClient {
     organizationId?: string;
   }): Promise<void> {
     try {
-      const axios = require('axios');
-      await axios.post(`${this.baseUrl()}/audit-logs`, payload, { timeout: 3000 });
+      await this.auditLogsService.log(payload);
     } catch (error: any) {
       console.error('Failed to write audit log:', error?.message || error);
     }
@@ -29,13 +23,6 @@ export class AuditLogClient {
   async resolveEmail(userId: string): Promise<string> {
     if (!userId) return 'unknown@hashibasha.com';
     if (userId.includes('@')) return userId;
-    try {
-      const axios = require('axios');
-      const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3002';
-      const response = await axios.get(`${userServiceUrl}/users/${userId}`, { timeout: 3000 });
-      return response.data?.email || userId;
-    } catch {
-      return userId;
-    }
+    return userId;
   }
 }
