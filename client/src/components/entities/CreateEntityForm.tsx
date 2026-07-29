@@ -341,7 +341,7 @@ export default function CreateEntityForm({
                       id="storeName"
                       value={formData.storeName}
                       onChange={(e) => updateField("storeName", e.target.value)}
-                      placeholder="Main Branch"
+                      placeholder={t('storeNamePlaceholder')}
                       className="focus-visible:ring-primary/30"
                     />
                   </div>
@@ -354,7 +354,7 @@ export default function CreateEntityForm({
                       id="entityId"
                       value={formData.entityId}
                       onChange={(e) => updateField("entityId", e.target.value)}
-                      placeholder="ENT-001"
+                      placeholder={t('entityIdPlaceholder')}
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
@@ -378,7 +378,7 @@ export default function CreateEntityForm({
                       min="0"
                       value={formData.staff}
                       onChange={(e) => updateField("staff", e.target.value)}
-                      placeholder="24"
+                      placeholder={t('staffCountPlaceholder')}
                     />
                   </div>
                   <div className="space-y-2">
@@ -422,7 +422,7 @@ export default function CreateEntityForm({
                       id="latitude"
                       value={formData.latitude}
                       onChange={(e) => updateField("latitude", e.target.value)}
-                      placeholder="24.68600000"
+                      placeholder={t('latitudePlaceholder')}
                     />
                     <p className="text-xs text-muted-foreground">{t('latitudeRangeHint')}</p>
                   </div>
@@ -432,7 +432,7 @@ export default function CreateEntityForm({
                       id="longitude"
                       value={formData.longitude}
                       onChange={(e) => updateField("longitude", e.target.value)}
-                      placeholder="46.72200000"
+                      placeholder={t('longitudePlaceholder')}
                     />
                     <p className="text-xs text-muted-foreground">{t('longitudeRangeHint')}</p>
                   </div>
@@ -446,11 +446,11 @@ export default function CreateEntityForm({
                     max="3000"
                     value={formData.storeRadius}
                     onChange={(e) => updateField("storeRadius", e.target.value)}
-                    placeholder="100"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t('storeRadiusRangeHint')}
-                  </p>
+                      placeholder={t('storeRadiusPlaceholder')}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t('storeRadiusRangeHint')}
+                    </p>
                 </div>
               </SectionCard>
             </TabsContent>
@@ -506,17 +506,17 @@ export default function CreateEntityForm({
               <SectionCard title={t('businessInfoTab')} icon={Briefcase}>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="registrationName">Registration name</Label>
+                    <Label htmlFor="registrationName">{t('registrationName')}</Label>
                     <Input
                       id="registrationName"
                       value={formData.registrationName}
                       onChange={(e) => updateField("registrationName", e.target.value)}
-                      placeholder="Example Holding Company"
+                      placeholder={t('registrationNamePlaceholder')}
                     />
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="space-y-2">
-                      <Label htmlFor="companyId">Company ID</Label>
+                      <Label htmlFor="companyId">{t('companyId')}</Label>
                       <Input
                         id="companyId"
                         value={formData.companyId}
@@ -524,27 +524,27 @@ export default function CreateEntityForm({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="taxSchemeId">Tax scheme ID</Label>
+                      <Label htmlFor="taxSchemeId">{t('taxSchemeId')}</Label>
                       <Input
                         id="taxSchemeId"
                         value={formData.taxSchemeId}
                         onChange={(e) => updateField("taxSchemeId", e.target.value)}
-                        placeholder="VAT"
+                        placeholder={t('taxSchemeIdPlaceholder')}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="businessCategory">Business category</Label>
+                      <Label htmlFor="businessCategory">{t('businessCategory')}</Label>
                       <Input
                         id="businessCategory"
                         value={formData.businessCategory}
                         onChange={(e) => updateField("businessCategory", e.target.value)}
-                        placeholder="food and beverage services"
+                        placeholder={t('businessCategoryPlaceholder')}
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="businessIdentificationId">Business identification ID</Label>
+                      <Label htmlFor="businessIdentificationId">{t('businessIdentificationId')}</Label>
                       <Input
                         id="businessIdentificationId"
                         value={formData.businessIdentificationId}
@@ -552,12 +552,12 @@ export default function CreateEntityForm({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="identificationScheme">Identification scheme</Label>
+                      <Label htmlFor="identificationScheme">{t('identificationScheme')}</Label>
                       <Input
                         id="identificationScheme"
                         value={formData.identificationScheme}
                         onChange={(e) => updateField("identificationScheme", e.target.value)}
-                        placeholder="CRN"
+                        placeholder={t('identificationSchemePlaceholder')}
                       />
                     </div>
                   </div>
@@ -567,7 +567,7 @@ export default function CreateEntityForm({
                       id="streetName"
                       value={formData.streetName}
                       onChange={(e) => updateField("streetName", e.target.value)}
-                      placeholder="King Fahd Road"
+                      placeholder={t('streetNamePlaceholder')}
                     />
                   </div>
                   <div className="space-y-2">
@@ -577,12 +577,12 @@ export default function CreateEntityForm({
                       value={formData.csrLocationAddress}
                       onChange={(e) => updateField("csrLocationAddress", e.target.value)}
                       rows={3}
-                      placeholder="Enter full address"
+                      placeholder={t('enterFullAddress')}
                     />
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="space-y-2">
-                      <Label htmlFor="buildingNumber">Building number</Label>
+                      <Label htmlFor="buildingNumber">{t('buildingNumber')}</Label>
                       <Input
                         id="buildingNumber"
                         value={formData.buildingNumber}
@@ -590,7 +590,7 @@ export default function CreateEntityForm({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="postalZone">Postal zone</Label>
+                      <Label htmlFor="postalZone">{t('postalZone')}</Label>
                       <Input
                         id="postalZone"
                         value={formData.postalZone}
@@ -598,12 +598,12 @@ export default function CreateEntityForm({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="countryIdentificationCode">Country identification code</Label>
+                      <Label htmlFor="countryIdentificationCode">{t('countryIdentificationCode')}</Label>
                       <Input
                         id="countryIdentificationCode"
                         value={formData.countryIdentificationCode}
                         onChange={(e) => updateField("countryIdentificationCode", e.target.value)}
-                        placeholder="SA"
+                        placeholder={t('countryCodePlaceholder')}
                       />
                     </div>
                   </div>
@@ -615,7 +615,7 @@ export default function CreateEntityForm({
               <SectionCard title={t('csrConfigTab')} icon={Shield}>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="csrIndustryBusinessCategory">CSR industry business category</Label>
+                    <Label htmlFor="csrIndustryBusinessCategory">{t('csrIndustryBusinessCategory')}</Label>
                     <Input
                       id="csrIndustryBusinessCategory"
                       value={formData.csrIndustryBusinessCategory}
@@ -623,7 +623,7 @@ export default function CreateEntityForm({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="csrCommonName">CSR common name</Label>
+                    <Label htmlFor="csrCommonName">{t('csrCommonName')}</Label>
                     <Input
                       id="csrCommonName"
                       value={formData.csrCommonName}
@@ -632,7 +632,7 @@ export default function CreateEntityForm({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="csrSerialNumber">CSR serial number</Label>
+                  <Label htmlFor="csrSerialNumber">{t('csrSerialNumber')}</Label>
                   <Input
                     id="csrSerialNumber"
                     value={formData.csrSerialNumber}
@@ -641,7 +641,7 @@ export default function CreateEntityForm({
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="csrOrganizationIdentifier">CSR organization identifier</Label>
+                    <Label htmlFor="csrOrganizationIdentifier">{t('csrOrganizationIdentifier')}</Label>
                     <Input
                       id="csrOrganizationIdentifier"
                       value={formData.csrOrganizationIdentifier}
@@ -649,7 +649,7 @@ export default function CreateEntityForm({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="csrOrganizationUnitName">CSR organization unit name</Label>
+                    <Label htmlFor="csrOrganizationUnitName">{t('csrOrganizationUnitName')}</Label>
                     <Input
                       id="csrOrganizationUnitName"
                       value={formData.csrOrganizationUnitName}
@@ -657,7 +657,7 @@ export default function CreateEntityForm({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="csrOrganizationName">CSR organization name</Label>
+                    <Label htmlFor="csrOrganizationName">{t('csrOrganizationName')}</Label>
                     <Input
                       id="csrOrganizationName"
                       value={formData.csrOrganizationName}
@@ -667,16 +667,16 @@ export default function CreateEntityForm({
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <div className="space-y-2">
-                    <Label htmlFor="csrCountryName">CSR country name</Label>
+                    <Label htmlFor="csrCountryName">{t('csrCountryName')}</Label>
                     <Input
                       id="csrCountryName"
                       value={formData.csrCountryName}
                       onChange={(e) => updateField("csrCountryName", e.target.value)}
-                      placeholder="SA"
+                      placeholder={t('countryCodePlaceholder')}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="csrInvoiceType">CSR invoice type</Label>
+                    <Label htmlFor="csrInvoiceType">{t('csrInvoiceType')}</Label>
                     <Input
                       id="csrInvoiceType"
                       value={formData.csrInvoiceType}
@@ -684,7 +684,7 @@ export default function CreateEntityForm({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="csrLocationAddress">CSR location address</Label>
+                    <Label htmlFor="csrLocationAddress">{t('csrLocationAddress')}</Label>
                     <Input
                       id="csrLocationAddress"
                       value={formData.csrLocationAddress}
@@ -692,18 +692,18 @@ export default function CreateEntityForm({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="csrEnvironmentType">CSR environment type</Label>
+                    <Label htmlFor="csrEnvironmentType">{t('csrEnvironmentType')}</Label>
                     <Select
                       value={formData.csrEnvironmentType}
                       onValueChange={(value) => updateField("csrEnvironmentType", value)}
                     >
                       <SelectTrigger id="csrEnvironmentType">
-                        <SelectValue placeholder="Select environment" />
+                        <SelectValue placeholder={t('selectEnvironment')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="NonProduction">NonProduction</SelectItem>
-                        <SelectItem value="Production">Production</SelectItem>
-                        <SelectItem value="Simulation">Simulation</SelectItem>
+                        <SelectItem value="NonProduction">{t('nonProduction')}</SelectItem>
+                        <SelectItem value="Production">{t('production')}</SelectItem>
+                        <SelectItem value="Simulation">{t('simulation')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -714,24 +714,24 @@ export default function CreateEntityForm({
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="generatedCsr">Generated CSR</Label>
+                  <Label htmlFor="generatedCsr">{t('generatedCsr')}</Label>
                   <Textarea
                     id="generatedCsr"
                     value={formData.generatedCsr}
                     readOnly
                     rows={5}
-                    placeholder="Generated CSR will appear here"
+                    placeholder={t('generatedCsrPlaceholder')}
                     className="font-mono text-xs"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="generatedPrivateKey">Generated EC Secp256k1 private-key (PEM)</Label>
+                  <Label htmlFor="generatedPrivateKey">{t('generatedPrivateKey')}</Label>
                   <Textarea
                     id="generatedPrivateKey"
                     value={formData.generatedPrivateKey}
                     readOnly
                     rows={5}
-                    placeholder="Generated private key will appear here"
+                    placeholder={t('generatedPrivateKeyPlaceholder')}
                     className="font-mono text-xs"
                   />
                 </div>
@@ -742,7 +742,7 @@ export default function CreateEntityForm({
               <SectionCard title={t('registerDeviceTab')} icon={Monitor}>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor="ccsidOtp">CCSID OTP</Label>
+                    <Label htmlFor="ccsidOtp">{t('ccsidOtp')}</Label>
                     <Input
                       id="ccsidOtp"
                       value={formData.ccsidOtp}
@@ -756,7 +756,7 @@ export default function CreateEntityForm({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ccsidBinaryToken">CCSID binary token</Label>
+                  <Label htmlFor="ccsidBinaryToken">{t('ccsidBinaryToken')}</Label>
                   <Textarea
                     id="ccsidBinaryToken"
                     value={formData.ccsidBinaryToken}
@@ -767,7 +767,7 @@ export default function CreateEntityForm({
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="tokenSecret">Token secret</Label>
+                    <Label htmlFor="tokenSecret">{t('tokenSecret')}</Label>
                     <Input
                       id="tokenSecret"
                       type="password"
@@ -776,7 +776,7 @@ export default function CreateEntityForm({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="requestId">Request ID</Label>
+                    <Label htmlFor="requestId">{t('requestId')}</Label>
                     <Input
                       id="requestId"
                       value={formData.requestId}
@@ -790,7 +790,7 @@ export default function CreateEntityForm({
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="pcsidBinaryToken">PCSID binary token</Label>
+                  <Label htmlFor="pcsidBinaryToken">{t('pcsidBinaryToken')}</Label>
                   <Textarea
                     id="pcsidBinaryToken"
                     value={formData.pcsidBinaryToken}
@@ -801,7 +801,7 @@ export default function CreateEntityForm({
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="pcsidSecret">PCSID secret</Label>
+                    <Label htmlFor="pcsidSecret">{t('pcsidSecret')}</Label>
                     <Input
                       id="pcsidSecret"
                       type="password"
@@ -810,7 +810,7 @@ export default function CreateEntityForm({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="registeredDate">Registered date</Label>
+                    <Label htmlFor="registeredDate">{t('registeredDate')}</Label>
                     <Input
                       id="registeredDate"
                       type="datetime-local"
