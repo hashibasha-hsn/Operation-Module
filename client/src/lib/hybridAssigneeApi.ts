@@ -1,5 +1,5 @@
 import { getOrganizationId } from '@/lib/authStorage';
-const BASE_URL = (import.meta.env.VITE_USER_API || 'http://localhost:3009/api/user') + '/hybrid-assignee-profiles';
+const BASE_URL = (import.meta.env.VITE_USER_API || '/api/user') + '/hybrid-assignee-profiles';
 
 export type HybridDashboardStats = {
   activeStores: number;

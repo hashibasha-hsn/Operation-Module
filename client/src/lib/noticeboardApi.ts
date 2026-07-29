@@ -1,8 +1,8 @@
 import { getOrganizationId } from '@/lib/authStorage';
 import { formatDateTime } from '@/lib/formatDateTime';
 
-export const MEDIA_BASE = import.meta.env.VITE_MEDIA_BASE || 'http://localhost:3009';
-export const ORG_API = import.meta.env.VITE_ORG_API || 'http://localhost:3009/api/org';
+export const MEDIA_BASE = import.meta.env.VITE_MEDIA_BASE || '';
+export const ORG_API = import.meta.env.VITE_ORG_API || '/api/org';
 export const NOTICEboard_API = `${ORG_API}/noticeboard`;
 
 export type NoticeboardPost = {

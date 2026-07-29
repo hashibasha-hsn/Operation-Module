@@ -8,7 +8,7 @@ import {
 } from './auditDraft';
 import { propertiesFromApiProcess } from './processProperties';
 
-const ORG_API = import.meta.env.VITE_ORG_API || 'http://localhost:3009/api/org';
+const ORG_API = import.meta.env.VITE_ORG_API || '/api/org';
 
 export async function saveAuditDraft(draft: AuditDraftState) {
   const response = await fetch(`${ORG_API}/audits/draft`, {

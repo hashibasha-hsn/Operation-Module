@@ -1,5 +1,5 @@
 export const NOTIFICATION_API =
-  import.meta.env.VITE_NOTIFICATION_API || 'http://localhost:3009/api/notification';
+  import.meta.env.VITE_NOTIFICATION_API || '/api/notification';
 
 export type EmailFrequency = 'instant' | 'daily' | 'weekly' | 'urgent_only' | 'off';
 

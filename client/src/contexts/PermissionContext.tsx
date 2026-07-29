@@ -23,7 +23,7 @@ interface PermissionProviderProps {
   children: ReactNode;
 }
 
-const USER_API = import.meta.env.VITE_USER_API || 'http://localhost:3009/api/user';
+const USER_API = import.meta.env.VITE_USER_API || '/api/user';
 
 /** Fallback Taqtics permissions when DB role-feature rows are empty. */
 const TAQTICS_ROLE_PERMISSIONS: Record<string, string[]> = {

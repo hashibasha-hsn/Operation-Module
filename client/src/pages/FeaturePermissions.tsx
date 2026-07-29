@@ -23,7 +23,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/contexts/PermissionContext";
 import { getStoredUser, getOrganizationId } from '@/lib/authStorage';
 
-const USER_API = import.meta.env.VITE_USER_API || 'http://localhost:3009/api/user';
+const USER_API = import.meta.env.VITE_USER_API || '/api/user';
 
 type FeatureRow = {
   id: string;

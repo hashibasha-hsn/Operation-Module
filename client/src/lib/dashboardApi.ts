@@ -1,6 +1,6 @@
 import { getReportContext } from './reportApi';
 
-const ORG_API = import.meta.env.VITE_ORG_API || 'http://localhost:3009/api/org';
+const ORG_API = import.meta.env.VITE_ORG_API || '/api/org';
 
 function ctx() {
   const { organizationId, userId } = getReportContext();

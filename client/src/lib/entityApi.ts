@@ -1,5 +1,5 @@
 import { getOrganizationId } from '@/lib/authStorage';
-const ORG_API = import.meta.env.VITE_ORG_API || 'http://localhost:3009/api/org';
+const ORG_API = import.meta.env.VITE_ORG_API || '/api/org';
 
 export type EntityRecord = Record<string, unknown> & {
   id: string;

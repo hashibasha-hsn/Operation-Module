@@ -18,7 +18,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { PLATFORM_NAME, PLATFORM_SHORT_NAME } from "@/lib/branding";
 import PlatformMark from "@/components/PlatformMark";
 
-const GATEWAY = import.meta.env.VITE_USER_API?.replace('/api/user', '') || 'http://localhost:3009';
+const GATEWAY = import.meta.env.VITE_USER_API?.replace('/api/user', '') || '';
 import { Checkbox } from "@/components/ui/checkbox";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { getRememberMePreference, setAuthSession, isProfileSetupComplete, syncProfileCompletionToSession } from "@/lib/authStorage";

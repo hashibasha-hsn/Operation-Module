@@ -68,8 +68,8 @@ interface AttendanceRecord {
   source?: string;
 }
 
-const ORG_API = import.meta.env.VITE_ORG_API || "http://localhost:3009/api/org";
-const USER_API = import.meta.env.VITE_USER_API || "http://localhost:3009/api/user";
+const ORG_API = import.meta.env.VITE_ORG_API || "/api/org";
+const USER_API = import.meta.env.VITE_USER_API || "/api/user";
 
 export default function Attendance() {
   const { t } = useLanguage();

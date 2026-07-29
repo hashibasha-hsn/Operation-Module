@@ -1,7 +1,7 @@
 import { getStoredUser, getOrganizationId } from '@/lib/authStorage';
 
 const ATTENDANCE_API =
-  import.meta.env.VITE_ATTENDANCE_API || 'http://localhost:3009/api/attendance';
+  import.meta.env.VITE_ATTENDANCE_API || '/api/attendance';
 
 export type AttendanceRecord = {
   id: string;

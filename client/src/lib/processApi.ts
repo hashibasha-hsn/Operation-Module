@@ -5,7 +5,7 @@ import { humanLabel } from './displayLabels';
 import { getReportContext } from './reportApi';
 
 import { USER_API } from './apiConfig';
-const ORG_API = import.meta.env.VITE_ORG_API || 'http://localhost:3009/api/org';
+const ORG_API = import.meta.env.VITE_ORG_API || '/api/org';
 
 export async function saveProcessDraft(draft: ProcessDraftState) {
   const response = await fetch(`${ORG_API}/processes/draft`, {

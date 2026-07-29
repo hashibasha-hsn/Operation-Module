@@ -3,7 +3,7 @@ import {
   type ProfileCompletionStatus,
 } from "@/lib/profileCompletion";
 
-const GATEWAY = (import.meta.env.VITE_USER_API || 'http://localhost:3009/api/user').replace('/api/user', '').replace(/\/$/, '');
+const GATEWAY = (import.meta.env.VITE_USER_API || '/api/user').replace('/api/user', '').replace(/\/$/, '');
 
 const AUTH_KEYS = [
   "isAuthenticated",

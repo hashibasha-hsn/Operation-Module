@@ -1,4 +1,4 @@
-export const GATEWAY = (import.meta.env.VITE_USER_API || 'http://localhost:3009/api/user').replace('/api/user', '').replace(/\/$/, '');
+export const GATEWAY = (import.meta.env.VITE_USER_API || '/api/user').replace('/api/user', '').replace(/\/$/, '');
 
 export const AUTH_API = `${GATEWAY}/api/auth`;
 export const USER_API = import.meta.env.VITE_USER_API || `${GATEWAY}/api/user`;

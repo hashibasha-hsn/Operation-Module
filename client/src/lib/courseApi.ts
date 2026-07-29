@@ -1,6 +1,6 @@
 import { getStoredUser, getOrganizationId } from '@/lib/authStorage';
 
-const ORG_API = import.meta.env.VITE_ORG_API || 'http://localhost:3009/api/org';
+const ORG_API = import.meta.env.VITE_ORG_API || '/api/org';
 
 function getOrgId(): string {
   const user = getStoredUser();
@@ -199,7 +199,7 @@ export async function fetchStores(): Promise<{ id: string; name: string }[]> {
 }
 
 export async function fetchProfiles(): Promise<{ id: string; name: string }[]> {
-  const USER_API = import.meta.env.VITE_USER_API || 'http://localhost:3009/api/user';
+  const USER_API = import.meta.env.VITE_USER_API || '/api/user';
   const response = await fetch(
     `${USER_API}/hybrid-assignee-profiles/dashboard?organizationId=${encodeURIComponent(getOrgId())}`,
   );

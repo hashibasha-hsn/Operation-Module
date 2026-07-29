@@ -36,8 +36,8 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import { getOrganizationId, getCurrentUserId, getStoredUser } from "@/lib/authStorage";
 
-const ORG_API = import.meta.env.VITE_ORG_API || "http://localhost:3009/api/org";
-const USER_API = import.meta.env.VITE_USER_API || "http://localhost:3009/api/user";
+const ORG_API = import.meta.env.VITE_ORG_API || "/api/org";
+const USER_API = import.meta.env.VITE_USER_API || "/api/user";
 
 export default function Processes() {
   const [processes, setProcesses] = useState<any[]>([]);

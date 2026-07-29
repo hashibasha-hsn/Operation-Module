@@ -978,8 +978,8 @@ const fallbackTranslations = {
   },
 };
 
-const LANGUAGE_API = import.meta.env.VITE_LANGUAGE_API || 'http://localhost:3009/api/language';
-const TRANSLATIONS_API = import.meta.env.VITE_TRANSLATIONS_API || 'http://localhost:3009/api/translations';
+const LANGUAGE_API = import.meta.env.VITE_LANGUAGE_API || '/api/language';
+const TRANSLATIONS_API = import.meta.env.VITE_TRANSLATIONS_API || '/api/translations';
 
 // Custom backend to fetch translations from language service
 const CustomBackend = {

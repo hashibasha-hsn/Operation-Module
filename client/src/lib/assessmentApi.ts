@@ -8,8 +8,8 @@ import {
   saveAssessmentDraftLocal,
 } from './assessmentDraft';
 
-const ORG_API = import.meta.env.VITE_ORG_API || 'http://localhost:3009/api/org';
-const USER_API = import.meta.env.VITE_USER_API || 'http://localhost:3009/api/user';
+const ORG_API = import.meta.env.VITE_ORG_API || '/api/org';
+const USER_API = import.meta.env.VITE_USER_API || '/api/user';
 
 export async function saveAssessmentDraft(draft: AssessmentDraftState) {
   const response = await fetch(`${ORG_API}/assessments/draft`, {
