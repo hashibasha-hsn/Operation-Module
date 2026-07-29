@@ -8,11 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Shield, CheckCircle, AlertCircle, Loader2, Circle } from "lucide-react";
 import { useLocation } from "wouter";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { validatePassword, getPasswordRuleResults, isPasswordValid } from "@/lib/passwordValidation";
 
 const API_BASE = `${GATEWAY}/api/auth`;
 
 export default function AdminSetup() {
+  const { t } = useLanguage();
   const [, navigate] = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const [isSetup, setIsSetup] = useState(false);
@@ -38,7 +40,6 @@ export default function AdminSetup() {
       
       if (data.isSetup) {
         setIsSetup(true);
-        // Redirect to login if already set up
         setTimeout(() => navigate('/login'), 2000);
       }
     } catch (err) {
@@ -52,14 +53,13 @@ export default function AdminSetup() {
     e.preventDefault();
     setError("");
 
-    // Validation
     if (!formData.email || !formData.password || !formData.confirmPassword || !formData.organizationName) {
-      setError("All fields are required");
+      setError(t('allFieldsRequired'));
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      setError(t('passwordsDoNotMatch'));
       return;
     }
 
@@ -88,13 +88,12 @@ export default function AdminSetup() {
 
       if (response.ok) {
         setSuccess(true);
-        // Redirect to login after 2 seconds
         setTimeout(() => navigate('/login'), 2000);
       } else {
-        setError(data.message || 'Failed to set up admin');
+        setError(data.message || t('failedToSetupAdmin'));
       }
     } catch (err) {
-      setError("Failed to connect to server");
+      setError(t('failedToConnectToServer'));
     } finally {
       setIsSubmitting(false);
     }
@@ -105,7 +104,7 @@ export default function AdminSetup() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-sky-50/60">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Checking setup status...</p>
+          <p className="text-muted-foreground">{t('checkingSetupStatus')}</p>
         </div>
       </div>
     );
@@ -117,8 +116,8 @@ export default function AdminSetup() {
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">System Already Set Up</h2>
-            <p className="text-gray-600 mb-4">Redirecting to login...</p>
+            <h2 className="text-2xl font-bold mb-2">{t('systemAlreadySetUp')}</h2>
+            <p className="text-gray-600 mb-4">{t('redirectingToLogin')}</p>
           </CardContent>
         </Card>
       </div>
@@ -137,9 +136,9 @@ export default function AdminSetup() {
             >
               <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
             </motion.div>
-            <h2 className="text-2xl font-bold mb-2">Setup Complete!</h2>
-            <p className="text-gray-600 mb-4">Admin account created successfully</p>
-            <p className="text-sm text-gray-500">Redirecting to login...</p>
+            <h2 className="text-2xl font-bold mb-2">{t('setupComplete')}</h2>
+            <p className="text-gray-600 mb-4">{t('adminAccountCreated')}</p>
+            <p className="text-sm text-gray-500">{t('redirectingToLogin')}</p>
           </CardContent>
         </Card>
       </div>
@@ -167,67 +166,67 @@ export default function AdminSetup() {
               </div>
             </motion.div>
             <CardTitle className="text-2xl font-bold text-gray-800">
-              Admin Setup
+              {t('adminSetup')}
             </CardTitle>
             <p className="text-sm text-gray-600 mt-2">
-              Create your admin account to get started
+              {t('createAdminAccountDescription')}
             </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="organizationName">Organization Name</Label>
+                <Label htmlFor="organizationName">{t('organizationName')}</Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Input
                       id="organizationName"
                       type="text"
-                      placeholder="Enter organization name"
+                      placeholder={t('enterOrganizationName')}
                       value={formData.organizationName}
                       onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })}
                       disabled={isSubmitting}
                     />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Name of your organization</p>
+                    <p>{t('organizationNameTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Admin Email</Label>
+                <Label htmlFor="email">{t('adminEmail')}</Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="admin@example.com"
+                      placeholder={t('adminEmailPlaceholder')}
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       disabled={isSubmitting}
                     />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Admin email address</p>
+                    <p>{t('adminEmailTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('password')}</Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Input
                       id="password"
                       type="password"
-                      placeholder="8+ chars, lowercase, number, special"
+                      placeholder={t('passwordPlaceholder')}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       disabled={isSubmitting}
                     />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>8+ characters, 1 lowercase, 1 number, 1 special character</p>
+                    <p>{t('passwordTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
                 <ul className="space-y-1.5 rounded-lg border border-border/70 bg-muted/30 p-3">
@@ -250,20 +249,20 @@ export default function AdminSetup() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword">{t('confirmPassword')}</Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Input
                       id="confirmPassword"
                       type="password"
-                      placeholder="Confirm password"
+                      placeholder={t('confirmPasswordPlaceholder')}
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                       disabled={isSubmitting}
                     />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Re-enter password</p>
+                    <p>{t('confirmPasswordTooltip')}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -293,24 +292,24 @@ export default function AdminSetup() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Setting up...
+                        {t('settingUp')}
                       </>
                     ) : (
                       <>
                         <Shield className="w-4 h-4 mr-2" />
-                        Create Admin Account
+                        {t('createAdminAccount')}
                       </>
                     )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Create admin account and complete setup</p>
+                  <p>{t('createAdminAccountTooltip')}</p>
                 </TooltipContent>
               </Tooltip>
             </form>
 
             <div className="mt-6 text-center text-xs text-gray-500">
-              <p>This will create the first admin user with full system access</p>
+              <p>{t('setupFooterText')}</p>
             </div>
           </CardContent>
         </Card>

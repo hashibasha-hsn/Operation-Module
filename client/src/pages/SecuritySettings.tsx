@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Shield, Key, Loader2, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   fetchPasswordPolicy,
   updatePasswordPolicy,
@@ -18,21 +19,22 @@ import {
 } from "@/lib/passwordPolicyApi";
 
 const EXPIRY_OPTIONS = [
-  { value: "30", label: "30 days" },
-  { value: "60", label: "60 days" },
-  { value: "90", label: "90 days" },
-  { value: "180", label: "180 days" },
-  { value: "0", label: "Never" },
+  { value: "30", labelKey: "expiry30Days" },
+  { value: "60", labelKey: "expiry60Days" },
+  { value: "90", labelKey: "expiry90Days" },
+  { value: "180", labelKey: "expiry180Days" },
+  { value: "0", labelKey: "expiryNever" },
 ];
 
 const WARN_OPTIONS = [
-  { value: "0", label: "No warning" },
-  { value: "3", label: "3 days before" },
-  { value: "7", label: "7 days before" },
-  { value: "14", label: "14 days before" },
+  { value: "0", labelKey: "warnNoWarning" },
+  { value: "3", labelKey: "warn3Days" },
+  { value: "7", labelKey: "warn7Days" },
+  { value: "14", labelKey: "warn14Days" },
 ];
 
 export default function SecuritySettings() {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [policy, setPolicy] = useState<PasswordPolicy>({
@@ -52,7 +54,7 @@ export default function SecuritySettings() {
       });
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load password rotation policy");
+      toast.error(t('failedToLoadPolicy'));
     } finally {
       setLoading(false);
     }
@@ -75,9 +77,9 @@ export default function SecuritySettings() {
         id: saved.id,
         scopeKey: saved.scopeKey,
       });
-      toast.success("Password rotation policy saved");
+      toast.success(t('policySaved'));
     } catch (err: any) {
-      toast.error(err?.message || "Failed to save password rotation policy");
+      toast.error(err?.message || t('failedToSavePolicy'));
     } finally {
       setSaving(false);
     }
@@ -91,20 +93,20 @@ export default function SecuritySettings() {
         <div className="flex items-center gap-2">
           <Shield className="w-8 h-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">Security Settings</h1>
+            <h1 className="text-3xl font-bold">{t('securitySettings')}</h1>
             <p className="text-muted-foreground mt-1">
-              Configure password rotation so users keep accounts secure
+              {t('configurePasswordRotation')}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline" className="gap-2" onClick={loadPolicy} disabled={loading || saving}>
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Reload
+            {t('reload')}
           </Button>
           <Button type="button" className="gap-2" onClick={handleSave} disabled={loading || saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save Changes
+            {t('saveChanges')}
           </Button>
         </div>
       </div>
@@ -113,26 +115,25 @@ export default function SecuritySettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Key className="w-5 h-5" />
-            Password Rotation Policy
+            {t('passwordRotationPolicy')}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Force users to change their password after a configured period. Expired passwords
-            redirect to Change Password after login.
+            {t('passwordRotationPolicyDescription')}
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
           {loading ? (
             <div className="flex items-center gap-2 text-muted-foreground py-6">
               <Loader2 className="w-5 h-5 animate-spin" />
-              Loading policy…
+              {t('loadingPolicy')}
             </div>
           ) : (
             <>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <Label>Password expiry (rotation interval)</Label>
+                  <Label>{t('passwordExpiry')}</Label>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Users must change password after this many days
+                    {t('passwordExpiryDescription')}
                   </p>
                 </div>
                 <Select
@@ -150,7 +151,7 @@ export default function SecuritySettings() {
                   <SelectContent>
                     {EXPIRY_OPTIONS.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
+                        {t(opt.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -159,9 +160,9 @@ export default function SecuritySettings() {
 
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <Label>Warn before expiry</Label>
+                  <Label>{t('warnBeforeExpiry')}</Label>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Show an approaching-expiry notice on login
+                    {t('warnBeforeExpiryDescription')}
                   </p>
                 </div>
                 <Select
@@ -180,7 +181,7 @@ export default function SecuritySettings() {
                   <SelectContent>
                     {WARN_OPTIONS.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
+                        {t(opt.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -190,13 +191,13 @@ export default function SecuritySettings() {
               <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm space-y-1">
                 <p className="font-medium">
                   {rotationEnabled
-                    ? `Rotation active — passwords expire every ${policy.passwordExpiryDays} days`
-                    : "Rotation disabled — passwords never expire"}
+                    ? t('rotationActive').replace('{{days}}', String(policy.passwordExpiryDays))
+                    : t('rotationDisabled')}
                 </p>
                 <p className="text-muted-foreground">
                   {rotationEnabled
-                    ? `When expired, login still succeeds but the user is required to set a new password (current password verified first). Warning window: ${policy.warnBeforeExpiryDays || "none"}.`
-                    : "Set an expiry interval above and save to enable rotation."}
+                    ? t('rotationDetails').replace('{{days}}', String(policy.warnBeforeExpiryDays || "none"))
+                    : t('rotationEnableHint')}
                 </p>
               </div>
             </>

@@ -456,10 +456,10 @@ export default function CreateEntityForm({
             </TabsContent>
 
             <TabsContent value="tags" className="mt-0">
-              <SectionCard title="Tags" icon={Tag}>
+              <SectionCard title={t('tags')} icon={Tag}>
                 {entityTags.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No tags available. Create tags in the Tags tab first.
+                    {t('noTagsAvailableCreateInTagsTab')}
                   </p>
                 ) : (
                   <div className="space-y-4">
@@ -477,7 +477,7 @@ export default function CreateEntityForm({
                             onValueChange={(value) => updateSelectedTag(tag.tag, value)}
                           >
                             <SelectTrigger id={`create-tag-${tag.id}`}>
-                              <SelectValue placeholder={`Select ${tag.tag}`} />
+                              <SelectValue placeholder={t('selectTag').replace('{{tag}}', tag.tag)} />
                             </SelectTrigger>
                             <SelectContent>
                               {tag.tagValues.map((value, index) => (
@@ -490,7 +490,7 @@ export default function CreateEntityForm({
                         ) : (
                           <Input
                             id={`create-tag-${tag.id}`}
-                            placeholder={`Enter ${tag.tag}`}
+                            placeholder={t('enterTag').replace('{{tag}}', tag.tag)}
                             value={formData.selectedTags[tag.tag] || ''}
                             onChange={(e) => updateSelectedTag(tag.tag, e.target.value)}
                           />
@@ -503,7 +503,7 @@ export default function CreateEntityForm({
             </TabsContent>
 
             <TabsContent value="business-info" className="mt-0">
-              <SectionCard title="Business Info" icon={Briefcase}>
+              <SectionCard title={t('businessInfoTab')} icon={Briefcase}>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="registrationName">Registration name</Label>
@@ -612,7 +612,7 @@ export default function CreateEntityForm({
             </TabsContent>
 
             <TabsContent value="csr-configuration" className="mt-0">
-              <SectionCard title="CSR Configuration" icon={Shield}>
+              <SectionCard title={t('csrConfigTab')} icon={Shield}>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="csrIndustryBusinessCategory">CSR industry business category</Label>
@@ -739,7 +739,7 @@ export default function CreateEntityForm({
             </TabsContent>
 
             <TabsContent value="register-device" className="mt-0">
-              <SectionCard title="Register Device" icon={Monitor}>
+              <SectionCard title={t('registerDeviceTab')} icon={Monitor}>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <div className="flex-1 space-y-2">
                     <Label htmlFor="ccsidOtp">CCSID OTP</Label>
