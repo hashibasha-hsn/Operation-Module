@@ -20,9 +20,12 @@ export class AuditLogClient {
   }): Promise<void> {
     try {
       const axios = require('axios');
-      const url = this.baseUrl().includes(':3015')
-        ? `${this.baseUrl()}/audit-logs`
-        : `${this.baseUrl()}/api/audit-logs`;
+      const base = this.baseUrl();
+      const url = base.endsWith('/audit-logs')
+        ? base
+        : base.includes(':3015')
+          ? `${base}/audit-logs`
+          : `${base}/api/audit-logs`;
       await axios.post(url, payload, { timeout: 3000 });
     } catch (error: any) {
       console.error('Failed to write audit log:', error?.message || error);

@@ -26,13 +26,13 @@ export class RoleFeaturePermissionsService {
   }) {
     try {
       const axios = require('axios');
-      const auditLogServiceUrl =
-        process.env.AUDIT_LOG_SERVICE_URL || 'http://localhost:3015';
-      await axios.post(
-        `${auditLogServiceUrl}/audit-logs`,
-        { ...payload, organizationId: 'default-org' },
-        { timeout: 3000 },
-      );
+      const base = (process.env.AUDIT_LOG_SERVICE_URL || 'http://localhost:3015').replace(/\/$/, '');
+      const url = base.endsWith('/audit-logs')
+        ? base
+        : base.includes(':3015')
+          ? `${base}/audit-logs`
+          : `${base}/api/audit-logs`;
+      await axios.post(url, { ...payload, organizationId: 'default-org' }, { timeout: 3000 });
     } catch (error: any) {
       console.error('Failed to write permission audit log:', error?.message || error);
     }
