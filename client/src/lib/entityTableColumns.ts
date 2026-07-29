@@ -22,10 +22,10 @@ export const DEFAULT_ENTITY_TABLE_COLUMNS: EntityInfoTableColumnKey[] = [
 
 export const MAX_ENTITY_TABLE_COLUMNS = 8;
 
-export function formatEntityColumnValue(entity: Record<string, unknown>, column: EntityInfoTableColumnKey) {
+export function formatEntityColumnValue(entity: Record<string, unknown>, column: EntityInfoTableColumnKey, t?: (key: string) => string) {
   switch (column) {
     case 'status':
-      return entity.status ? 'Active' : 'Inactive';
+      return entity.status ? t?.('active') || 'Active' : t?.('inactive') || 'Inactive';
     case 'staff':
       return entity.staff != null ? String(entity.staff) : '-';
     default:

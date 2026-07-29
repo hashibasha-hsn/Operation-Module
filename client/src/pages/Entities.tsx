@@ -228,7 +228,7 @@ export default function Entities() {
       const row: Record<string, string | number> = {};
       visibleColumns.forEach((column) => {
         const config = ENTITY_INFO_TABLE_COLUMNS.find((item) => item.key === column);
-        row[config?.label ?? column] = formatEntityColumnValue(entity, column);
+        row[config?.label ?? column] = formatEntityColumnValue(entity, column, t);
       });
       return row;
     });
@@ -393,7 +393,7 @@ export default function Entities() {
       }
     } catch (err) {
       console.error('Error bulk uploading entities:', err);
-      alert('Bulk upload failed');
+      alert(t('bulkUploadFailed'));
     }
   };
 
@@ -937,7 +937,7 @@ export default function Entities() {
                             key={column.key}
                             className={column.key === 'storeName' ? 'font-medium' : undefined}
                           >
-                            {formatEntityColumnValue(entity, column.key)}
+                            {formatEntityColumnValue(entity, column.key, t)}
                           </TableCell>
                         ))}
                         {tags.map((tag: any) => (
