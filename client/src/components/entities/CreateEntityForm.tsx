@@ -28,6 +28,7 @@ import {
   Shield,
   Monitor,
   Check,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -188,6 +189,7 @@ interface CreateEntityFormProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: CreateEntityFormValues) => void;
   entityTags?: EntityTagOption[];
+  submitting?: boolean;
 }
 
 export default function CreateEntityForm({
@@ -195,6 +197,7 @@ export default function CreateEntityForm({
   onOpenChange,
   onSubmit,
   entityTags = [],
+  submitting = false,
 }: CreateEntityFormProps) {
   const { language, t } = useLanguage();
   const preferArabic = language === "ar";
@@ -825,8 +828,8 @@ export default function CreateEntityForm({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('cancel')}
           </Button>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSubmit}>
-            <Check className="mr-2 h-4 w-4" />
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSubmit} disabled={submitting}>
+            {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
             {t('createEntity')}
           </Button>
         </DialogFooter>

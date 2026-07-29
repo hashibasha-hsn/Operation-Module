@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Building2, Filter, MoreVertical, ChevronDown, ChevronLeft, ChevronRight, Store, Settings, Upload, Trash2, Edit, Download } from "lucide-react";
+import { Plus, Search, Building2, Filter, MoreVertical, ChevronDown, ChevronLeft, ChevronRight, Store, Settings, Upload, Trash2, Edit, Download, Loader2 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -139,6 +139,9 @@ export default function Entities() {
   const [selectedTags, setSelectedTags] = useState<{ [key: string]: string }>({});
   const [removedEntities, setRemovedEntities] = useState<any[]>([]);
   const [storeNameSearch, setStoreNameSearch] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchTags();
@@ -239,6 +242,7 @@ export default function Entities() {
 
   const handleCreateEntity = async (values: CreateEntityFormValues) => {
     try {
+      setIsCreating(true);
       await createEntity(buildEntityPayload(values));
       setIsEntityDialogOpen(false);
       toast.success(t('entityCreatedSuccessfully'));
@@ -246,6 +250,8 @@ export default function Entities() {
     } catch (err: any) {
       console.error('Error creating entity:', err);
       toast.error(err?.message || t('entityCreateFailed'));
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -273,6 +279,7 @@ export default function Entities() {
     if (!editingEntity) return;
 
     try {
+      setIsUpdating(true);
       await updateEntity(editingEntity.id, {
         ...entityFormData,
         staff: parseInt(entityFormData.staff) || 0,
@@ -303,6 +310,8 @@ export default function Entities() {
     } catch (err) {
       console.error('Error updating entity:', err);
       toast.error(t('entityUpdateFailed') || 'Failed to update entity');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -310,10 +319,13 @@ export default function Entities() {
     if (!confirm(t('confirmDeleteEntity'))) return;
 
     try {
+      setIsDeleting(true);
       await deleteEntity(id);
       loadEntities();
     } catch (err) {
       console.error('Error deleting entity:', err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -679,6 +691,7 @@ export default function Entities() {
               onOpenChange={setIsEntityDialogOpen}
               onSubmit={handleCreateEntity}
               entityTags={tags}
+              submitting={isCreating}
             />
             
             {/* Edit Entity Dialog */}
@@ -844,7 +857,8 @@ export default function Entities() {
                   <Button variant="outline" onClick={() => setIsEditEntityDialogOpen(false)}>
                     {t('cancel')}
                   </Button>
-                  <Button onClick={handleUpdateEntity}>
+                  <Button onClick={handleUpdateEntity} disabled={isUpdating}>
+                    {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                     {t('updateEntity')}
                   </Button>
                 </DialogFooter>
@@ -934,7 +948,8 @@ export default function Entities() {
                         <TableCell>
                           <TableActionsMenu>
                             <DropdownMenuItem onClick={() => handleEditEntity(entity)}>{t('edit')}</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDeleteEntity(entity.id)} className="text-destructive">
+                            <DropdownMenuItem onClick={() => handleDeleteEntity(entity.id)} className="text-destructive" disabled={isDeleting}>
+                              {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                               {t('delete')}
                             </DropdownMenuItem>
                           </TableActionsMenu>

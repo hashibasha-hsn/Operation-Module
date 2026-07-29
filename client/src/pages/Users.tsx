@@ -65,6 +65,7 @@ import {
   ChevronRight,
   X,
   Settings,
+  Loader2,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { validatePassword } from "@/lib/passwordValidation";
@@ -289,6 +290,10 @@ export default function UsersPage() {
   const [features, setFeatures] = useState<any[]>([]);
   const [designationPermissions, setDesignationPermissions] = useState<any[]>([]);
   const [removedUsers, setRemovedUsers] = useState<any[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isCreatingDesignation, setIsCreatingDesignation] = useState(false);
 
   const tabs = [
     { key: "Users", label: t('users') },
@@ -482,6 +487,7 @@ export default function UsersPage() {
     }
 
     try {
+      setIsCreatingDesignation(true);
       let reportingDesignationId = null;
       if (designationData.reportingDesignation) {
         try {
@@ -524,6 +530,8 @@ export default function UsersPage() {
     } catch (err: any) {
       console.error('Error creating designation:', err);
       toast.error(err?.message || 'Error creating designation mapping');
+    } finally {
+      setIsCreatingDesignation(false);
     }
   };
 
@@ -727,6 +735,7 @@ export default function UsersPage() {
     }
 
     try {
+      setIsCreating(true);
       setPhoneError("");
       setCreateError("");
       const response = await fetch(`${GATEWAY}/api/user/users`, {
@@ -814,6 +823,8 @@ export default function UsersPage() {
     } catch (err) {
       console.error('Error creating user:', err);
       setCreateError('Could not connect to the server. Make sure user-service is running.');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -1133,6 +1144,7 @@ export default function UsersPage() {
     }
 
     try {
+      setIsDeleting(true);
       const userResponse = await fetch(`${GATEWAY}/api/user/users/${userId}`, {
         method: 'DELETE',
       });
@@ -1151,6 +1163,8 @@ export default function UsersPage() {
     } catch (err) {
       console.error('Error removing user:', err);
       alert('Error removing user');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1161,6 +1175,7 @@ export default function UsersPage() {
     }
 
     try {
+      setIsUpdating(true);
       const response = await fetch(`${GATEWAY}/api/user/users/${editingUser.userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1188,6 +1203,8 @@ export default function UsersPage() {
       }
     } catch (err) {
       console.error('Error updating user:', err);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -2065,7 +2082,8 @@ export default function UsersPage() {
                     <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                       {t('cancel')}
                     </Button>
-                    <Button onClick={handleCreateUser}>
+                    <Button onClick={handleCreateUser} disabled={isCreating}>
+                      {isCreating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                       {t('createUser')}
                     </Button>
                   </DialogFooter>
@@ -2254,7 +2272,8 @@ export default function UsersPage() {
                     <Button variant="outline" onClick={() => setIsEditUserDialogOpen(false)}>
                       {t('cancel')}
                     </Button>
-                    <Button onClick={handleUpdateUser}>
+                    <Button onClick={handleUpdateUser} disabled={isUpdating}>
+                      {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                       {t('updateUser')}
                     </Button>
                   </DialogFooter>
@@ -2432,11 +2451,13 @@ export default function UsersPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-destructive"
+                                  disabled={isDeleting}
                                   onClick={() => {
                                     const userId = user.userId || user.id;
                                     handleDeleteUser(userId);
                                   }}
                                 >
+                                  {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                                   {t('delete')}
                                 </DropdownMenuItem>
                               </TableActionsMenu>
@@ -2530,7 +2551,8 @@ export default function UsersPage() {
                     <Button variant="outline" onClick={() => setIsDesignationDialogOpen(false)}>
                       {t('cancel')}
                     </Button>
-                    <Button onClick={handleCreateDesignation}>
+                    <Button onClick={handleCreateDesignation} disabled={isCreatingDesignation}>
+                      {isCreatingDesignation ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                       {t('createDesignation')}
                     </Button>
                   </DialogFooter>
