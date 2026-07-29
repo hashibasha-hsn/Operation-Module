@@ -35,10 +35,11 @@ import NotificationPreferencesSummary from "@/components/NotificationPreferences
 import { DEFAULT_NOTIFICATION_SETTINGS, type NotificationSettingsForm } from "@/lib/notificationApi";
 import { fetchTwoFactorSettings, updateTwoFactorSettings } from "@/lib/twoFactorApi";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { GATEWAY } from "@/lib/apiConfig";
 
-const USER_API = (import.meta.env.VITE_USER_API || 'http://localhost:3009/api/user') + '/users';
+const USER_API = (import.meta.env.VITE_USER_API || `${GATEWAY}/api/user`) + '/users';
 const getEntitiesApi = () =>
-  `http://localhost:3009/api/org/entities?organizationId=${encodeURIComponent(getOrganizationId())}`;
+  `${GATEWAY}/api/org/entities?organizationId=${encodeURIComponent(getOrganizationId())}`;
 
 type EntityOption = {
   id: string;

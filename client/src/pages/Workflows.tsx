@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { GATEWAY } from "@/lib/apiConfig";
 import { getOrganizationId } from '@/lib/authStorage';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,7 @@ export default function Workflows() {
 
   const fetchProcesses = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/org/processes?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/org/processes?organizationId=${encodeURIComponent(getOrganizationId())}`);
       const data = await response.json();
       setProcesses(data || []);
     } catch (err) {
@@ -63,7 +64,7 @@ export default function Workflows() {
 
   const fetchAudits = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/org/audits?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/org/audits?organizationId=${encodeURIComponent(getOrganizationId())}`);
       const data = await response.json();
       setAudits(data || []);
     } catch (err) {
@@ -80,7 +81,7 @@ export default function Workflows() {
   const handleToggleStatus = async (id: string, type: 'process' | 'audit', currentStatus: boolean) => {
     try {
       const endpoint = type === 'process' ? 'processes' : 'audits';
-      await fetch(`http://localhost:3009/api/org/${endpoint}/${id}`, {
+      await fetch(`${GATEWAY}/api/org/${endpoint}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !currentStatus }),
@@ -100,7 +101,7 @@ export default function Workflows() {
 
     try {
       const endpoint = type === 'process' ? 'processes' : 'audits';
-      await fetch(`http://localhost:3009/api/org/${endpoint}/${id}`, {
+      await fetch(`${GATEWAY}/api/org/${endpoint}/${id}`, {
         method: 'DELETE',
       });
       if (type === 'process') {
@@ -116,7 +117,7 @@ export default function Workflows() {
   const handleDuplicate = async (id: string, type: 'process' | 'audit') => {
     try {
       const endpoint = type === 'process' ? 'processes' : 'audits';
-      const response = await fetch(`http://localhost:3009/api/org/${endpoint}/${id}`);
+      const response = await fetch(`${GATEWAY}/api/org/${endpoint}/${id}`);
       const original = await response.json();
       
       const duplicate = {
@@ -128,7 +129,7 @@ export default function Workflows() {
         updatedAt: undefined,
       };
 
-      await fetch(`http://localhost:3009/api/org/${endpoint}`, {
+      await fetch(`${GATEWAY}/api/org/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(duplicate),

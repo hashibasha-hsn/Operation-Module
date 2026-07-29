@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { GATEWAY } from "@/lib/apiConfig";
 import { getOrganizationId } from '@/lib/authStorage';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -93,7 +94,7 @@ export default function Tags() {
 
   const fetchAdvDropdownTags = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/user/tags/adv-dropdown?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/user/tags/adv-dropdown?organizationId=${encodeURIComponent(getOrganizationId())}`);
       if (!response.ok) {
         setAdvDropdownTags([]);
         return;
@@ -108,7 +109,7 @@ export default function Tags() {
 
   const fetchAssigneeProfiles = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/user/tags/assignee-profile?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/user/tags/assignee-profile?organizationId=${encodeURIComponent(getOrganizationId())}`);
       if (!response.ok) {
         setAssigneeProfiles([]);
         return;
@@ -123,7 +124,7 @@ export default function Tags() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/user/users?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/user/users?organizationId=${encodeURIComponent(getOrganizationId())}`);
       if (!response.ok) {
         setUsers([]);
         return;
@@ -138,7 +139,7 @@ export default function Tags() {
 
   const fetchEntities = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/org/entities?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/org/entities?organizationId=${encodeURIComponent(getOrganizationId())}`);
       if (!response.ok) {
         setEntities([]);
         return;
@@ -153,7 +154,7 @@ export default function Tags() {
 
   const fetchProcessTags = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/user/tags/process?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/user/tags/process?organizationId=${encodeURIComponent(getOrganizationId())}`);
       if (!response.ok) {
         setProcessTags([]);
         return;
@@ -168,7 +169,7 @@ export default function Tags() {
 
   const fetchQuestionTags = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/user/tags/question?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/user/tags/question?organizationId=${encodeURIComponent(getOrganizationId())}`);
       if (!response.ok) {
         setQuestionTags([]);
         return;
@@ -186,8 +187,8 @@ export default function Tags() {
       // Transform string array to object array for backend
       const valuesArray = advTagData.values.map((value) => ({ value }));
       const url = editingAdvTag
-        ? `http://localhost:3009/api/user/tags/adv-dropdown/${editingAdvTag.id}`
-        : 'http://localhost:3009/api/user/tags/adv-dropdown';
+        ? `${GATEWAY}/api/user/tags/adv-dropdown/${editingAdvTag.id}`
+        : `${GATEWAY}/api/user/tags/adv-dropdown`;
       const method = editingAdvTag ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -254,8 +255,8 @@ export default function Tags() {
 
     try {
       const url = editingAssigneeProfile
-        ? `http://localhost:3009/api/user/tags/assignee-profile/${editingAssigneeProfile.id}`
-        : 'http://localhost:3009/api/user/tags/assignee-profile';
+        ? `${GATEWAY}/api/user/tags/assignee-profile/${editingAssigneeProfile.id}`
+        : `${GATEWAY}/api/user/tags/assignee-profile`;
 
       const method = editingAssigneeProfile ? 'PUT' : 'POST';
 
@@ -306,7 +307,7 @@ export default function Tags() {
     if (!confirm(t('areYouSureYouWantToDeleteThisTag'))) return;
 
     try {
-      await fetch(`http://localhost:3009/api/user/tags/adv-dropdown/${id}`, {
+      await fetch(`${GATEWAY}/api/user/tags/adv-dropdown/${id}`, {
         method: 'DELETE',
       });
       fetchAdvDropdownTags();
@@ -319,7 +320,7 @@ export default function Tags() {
     if (!confirm(t('areYouSureYouWantToDeleteThisProfile'))) return;
 
     try {
-      await fetch(`http://localhost:3009/api/user/tags/assignee-profile/${id}`, {
+      await fetch(`${GATEWAY}/api/user/tags/assignee-profile/${id}`, {
         method: 'DELETE',
       });
       fetchAssigneeProfiles();
@@ -331,8 +332,8 @@ export default function Tags() {
   const handleCreateProcessTag = async () => {
     try {
       const url = editingProcessTag 
-        ? `http://localhost:3009/api/user/tags/process/${editingProcessTag.id}`
-        : 'http://localhost:3009/api/user/tags/process';
+        ? `${GATEWAY}/api/user/tags/process/${editingProcessTag.id}`
+        : `${GATEWAY}/api/user/tags/process`;
       
       const method = editingProcessTag ? 'PUT' : 'POST';
 
@@ -375,7 +376,7 @@ export default function Tags() {
     if (!confirm(t('areYouSureYouWantToDeleteThisTag'))) return;
 
     try {
-      await fetch(`http://localhost:3009/api/user/tags/process/${id}`, {
+      await fetch(`${GATEWAY}/api/user/tags/process/${id}`, {
         method: 'DELETE',
       });
       fetchProcessTags();
@@ -387,8 +388,8 @@ export default function Tags() {
   const handleCreateQuestionTag = async () => {
     try {
       const url = editingQuestionTag 
-        ? `http://localhost:3009/api/user/tags/question/${editingQuestionTag.id}`
-        : 'http://localhost:3009/api/user/tags/question';
+        ? `${GATEWAY}/api/user/tags/question/${editingQuestionTag.id}`
+        : `${GATEWAY}/api/user/tags/question`;
       
       const method = editingQuestionTag ? 'PUT' : 'POST';
 
@@ -431,7 +432,7 @@ export default function Tags() {
     if (!confirm(t('areYouSureYouWantToDeleteThisTag'))) return;
 
     try {
-      await fetch(`http://localhost:3009/api/user/tags/question/${id}`, {
+      await fetch(`${GATEWAY}/api/user/tags/question/${id}`, {
         method: 'DELETE',
       });
       fetchQuestionTags();

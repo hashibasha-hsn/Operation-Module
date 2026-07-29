@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { GATEWAY } from "@/lib/apiConfig";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Shield, CheckCircle, AlertCircle, Loader2, Circle } from "lucide-react"
 import { useLocation } from "wouter";
 import { validatePassword, getPasswordRuleResults, isPasswordValid } from "@/lib/passwordValidation";
 
-const API_BASE = "http://localhost:3009/api/auth";
+const API_BASE = `${GATEWAY}/api/auth`;
 
 export default function AdminSetup() {
   const [, navigate] = useLocation();

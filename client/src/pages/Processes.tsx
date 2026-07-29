@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { GATEWAY } from "@/lib/apiConfig";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -151,7 +152,7 @@ await fetch(`${ORG_API}/processes/${id}/publish`, {
     if (!confirm('Are you sure you want to archive this process?')) return;
 
     try {
-      await fetch(`http://localhost:3009/api/org/processes/${id}/archive`, {
+      await fetch(`${GATEWAY}/api/org/processes/${id}/archive`, {
         method: 'PUT',
       });
       fetchProcesses();
@@ -164,7 +165,7 @@ await fetch(`${ORG_API}/processes/${id}/publish`, {
     if (!confirm('Are you sure you want to delete this process?')) return;
 
     try {
-      await fetch(`http://localhost:3009/api/org/processes/${id}`, {
+      await fetch(`${GATEWAY}/api/org/processes/${id}`, {
         method: 'DELETE',
       });
       fetchProcesses();

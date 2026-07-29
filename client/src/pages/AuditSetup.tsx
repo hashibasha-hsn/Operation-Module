@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { GATEWAY } from "@/lib/apiConfig";
 import { getStoredUser } from "@/lib/authStorage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -81,14 +82,14 @@ export default function AuditSetup() {
   const loadAvailableData = async (organizationId: string) => {
     try {
       // Load users
-      const usersResponse = await fetch(`http://localhost:3009/api/user?organizationId=${organizationId}`);
+      const usersResponse = await fetch(`${GATEWAY}/api/user?organizationId=${organizationId}`);
       if (usersResponse.ok) {
         const users = await usersResponse.json();
         setAvailableUsers(users);
       }
 
       // Load stores (assuming there's an endpoint for this)
-      const storesResponse = await fetch(`http://localhost:3009/api/org/stores?organizationId=${organizationId}`);
+      const storesResponse = await fetch(`${GATEWAY}/api/org/stores?organizationId=${organizationId}`);
       if (storesResponse.ok) {
         const stores = await storesResponse.json();
         setAvailableStores(stores);
@@ -102,7 +103,7 @@ export default function AuditSetup() {
     setLoading(true);
     try {
       const user = getStoredUser();
-      const response = await fetch("http://localhost:3009/api/audits/setup", {
+      const response = await fetch(`${GATEWAY}/api/audits/setup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -143,7 +144,7 @@ export default function AuditSetup() {
     } else {
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:3009/api/audits/${auditId}/basic-info`, {
+        const response = await fetch(`${GATEWAY}/api/audits/${auditId}/basic-info`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title, description, processTag }),
@@ -170,7 +171,7 @@ export default function AuditSetup() {
     if (!auditId) return;
     setLoading(true);
     try {
-      await fetch(`http://localhost:3009/api/audits/${auditId}/properties`, {
+      await fetch(`${GATEWAY}/api/audits/${auditId}/properties`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -197,7 +198,7 @@ export default function AuditSetup() {
     if (!auditId) return;
     setLoading(true);
     try {
-      await fetch(`http://localhost:3009/api/audits/${auditId}/assignment`, {
+      await fetch(`${GATEWAY}/api/audits/${auditId}/assignment`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assigneeIds, storeIds }),
@@ -214,7 +215,7 @@ export default function AuditSetup() {
     if (!auditId) return;
     setLoading(true);
     try {
-      await fetch(`http://localhost:3009/api/audits/${auditId}/publish`, {
+      await fetch(`${GATEWAY}/api/audits/${auditId}/publish`, {
         method: "PUT",
       });
       navigate("/audit");
@@ -229,7 +230,7 @@ export default function AuditSetup() {
     if (!newSectionTitle.trim() || !auditId) return;
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:3009/api/audits/sections", {
+      const response = await fetch(`${GATEWAY}/api/audits/sections`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -265,7 +266,7 @@ export default function AuditSetup() {
         ? newQuestionOptions.split(",").map(o => o.trim())
         : null;
 
-      const response = await fetch("http://localhost:3009/api/audits/questions", {
+      const response = await fetch(`${GATEWAY}/api/audits/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -308,7 +309,7 @@ export default function AuditSetup() {
   const handleDeleteSection = async (sectionId: string) => {
     if (!confirm("Are you sure you want to delete this section?")) return;
     try {
-      await fetch(`http://localhost:3009/api/audits/sections/${sectionId}`, {
+      await fetch(`${GATEWAY}/api/audits/sections/${sectionId}`, {
         method: "DELETE",
       });
       setSections(sections.filter(s => s.id !== sectionId));
@@ -321,7 +322,7 @@ export default function AuditSetup() {
   const handleDeleteQuestion = async (questionId: string) => {
     if (!confirm("Are you sure you want to delete this question?")) return;
     try {
-      await fetch(`http://localhost:3009/api/audits/questions/${questionId}`, {
+      await fetch(`${GATEWAY}/api/audits/questions/${questionId}`, {
         method: "DELETE",
       });
       setSections(sections.map(section => ({
