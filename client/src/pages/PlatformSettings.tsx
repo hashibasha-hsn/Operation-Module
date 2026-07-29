@@ -27,10 +27,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getStoredUser, getOrganizationId } from '@/lib/authStorage';
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const PLATFORM_KEY = (orgId: string) => `platform-settings:${orgId}`;
 
 export default function PlatformSettings() {
+  const { t } = useLanguage();
   const orgId = getOrganizationId();
   const [activeTab, setActiveTab] = useState("admin");
 
@@ -95,9 +97,9 @@ export default function PlatformSettings() {
           updatedAt: new Date().toISOString(),
         }),
       );
-      toast.success("Platform settings saved");
+      toast.success(t('platformSettingsSaved'));
     } catch (error: any) {
-      toast.error(error?.message || "Failed to save platform settings");
+      toast.error(error?.message || t('failedToSavePlatformSettings'));
     }
   };
 
@@ -108,22 +110,22 @@ export default function PlatformSettings() {
         <div className="flex items-center gap-2">
           <Settings className="w-8 h-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">Platform Settings</h1>
-            <p className="text-muted-foreground mt-1">Configure platform-wide operating rules</p>
+            <h1 className="text-3xl font-bold">{t('platformSettings')}</h1>
+            <p className="text-muted-foreground mt-1">{t('platformSettingsDesc')}</p>
           </div>
         </div>
         <Button className="gap-2" onClick={handleSave}>
           <Save className="w-4 h-4" />
-          Save Changes
+          {t('saveChanges')}
         </Button>
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="admin">Admin Configuration</TabsTrigger>
-          <TabsTrigger value="additional">Additional Configurations</TabsTrigger>
-          <TabsTrigger value="webhooks">Webhook Configurations</TabsTrigger>
+          <TabsTrigger value="admin">{t('adminConfiguration')}</TabsTrigger>
+          <TabsTrigger value="additional">{t('additionalConfigurations')}</TabsTrigger>
+          <TabsTrigger value="webhooks">{t('webhookConfigurations')}</TabsTrigger>
         </TabsList>
 
         {/* Admin Configuration */}
@@ -132,15 +134,15 @@ export default function PlatformSettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="w-5 h-5" />
-                User Creation Emails
+                {t('userCreationEmails')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Send Email on User Creation</Label>
+                  <Label>{t('sendEmailOnUserCreation')}</Label>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Automatically send emails when new users are created
+                    {t('sendEmailOnUserCreationDesc')}
                   </p>
                 </div>
                 <Switch
@@ -154,9 +156,9 @@ export default function PlatformSettings() {
                 <>
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label>Send Temporary Password</Label>
+                      <Label>{t('sendTemporaryPassword')}</Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Include temporary password in welcome email
+                        {t('sendTemporaryPasswordDesc')}
                       </p>
                     </div>
                     <Switch
@@ -168,9 +170,9 @@ export default function PlatformSettings() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label>Send Consent Email</Label>
+                      <Label>{t('sendConsentEmail')}</Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Request consent for future communications
+                        {t('sendConsentEmailDesc')}
                       </p>
                     </div>
                     <Switch
@@ -189,12 +191,12 @@ export default function PlatformSettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
-                Business Hours
+                {t('businessHours')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-2">
-                <Label>Business Day Closure Time</Label>
+                <Label>{t('businessDayClosureTime')}</Label>
                 <Input
                   type="time"
                   value={adminSettings.businessDayClosureTime}
@@ -203,11 +205,11 @@ export default function PlatformSettings() {
                   }
                 />
                 <p className="text-sm text-muted-foreground">
-                  Time when business day ends for submission tracking
+                  {t('businessDayClosureTimeDesc')}
                 </p>
               </div>
               <div className="grid gap-2">
-                <Label>Start Day of the Week</Label>
+                <Label>{t('startDayOfWeek')}</Label>
                 <Select
                   value={adminSettings.startDayOfWeek}
                   onValueChange={(value) =>
@@ -218,9 +220,9 @@ export default function PlatformSettings() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="monday">Monday</SelectItem>
-                    <SelectItem value="sunday">Sunday</SelectItem>
-                    <SelectItem value="saturday">Saturday</SelectItem>
+                    <SelectItem value="monday">{t('monday')}</SelectItem>
+                    <SelectItem value="sunday">{t('sunday')}</SelectItem>
+                    <SelectItem value="saturday">{t('saturday')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -231,12 +233,12 @@ export default function PlatformSettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Globe className="w-5 h-5" />
-                Timezone & SSO
+                {t('timezoneSso')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-2">
-                <Label>Timezone</Label>
+                <Label>{t('timezone')}</Label>
                 <Select
                   value={adminSettings.timezone}
                   onValueChange={(value) =>
@@ -257,9 +259,9 @@ export default function PlatformSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Enable Azure AD SSO</Label>
+                  <Label>{t('enableAzureAdSso')}</Label>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Allow single sign-on via Azure Active Directory
+                    {t('enableAzureAdSsoDesc')}
                   </p>
                 </div>
                 <Switch
@@ -272,9 +274,9 @@ export default function PlatformSettings() {
               {adminSettings.enableAzureAD && (
                 <>
                   <div className="grid gap-2">
-                    <Label>Azure AD Tenant ID</Label>
+                    <Label>{t('azureAdTenantId')}</Label>
                     <Input
-                      placeholder="Enter tenant ID"
+                      placeholder={t('enterTenantId')}
                       value={adminSettings.azureADTenantId}
                       onChange={(e) =>
                         setAdminSettings({ ...adminSettings, azureADTenantId: e.target.value })
@@ -282,9 +284,9 @@ export default function PlatformSettings() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Azure AD Client ID</Label>
+                    <Label>{t('azureAdClientId')}</Label>
                     <Input
-                      placeholder="Enter client ID"
+                      placeholder={t('enterClientId')}
                       value={adminSettings.azureADClientId}
                       onChange={(e) =>
                         setAdminSettings({ ...adminSettings, azureADClientId: e.target.value })
@@ -303,21 +305,21 @@ export default function PlatformSettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5" />
-                Google Sheet Integration
+                {t('googleSheetIntegration')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-2">
-                <Label>Share Google Sheet With</Label>
+                <Label>{t('shareGoogleSheetWith')}</Label>
                 <Input
-                  placeholder="Enter email address"
+                  placeholder={t('enterEmailAddress')}
                   value={additionalSettings.googleSheetEmail}
                   onChange={(e) =>
                     setAdditionalSettings({ ...additionalSettings, googleSheetEmail: e.target.value })
                   }
                 />
                 <p className="text-sm text-muted-foreground">
-                  Email address to share Google Sheets with
+                  {t('shareGoogleSheetWithDesc')}
                 </p>
               </div>
             </CardContent>
@@ -327,12 +329,12 @@ export default function PlatformSettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="w-5 h-5" />
-                Snapshot Emails
+                {t('snapshotEmails')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-2">
-                <Label>Email Frequency</Label>
+                <Label>{t('emailFrequency')}</Label>
                 <Select
                   value={additionalSettings.snapshotEmailFrequency}
                   onValueChange={(value) =>
@@ -343,14 +345,14 @@ export default function PlatformSettings() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="daily">{t('daily')}</SelectItem>
+                    <SelectItem value="weekly">{t('weekly')}</SelectItem>
+                    <SelectItem value="monthly">{t('monthly')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Send Time</Label>
+                <Label>{t('sendTime')}</Label>
                 <Input
                   type="time"
                   value={additionalSettings.snapshotEmailTime}
@@ -360,9 +362,9 @@ export default function PlatformSettings() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Recipients</Label>
+                <Label>{t('recipients')}</Label>
                 <Textarea
-                  placeholder="Enter email addresses (comma-separated)"
+                  placeholder={t('recipientsPlaceholder')}
                   value={additionalSettings.snapshotEmailRecipients}
                   onChange={(e) =>
                     setAdditionalSettings({ ...additionalSettings, snapshotEmailRecipients: e.target.value })
@@ -380,15 +382,15 @@ export default function PlatformSettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Webhook className="w-5 h-5" />
-                Process Webhook Settings
+                {t('processWebhookSettings')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Enable Process Webhooks</Label>
+                  <Label>{t('enableProcessWebhooks')}</Label>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Send process data to external endpoints
+                    {t('enableProcessWebhooksDesc')}
                   </p>
                 </div>
                 <Switch
@@ -401,7 +403,7 @@ export default function PlatformSettings() {
               {webhookSettings.processWebhookEnabled && (
                 <>
                   <div className="grid gap-2">
-                    <Label>Webhook Version</Label>
+                    <Label>{t('webhookVersion')}</Label>
                     <Select
                       value={webhookSettings.processWebhookVersion}
                       onValueChange={(value) =>
@@ -418,9 +420,9 @@ export default function PlatformSettings() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Webhook URL (HTTPS)</Label>
+                    <Label>{t('webhookUrl')}</Label>
                     <Input
-                      placeholder="https://your-endpoint.com/webhook"
+                      placeholder={t('webhookUrlPlaceholder')}
                       value={webhookSettings.processWebhookUrl}
                       onChange={(e) =>
                         setWebhookSettings({ ...webhookSettings, processWebhookUrl: e.target.value })
@@ -428,10 +430,10 @@ export default function PlatformSettings() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>API Key (optional)</Label>
+                    <Label>{t('apiKeyOptional')}</Label>
                     <Input
                       type="password"
-                      placeholder="Enter API key"
+                      placeholder={t('enterApiKey')}
                       value={webhookSettings.processWebhookApiKey}
                       onChange={(e) =>
                         setWebhookSettings({ ...webhookSettings, processWebhookApiKey: e.target.value })
@@ -445,14 +447,14 @@ export default function PlatformSettings() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Action Point Webhook Settings</CardTitle>
+              <CardTitle>{t('actionPointWebhookSettings')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Enable Action Point Webhooks</Label>
+                  <Label>{t('enableActionPointWebhooks')}</Label>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Send action point data to external endpoints
+                    {t('enableActionPointWebhooksDesc')}
                   </p>
                 </div>
                 <Switch
@@ -465,7 +467,7 @@ export default function PlatformSettings() {
               {webhookSettings.actionPointWebhookEnabled && (
                 <>
                   <div className="grid gap-2">
-                    <Label>Triggers</Label>
+                    <Label>{t('triggers')}</Label>
                     <div className="space-y-2">
                       {["created", "completed", "closed"].map((trigger) => (
                         <div key={trigger} className="flex items-center gap-2">
@@ -494,9 +496,9 @@ export default function PlatformSettings() {
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Alert Email for Failures</Label>
+                    <Label>{t('alertEmailForFailures')}</Label>
                     <Input
-                      placeholder="Enter alert email"
+                      placeholder={t('enterAlertEmail')}
                       value={webhookSettings.actionPointAlertEmail}
                       onChange={(e) =>
                         setWebhookSettings({ ...webhookSettings, actionPointAlertEmail: e.target.value })
@@ -510,14 +512,14 @@ export default function PlatformSettings() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Ticket Webhook Settings</CardTitle>
+              <CardTitle>{t('ticketWebhookSettings')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Enable Ticket Webhooks</Label>
+                  <Label>{t('enableTicketWebhooks')}</Label>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Send ticket data to external endpoints
+                    {t('enableTicketWebhooksDesc')}
                   </p>
                 </div>
                 <Switch
@@ -530,7 +532,7 @@ export default function PlatformSettings() {
               {webhookSettings.ticketWebhookEnabled && (
                 <>
                   <div className="grid gap-2">
-                    <Label>Triggers</Label>
+                    <Label>{t('triggers')}</Label>
                     <div className="space-y-2">
                       {["created", "updated", "closed"].map((trigger) => (
                         <div key={trigger} className="flex items-center gap-2">
@@ -557,9 +559,9 @@ export default function PlatformSettings() {
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Fallback User for Assignment</Label>
+                    <Label>{t('fallbackUserForAssignment')}</Label>
                     <Input
-                      placeholder="Enter fallback user ID"
+                      placeholder={t('enterFallbackUserId')}
                       value={webhookSettings.ticketFallbackUser}
                       onChange={(e) =>
                         setWebhookSettings({ ...webhookSettings, ticketFallbackUser: e.target.value })
@@ -573,14 +575,14 @@ export default function PlatformSettings() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Asset Webhook Settings</CardTitle>
+              <CardTitle>{t('assetWebhookSettings')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Enable Asset Webhooks</Label>
+                  <Label>{t('enableAssetWebhooks')}</Label>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Send real-time asset updates to external systems
+                    {t('enableAssetWebhooksDesc')}
                   </p>
                 </div>
                 <Switch

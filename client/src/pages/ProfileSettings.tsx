@@ -207,7 +207,7 @@ export default function ProfileSettings() {
         setAccountMeta({
           userId: profile.userId,
           designation: profile.designation || "",
-          status: profile.isActive === false ? "Inactive" : "Active",
+          status: profile.isActive === false ? t('inactive') : t('active'),
           joinedDate: profile.createdAt
             ? new Date(profile.createdAt).toLocaleDateString()
             : "",
@@ -251,7 +251,7 @@ export default function ProfileSettings() {
       }
     } catch (err) {
       console.error("Failed to load profile setup:", err);
-      setProfileError("Failed to load profile data");
+      setProfileError(t('failedToLoadProfileData'));
     } finally {
       setIsLoadingProfile(false);
     }
@@ -265,14 +265,14 @@ export default function ProfileSettings() {
     const storeName = profileData.storeName.trim();
 
     if (!name || !entityId) {
-      setProfileError("Name and store are required");
+      setProfileError(t('nameAndStoreRequired'));
       return;
     }
 
     const authUser = getStoredUser();
     const userId = String(authUser.userId ?? authUser.id ?? accountMeta.userId ?? "");
     if (!userId) {
-      setProfileError("Unable to determine your user account. Please log in again.");
+      setProfileError(t('unableToDetermineUser'));
       return;
     }
 
@@ -312,7 +312,7 @@ export default function ProfileSettings() {
 
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        setProfileError(data?.message || "Failed to save profile");
+        setProfileError(data?.message || t('failedToSaveProfile'));
         return;
       }
 
@@ -340,8 +340,8 @@ export default function ProfileSettings() {
 
       toast.success(
         saved.profileSetupComplete !== false
-          ? "Profile saved — setup marked complete"
-          : "Profile saved successfully",
+          ? t('profileSavedSetupComplete')
+          : t('profileSavedSuccessfully'),
       );
       if (setupMode) {
         // Next onboarding step: verify current password and set a secure password
@@ -351,7 +351,7 @@ export default function ProfileSettings() {
       }
     } catch (err) {
       console.error("Save profile error:", err);
-      setProfileError("Failed to connect to server");
+      setProfileError(t('failedToConnectToServer'));
     } finally {
       setIsSavingProfile(false);
     }
@@ -366,7 +366,7 @@ export default function ProfileSettings() {
     if (!isProfileSetupComplete(getStoredUser())) {
       setActiveTab("My Profile");
       navigate("/profile-settings?setup=1");
-      toast.error("Complete name and store before continuing");
+      toast.error(t('completeNameAndStore'));
       return;
     }
     navigate("/dashboard");
@@ -379,11 +379,11 @@ export default function ProfileSettings() {
       setTwoFactorEnabled(Boolean(data.enabled));
       toast.success(
         enabled
-          ? "Two-factor authentication enabled"
-          : "Two-factor authentication disabled",
+          ? t('twoFactorEnabled')
+          : t('twoFactorDisabled'),
       );
     } catch (err: any) {
-      toast.error(err?.message || "Failed to update two-factor authentication");
+      toast.error(err?.message || t('failedToUpdateTwoFactor'));
     } finally {
       setIsSavingTwoFactor(false);
     }
@@ -408,12 +408,12 @@ export default function ProfileSettings() {
           <User className="w-8 h-8 text-primary" />
           <div>
             <h1 className="text-3xl font-bold">
-              {setupMode ? "Complete Your Profile" : "Profile Settings"}
+              {setupMode ? t('completeYourProfile') : t('profileSettings')}
             </h1>
             <p className="text-muted-foreground mt-1">
               {setupMode
-                ? "Track required fields below. Save to mark profile setup complete, then optionally verify your password."
-                : "Manage your personal settings"}
+                ? t('completeProfileDesc')
+                : t('manageYourPersonalSettings')}
             </p>
           </div>
         </div>
@@ -427,7 +427,7 @@ export default function ProfileSettings() {
             ) : (
               <AlertCircle className="w-3.5 h-3.5" />
             )}
-            {completionProgress.percent}% complete
+            {completionProgress.percent}{t('percentComplete')}
           </Badge>
         )}
       </div>
@@ -436,9 +436,9 @@ export default function ProfileSettings() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center justify-between gap-3">
-              <span>Profile completion tracking</span>
+              <span>{t('profileCompletionTracking')}</span>
               <span className="text-sm font-normal text-muted-foreground">
-                {completionProgress.completedCount}/{completionProgress.totalCount} required
+                {completionProgress.completedCount}/{completionProgress.totalCount} {t('required')}
               </span>
             </CardTitle>
           </CardHeader>
@@ -469,10 +469,10 @@ export default function ProfileSettings() {
               ))}
             </ul>
             <p className="text-xs text-muted-foreground">
-              Step {activeTab === "Change Password" ? "2" : "1"} of 2
+              {t('step')} {activeTab === "Change Password" ? "2" : "1"} {t('of')} 2
               {completionProgress.profileSetupComplete
-                ? " — required profile fields are complete"
-                : " — fill name and store, then save"}
+                ? t('profileFieldsComplete')
+                : t('fillNameAndStore')}
             </p>
           </CardContent>
         </Card>
@@ -507,12 +507,12 @@ export default function ProfileSettings() {
                 }}
               >
                 {tab === "Change Password"
-                  ? t("changePassword") || tab
+                  ? t("changePassword")
                   : tab === "My Profile"
                     ? setupMode
-                      ? "1. Profile"
-                      : t("myProfile") || tab
-                    : t("notifications") || tab}
+                      ? t("profileStepOne")
+                      : t("myProfile")
+                    : t("notifications")}
               </Button>
             ))}
           </div>
@@ -523,19 +523,19 @@ export default function ProfileSettings() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Profile Setup</CardTitle>
+              <CardTitle>{t('profileSetup')}</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoadingProfile ? (
                 <div className="flex items-center justify-center py-12 text-muted-foreground gap-2">
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Loading profile...
+                  {t('loadingProfile')}
                 </div>
               ) : (
                 <div className="space-y-4 max-w-2xl">
                   <div className="grid gap-2">
                     <Label htmlFor="fullName">
-                      Full Name <span className="text-destructive">*</span>
+                      {t('fullName')} <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="fullName"
@@ -543,13 +543,13 @@ export default function ProfileSettings() {
                       onChange={(e) =>
                         setProfileData({ ...profileData, name: e.target.value })
                       }
-                      placeholder="Enter your full name"
+                      placeholder={t('enterFullName')}
                       required
                     />
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="profileEmail">Email</Label>
+                    <Label htmlFor="profileEmail">{t('email')}</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                       <Input
@@ -564,18 +564,18 @@ export default function ProfileSettings() {
 
                   <div className="grid gap-2">
                     <Label>
-                      Store <span className="text-destructive">*</span>
+                      {t('store')} <span className="text-destructive">*</span>
                     </Label>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full justify-between">
-                          {profileData.storeName || "Select store"}
+                          {profileData.storeName || t('selectStore')}
                           <ChevronDown className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto">
                         {entities.length === 0 ? (
-                          <DropdownMenuItem disabled>No stores available</DropdownMenuItem>
+                          <DropdownMenuItem disabled>{t('noStoresAvailable')}</DropdownMenuItem>
                         ) : (
                           entities.map((entity) => (
                             <DropdownMenuItem
@@ -585,11 +585,11 @@ export default function ProfileSettings() {
                                   ...profileData,
                                   entityId: entity.id,
                                   storeName:
-                                    entity.storeName || entity.name || "Unnamed store",
+                                    entity.storeName || entity.name || t('unnamedStore'),
                                 })
                               }
                             >
-                              {entity.storeName || entity.name || "Unnamed store"}
+                              {entity.storeName || entity.name || t('unnamedStore')}
                             </DropdownMenuItem>
                           ))
                         )}
@@ -599,13 +599,13 @@ export default function ProfileSettings() {
 
                   <div className="grid gap-2">
                     <Label>
-                      Reporting Manager
+                      {t('reportingManager')}
                     </Label>
                     {managers.length > 0 ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" className="w-full justify-between">
-                            {profileData.manager || "Select reporting manager"}
+                            {profileData.manager || t('selectReportingManager')}
                             <ChevronDown className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -638,32 +638,32 @@ export default function ProfileSettings() {
                         onChange={(e) =>
                           setProfileData({ ...profileData, manager: e.target.value })
                         }
-                        placeholder="Enter reporting manager name"
+                        placeholder={t('enterManagerName')}
                       />
                     )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="designation">Designation</Label>
+                      <Label htmlFor="designation">{t('designation')}</Label>
                       <Input
                         id="designation"
                         value={profileData.designation}
                         onChange={(e) =>
                           setProfileData({ ...profileData, designation: e.target.value })
                         }
-                        placeholder="Optional"
+                        placeholder={t('optional')}
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="phone">Phone</Label>
+                      <Label htmlFor="phone">{t('phone')}</Label>
                       <Input
                         id="phone"
                         value={profileData.phone}
                         onChange={(e) =>
                           setProfileData({ ...profileData, phone: e.target.value })
                         }
-                        placeholder="Optional"
+                        placeholder={t('optional')}
                       />
                     </div>
                   </div>
@@ -683,7 +683,7 @@ export default function ProfileSettings() {
                         onClick={openPasswordTab}
                       >
                         <Lock className="w-4 h-4" />
-                        {t("changePassword") || "Change Password"}
+                        {t("changePassword")}
                       </Button>
                     )}
                     <Button
@@ -696,7 +696,7 @@ export default function ProfileSettings() {
                       ) : (
                         <Save className="w-4 h-4" />
                       )}
-                      {setupMode ? "Save & Continue" : "Save Changes"}
+                      {setupMode ? t('saveAndContinue') : t('saveChanges')}
                     </Button>
                   </div>
                 </div>
@@ -708,29 +708,29 @@ export default function ProfileSettings() {
             <>
               <Card>
                 <CardHeader>
-                  <CardTitle>Account Information</CardTitle>
+                  <CardTitle>{t('accountInformation')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-muted-foreground">Designation</span>
+                      <span className="text-muted-foreground">{t('designation')}</span>
                       <Badge variant="outline">
                         {accountMeta.designation || profileData.designation || "—"}
                       </Badge>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-muted-foreground">Account Status</span>
+                      <span className="text-muted-foreground">{t('accountStatus')}</span>
                       <Badge variant="default" className="gap-1">
                         <CheckCircle className="w-3 h-3" />
                         {accountMeta.status}
                       </Badge>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-muted-foreground">Joined Date</span>
+                      <span className="text-muted-foreground">{t('joinedDate')}</span>
                       <span>{accountMeta.joinedDate || "—"}</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
-                      <span className="text-muted-foreground">Last Login</span>
+                      <span className="text-muted-foreground">{t('lastLogin')}</span>
                       <span>{accountMeta.lastLogin || "—"}</span>
                     </div>
                     {!isProfileSetupComplete({
@@ -739,13 +739,12 @@ export default function ProfileSettings() {
                       manager: profileData.manager,
                     }) ? (
                       <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                        Complete name and store to finish profile setup (
-                        {completionProgress.percent}% done).
+                        {t('completeNameAndStoreToFinish')}{completionProgress.percent}% done).
                       </p>
                     ) : (
                       <p className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 flex items-center gap-2">
                         <CheckCircle className="w-4 h-4" />
-                        Profile setup complete
+                        {t('profileSetupComplete')}
                         {getStoredUser().profileSetupCompletedAt
                           ? ` · ${new Date(String(getStoredUser().profileSetupCompletedAt)).toLocaleString()}`
                           : ""}
@@ -757,14 +756,14 @@ export default function ProfileSettings() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Security</CardTitle>
+                  <CardTitle>{t('security')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
                     <div className="space-y-1">
-                      <div className="font-medium">Email OTP two-factor authentication</div>
+                      <div className="font-medium">{t('emailOtpTwoFactor')}</div>
                       <p className="text-sm text-muted-foreground">
-                        When enabled, every login requires a one-time OTP sent to your email address.
+                        {t('emailOtpTwoFactorDesc')}
                       </p>
                     </div>
                     <Switch
@@ -786,26 +785,25 @@ export default function ProfileSettings() {
             <CardTitle className="flex items-center gap-2">
               <Lock className="w-5 h-5" />
               {forcePasswordChange
-                ? "Password expired — change required"
+                ? t('passwordExpiredChangeRequired')
                 : setupMode
-                  ? "2. Verify Current Password"
-                  : t("changePassword") || "Change Password"}
+                  ? t('verifyCurrentPassword')
+                  : t("changePassword")}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {forcePasswordChange
-                ? "Your password has reached the rotation limit set by your organization. Verify your current password and set a new one to continue."
+                ? t('forcePasswordChangeDesc')
                 : setupMode
-                  ? "Enter your current password to verify your identity, then set a new secure password before entering the app."
-                  : t("changePasswordDescription") ||
-                    "Update your password to keep your account secure"}
+                  ? t('setupPasswordChangeDesc')
+                  : t("changePasswordDescription")}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
             {(setupMode || forcePasswordChange) && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                 {forcePasswordChange
-                  ? "Password rotation policy requires a new password. You cannot skip this step."
-                  : "Current password verification is required before your new password is saved."}
+                  ? t('forcePasswordChangeNotice')
+                  : t('setupPasswordChangeNotice')}
               </div>
             )}
             <PasswordChangeForm
@@ -822,10 +820,10 @@ export default function ProfileSettings() {
             {setupMode && !forcePasswordChange && (
               <div className="flex flex-wrap justify-end gap-2 pt-2 border-t">
                 <Button type="button" variant="outline" onClick={finishSetup}>
-                  Skip for now
+                  {t('skipForNow')}
                 </Button>
                 <Button type="button" onClick={finishSetup}>
-                  Continue to Dashboard
+                  {t('continueToDashboard')}
                 </Button>
               </div>
             )}
@@ -840,7 +838,7 @@ export default function ProfileSettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="w-5 h-5" />
-                {t("notificationPreferences") || "Notification Preferences"}
+                {t("notificationPreferences")}
               </CardTitle>
             </CardHeader>
             <CardContent>
