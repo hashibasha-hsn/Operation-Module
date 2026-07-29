@@ -81,6 +81,7 @@ import {
 } from "@/lib/ticketApi";
 import { fetchEntities, fetchUsers, getUserDisplayName } from "@/lib/processApi";
 import { humanLabel } from "@/lib/displayLabels";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type AssignOption = { id: string; label: string };
 
@@ -98,19 +99,21 @@ const ALL_EXPORT_COLUMNS = [
   "createdAt",
 ] as const;
 
-const COLUMN_DEFS: { key: string; label: string; sortable?: boolean }[] = [
-  { key: "title", label: "Title", sortable: true },
-  { key: "description", label: "Description" },
-  { key: "priority", label: "Priority", sortable: true },
-  { key: "status", label: "Status", sortable: true },
-  { key: "assignedTo", label: "Assigned To", sortable: true },
-  { key: "storeId", label: "Store", sortable: true },
-  { key: "dueDate", label: "Due Date", sortable: true },
-  { key: "timeLeft", label: "Time Left" },
-  { key: "createdBy", label: "Created By", sortable: true },
-];
-
 export default function Tickets() {
+  const { t } = useLanguage();
+
+  const COLUMN_DEFS: { key: string; label: string; sortable?: boolean }[] = useMemo(() => [
+    { key: "title", label: t('title'), sortable: true },
+    { key: "description", label: t('description') },
+    { key: "priority", label: t('priority'), sortable: true },
+    { key: "status", label: t('status'), sortable: true },
+    { key: "assignedTo", label: t('assignedTo'), sortable: true },
+    { key: "storeId", label: t('store'), sortable: true },
+    { key: "dueDate", label: t('dueDate'), sortable: true },
+    { key: "timeLeft", label: t('timeLeft') },
+    { key: "createdBy", label: t('createdBy'), sortable: true },
+  ], [t]);
+
   const [primaryFilter, setPrimaryFilter] = useState("assigned-to-me");
   const [statusFilter, setStatusFilter] = useState("total");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -196,13 +199,13 @@ export default function Tickets() {
       return levels.filter((level: any) => level.enabled !== false);
     }
     return [
-      { key: "highest", label: "Highest" },
-      { key: "high", label: "High" },
-      { key: "medium", label: "Medium" },
-      { key: "low", label: "Low" },
-      { key: "lowest", label: "Lowest" },
+      { key: "highest", label: t('highest') },
+      { key: "high", label: t('high') },
+      { key: "medium", label: t('medium') },
+      { key: "low", label: t('low') },
+      { key: "lowest", label: t('lowest') },
     ];
-  }, [ticketSettings]);
+  }, [ticketSettings, t]);
 
   const categoryLabel = (cat: any) => {
     if (!cat?.parentId) return cat?.categoryName || "";
@@ -211,12 +214,11 @@ export default function Tickets() {
   };
 
   const getUserLabel = (userId?: string) => {
-    if (!userId) return "N/A";
+    if (!userId) return t('notAvailable');
     const user = users.find((u) => u.id === userId || (u as any).userId === userId);
-    if (user) return user.label || "Unknown user";
-    // Never show raw UUIDs in the UI
+    if (user) return user.label || t('unknownUser');
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
-      return "Unknown user";
+      return t('unknownUser');
     }
     return userId;
   };
@@ -236,7 +238,7 @@ export default function Tickets() {
       return data;
     } catch (err: any) {
       console.error("Failed to fetch tickets:", err);
-      toast.error(err.message || "Failed to fetch tickets");
+      toast.error(err.message || t('failedToFetchTickets'));
       setTickets([]);
       return [];
     }
@@ -252,7 +254,7 @@ export default function Tickets() {
       setTickets(data || []);
       setLastUpdated(new Date());
     } catch (err: any) {
-      toast.error(err.message || "Failed to apply date filter");
+      toast.error(err.message || t('failedToApplyDateFilter'));
     }
   };
 
@@ -270,9 +272,9 @@ export default function Tickets() {
       await refreshTicketList();
       const refreshed = await fetchTicketById(id);
       setSelectedTicket(refreshed);
-      toast.success("Ticket status updated");
+      toast.success(t('ticketStatusUpdated'));
     } catch (err: any) {
-      toast.error(err.message || "Error updating status");
+      toast.error(err.message || t('errorUpdatingStatus'));
     }
   };
 
@@ -285,9 +287,9 @@ export default function Tickets() {
       await refreshTicketList();
       const refreshed = await fetchTicketById(selectedTicket.id);
       setSelectedTicket(refreshed);
-      toast.success("Comment added");
+      toast.success(t('commentAdded'));
     } catch (err: any) {
-      toast.error(err.message || "Error adding comment");
+      toast.error(err.message || t('errorAddingComment'));
     }
   };
 
@@ -295,7 +297,7 @@ export default function Tickets() {
     if (!file) return;
     const maxBytes = 5 * 1024 * 1024;
     if (file.size > maxBytes) {
-      toast.error("Attachment must be 5 MB or smaller");
+      toast.error(t('attachmentTooLarge'));
       return;
     }
     const reader = new FileReader();
@@ -314,15 +316,15 @@ export default function Tickets() {
   const handleCreateTicket = async () => {
     if (isCreating) return;
     if (!newTicket.title.trim() && newTicket.ticketType === "custom") {
-      toast.error("Title is required");
+      toast.error(t('titleRequiredError'));
       return;
     }
     if (newTicket.ticketType === "auto" && !newTicket.categoryId) {
-      toast.error("Category is required for auto tickets");
+      toast.error(t('categoryRequiredForAuto'));
       return;
     }
     if (!newTicket.storeId) {
-      toast.error("Store is required");
+      toast.error(t('storeRequiredError'));
       return;
     }
 
@@ -333,20 +335,20 @@ export default function Tickets() {
       selectedCategory.assigneeIds.length > 0;
 
     if (!newTicket.assignedTo && !hasCategoryAssignee) {
-      toast.error("Please select a user to assign the ticket");
+      toast.error(t('assigneeRequired'));
       return;
     }
 
     for (const tag of applicableTags) {
       if (!tag.isMandatory) continue;
       if (!newTicket.tagValues[tag.tagName]?.trim()) {
-        toast.error(`Tag "${tag.tagName}" is mandatory`);
+        toast.error(`${t('tagMandatory')} "${tag.tagName}"`);
         return;
       }
     }
 
     if (ticketSettings?.attachmentMandatory && newTicket.attachments.length === 0) {
-      toast.error("Attachment is mandatory");
+      toast.error(t('attachmentMandatoryError'));
       return;
     }
 
@@ -379,9 +381,9 @@ export default function Tickets() {
       });
       setIsCreateDialogOpen(false);
       fetchTickets();
-      toast.success("Ticket created");
+      toast.success(t('ticketCreated'));
     } catch (err: any) {
-      toast.error(err.message || "Error creating ticket");
+      toast.error(err.message || t('errorCreatingTicket'));
     } finally {
       setIsCreating(false);
     }
@@ -389,18 +391,18 @@ export default function Tickets() {
 
   const handleDeleteTicket = async (id: string) => {
     if (ticketSettings?.disableTicketDelete) {
-      toast.error("Ticket deletion is disabled by organization settings");
+      toast.error(t('deletionDisabled'));
       return;
     }
-    if (!confirm("Delete this ticket permanently?")) return;
+    if (!confirm(t('confirmDeleteTicket'))) return;
     try {
       await deleteTicket(id);
       setIsDetailDialogOpen(false);
       setSelectedTicket(null);
       await refreshTicketList();
-      toast.success("Ticket deleted");
+      toast.success(t('ticketDeleted'));
     } catch (err: any) {
-      toast.error(err.message || "Failed to delete ticket");
+      toast.error(err.message || t('failedToDeleteTicket'));
     }
   };
 
@@ -418,7 +420,7 @@ export default function Tickets() {
     for (const question of closureQuestions) {
       if (!question.isRequired) continue;
       if (!closureAnswers[question.id]?.trim()) {
-        toast.error(`Please answer: ${question.questionText}`);
+        toast.error(`${t('pleaseAnswer')}: ${question.questionText}`);
         return;
       }
     }
@@ -431,18 +433,18 @@ export default function Tickets() {
       await refreshTicketList();
       const refreshed = await fetchTicketById(selectedTicket.id);
       setSelectedTicket(refreshed);
-      toast.success("Ticket closed");
+      toast.success(t('ticketClosed'));
     } catch (err: any) {
-      toast.error(err.message || "Failed to close ticket");
+      toast.error(err.message || t('failedToCloseTicket'));
     } finally {
       setIsClosing(false);
     }
   };
 
   const getStoreLabel = (storeId?: string) => {
-    if (!storeId) return "N/A";
+    if (!storeId) return t('notAvailable');
     const entity = entities.find((e: any) => e.id === storeId);
-    return entity?.storeName || entity?.name || entity?.entityName || "N/A";
+    return entity?.storeName || entity?.name || entity?.entityName || t('notAvailable');
   };
 
   const handleExportCsv = (allFields = false) => {
@@ -453,7 +455,7 @@ export default function Tickets() {
       assignedTo: getUserLabel(ticket.assignedTo),
     }));
     exportTicketsToCsv(exportRows as TicketRecord[], columns);
-    toast.success("CSV exported");
+    toast.success(t('csvExported'));
   };
 
   const toggleColumn = (key: string, checked: boolean) => {
@@ -530,13 +532,14 @@ export default function Tickets() {
       case "storeId":
         return getStoreLabel(ticket.storeId);
       case "dueDate":
-        return ticket.dueDate ? new Date(ticket.dueDate).toLocaleDateString() : "N/A";
+        return ticket.dueDate ? new Date(ticket.dueDate).toLocaleDateString() : t('notAvailable');
       case "timeLeft": {
         const left = getTimeLeft(ticket.dueDate || "");
+        const isOverdue = ticket.dueDate && new Date(ticket.dueDate).getTime() < Date.now();
         return (
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
-            <span className={left === "Overdue" ? "text-red-600" : ""}>{left}</span>
+            <span className={isOverdue ? "text-red-600" : ""}>{left}</span>
           </div>
         );
       }
@@ -548,16 +551,16 @@ export default function Tickets() {
   };
 
   const getTimeLeft = (dueDate: string) => {
-    if (!dueDate) return 'No due date';
+    if (!dueDate) return t('noDueDate');
     const due = new Date(dueDate);
     const now = new Date();
     const diff = due.getTime() - now.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
-    if (diff < 0) return 'Overdue';
-    if (days === 0) return 'Today';
-    if (days === 1) return '1 day';
-    return `${days} days`;
+
+    if (diff < 0) return t('overdue');
+    if (days === 0) return t('today');
+    if (days === 1) return t('oneDay');
+    return `${days} ${t('days')}`;
   };
 
   const getStatusIcon = (status: string) => {
@@ -609,23 +612,23 @@ export default function Tickets() {
   const activeColumns = COLUMN_DEFS.filter((col) => visibleColumns.includes(col.key));
 
   const primaryFilters = [
-    { label: "Assigned to me", value: "assigned-to-me" },
-    { label: "Created by me", value: "created-by-me" },
-    { label: "Closure Assigned", value: "closure-assigned" },
+    { label: t('assignedToMe'), value: "assigned-to-me" },
+    { label: t('createdByMe'), value: "created-by-me" },
+    { label: t('closureAssigned'), value: "closure-assigned" },
   ];
 
   const statusFilters = [
-    { label: "Total", value: "total" },
-    { label: "Open", value: "open" },
-    { label: "In Progress", value: "in_progress" },
-    { label: "On Hold", value: "on_hold" },
-    { label: "Completed", value: "complete" },
-    { label: "Closed", value: "closed" },
-    { label: "Rejected", value: "rejected" },
-    { label: "Overdue", value: "overdue" },
-    { label: "On Time", value: "on-time" },
-    { label: "Due Today", value: "due-today" },
-    { label: "Active", value: "active" },
+    { label: t('total'), value: "total" },
+    { label: t('open'), value: "open" },
+    { label: t('inProgress'), value: "in_progress" },
+    { label: t('onHold'), value: "on_hold" },
+    { label: t('completed'), value: "complete" },
+    { label: t('closed'), value: "closed" },
+    { label: t('rejected'), value: "rejected" },
+    { label: t('overdue'), value: "overdue" },
+    { label: t('onTime'), value: "on-time" },
+    { label: t('dueToday'), value: "due-today" },
+    { label: t('active'), value: "active" },
   ];
 
   return (
@@ -637,9 +640,9 @@ export default function Tickets() {
         transition={{ duration: 0.5 }}
       >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Ticket Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('ticketDashboard')}</h1>
           <p className="text-gray-600 mt-1">
-            Manage and track all your tickets in one place
+            {t('ticketDashboardDesc')}
           </p>
         </div>
       </motion.div>
@@ -680,7 +683,7 @@ export default function Tickets() {
       <div className="flex-1 relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <Input
-          placeholder="Search tickets..."
+          placeholder={t('searchTickets')}
           className="pl-10"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -696,7 +699,7 @@ export default function Tickets() {
                 className="w-[160px] justify-start text-left font-normal border-gray-300"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "PPP") : "Start Date"}
+                {startDate ? format(startDate, "PPP") : t('startDate')}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -709,7 +712,7 @@ export default function Tickets() {
             </PopoverContent>
           </Popover>
 
-          <span className="text-gray-500">to</span>
+          <span className="text-gray-500">{t('to')}</span>
 
           <Popover>
             <PopoverTrigger asChild>
@@ -718,7 +721,7 @@ export default function Tickets() {
                 className="w-[160px] justify-start text-left font-normal border-gray-300"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "PPP") : "End Date"}
+                {endDate ? format(endDate, "PPP") : t('endDate')}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -731,8 +734,8 @@ export default function Tickets() {
             </PopoverContent>
           </Popover>
 
-          <Button onClick={applyDateFilter}>Apply</Button>
-          <Button variant="outline" onClick={resetFilters}>Reset</Button>
+          <Button onClick={applyDateFilter}>{t('apply')}</Button>
+          <Button variant="outline" onClick={resetFilters}>{t('reset')}</Button>
         </div>
       </motion.div>
 
@@ -770,18 +773,18 @@ export default function Tickets() {
       >
         <div className="flex gap-3 items-center">
           <Button variant="outline" size="sm" onClick={fetchTickets}>
-            Refresh
+            {t('refresh')}
           </Button>
 
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2">
                 <Settings className="w-4 h-4" />
-                Report Settings
+                {t('reportSettings')}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-64" align="start">
-              <p className="text-sm font-medium mb-3">Visible columns</p>
+              <p className="text-sm font-medium mb-3">{t('visibleColumns')}</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {COLUMN_DEFS.map((col) => (
                   <label key={col.key} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -800,34 +803,34 @@ export default function Tickets() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2">
                 <Download className="w-4 h-4" />
-                Export CSV
+                {t('exportCsv')}
                 <ChevronDown className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onClick={() => handleExportCsv(false)}>
-                Visible columns
+                {t('visibleColumns')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleExportCsv(true)}>
-                With all fields
+                {t('withAllFields')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           <Button className="flex items-center gap-2" onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="w-4 h-4" />
-            New Ticket
+            {t('newTicket')}
           </Button>
           <Link href="/ticket-setup">
             <Button variant="outline" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
-              Ticket Setup
+              {t('ticketSetup')}
             </Button>
           </Link>
         </div>
 
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>Last Updated At:</span>
+          <span>{t('lastUpdatedAt')}</span>
           <span>{lastUpdated ? lastUpdated.toLocaleString() : "-"}</span>
           <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={fetchTickets}>
             <RefreshCw className="w-4 h-4" />
@@ -857,7 +860,7 @@ export default function Tickets() {
               transition={{ duration: 0.5, delay: 0.7 }}
               className="text-gray-500 text-lg"
             >
-              No Tickets available. Try selecting different filters or create a new ticket.
+              {t('noTicketsAvailable')}
             </motion.p>
           </div>
         ) : (
@@ -882,7 +885,7 @@ export default function Tickets() {
                         )}
                       </TableHead>
                     ))}
-                    <TableHead className="w-[90px]">Actions</TableHead>
+                    <TableHead className="w-[90px]">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -909,7 +912,7 @@ export default function Tickets() {
                               setIsDetailDialogOpen(true);
                             }}
                           >
-                            View
+                            {t('view')}
                           </DropdownMenuItem>
                         </TableActionsMenu>
                       </TableCell>
@@ -926,14 +929,14 @@ export default function Tickets() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Create New Ticket</DialogTitle>
+            <DialogTitle>{t('createNewTicket')}</DialogTitle>
             <DialogDescription>
-              Create a new issue ticket to track and resolve problems.
+              {t('createTicketDesc')}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label>Ticket Type</Label>
+              <Label>{t('ticketType')}</Label>
               <Select
                 value={newTicket.ticketType}
                 onValueChange={(value: "custom" | "auto") =>
@@ -944,15 +947,15 @@ export default function Tickets() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="custom">Custom Ticket</SelectItem>
-                  <SelectItem value="auto">Auto Ticket</SelectItem>
+                  <SelectItem value="custom">{t('customTicket')}</SelectItem>
+                  <SelectItem value="auto">{t('autoTicket')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {newTicket.ticketType === "auto" && (
               <div className="grid gap-2">
-                <Label>Category</Label>
+                <Label>{t('category')}</Label>
                 <Select
                   value={newTicket.categoryId || "none"}
                   onValueChange={(value) => {
@@ -975,10 +978,10 @@ export default function Tickets() {
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder={t('selectCategory')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Select category</SelectItem>
+                    <SelectItem value="none">{t('selectCategory')}</SelectItem>
                     {categories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
                         {categoryLabel(cat)}
@@ -990,19 +993,19 @@ export default function Tickets() {
             )}
 
             <div className="grid gap-2">
-              <Label htmlFor="title">Title *</Label>
+              <Label htmlFor="title">{t('titleRequired')}</Label>
               <Input
                 id="title"
-                placeholder="Enter ticket title"
+                placeholder={t('enterTicketTitle')}
                 value={newTicket.title}
                 onChange={(e) => setNewTicket({ ...newTicket, title: e.target.value })}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('description')}</Label>
               <Textarea
                 id="description"
-                placeholder="Enter ticket description"
+                placeholder={t('enterTicketDescription')}
                 value={newTicket.description}
                 onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
                 rows={3}
@@ -1011,7 +1014,7 @@ export default function Tickets() {
             <div className="grid grid-cols-2 gap-4">
               {!ticketSettings?.hidePriorities && (
                 <div className="grid gap-2">
-                  <Label htmlFor="priority">Priority</Label>
+                  <Label htmlFor="priority">{t('priority')}</Label>
                   <Select
                     value={newTicket.priority}
                     onValueChange={(value) => {
@@ -1042,7 +1045,7 @@ export default function Tickets() {
                 </div>
               )}
               <div className="grid gap-2">
-                <Label htmlFor="storeId">Store *</Label>
+                <Label htmlFor="storeId">{t('storeRequired')}</Label>
                 <Select
                   value={newTicket.storeId || "none"}
                   onValueChange={(value) =>
@@ -1050,10 +1053,10 @@ export default function Tickets() {
                   }
                 >
                   <SelectTrigger id="storeId">
-                    <SelectValue placeholder="Select store" />
+                    <SelectValue placeholder={t('selectStore')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Select store</SelectItem>
+                    <SelectItem value="none">{t('selectStore')}</SelectItem>
                     {entities.map((entity: any) => (
                       <SelectItem key={entity.id} value={entity.id}>
                         {humanLabel(entity.storeName, entity.name, "Unnamed store")}
@@ -1066,8 +1069,8 @@ export default function Tickets() {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="assignedTo">
-                  Assigned To
-                  {newTicket.ticketType === "auto" ? " (optional if category has assignees)" : " *"}
+                  {t('assignedTo')}
+                  {newTicket.ticketType === "auto" ? t('optionalIfCategoryHasAssignees') : " " + t('required')}
                 </Label>
                 <Select
                   value={newTicket.assignedTo || "none"}
@@ -1076,10 +1079,10 @@ export default function Tickets() {
                   }
                 >
                   <SelectTrigger id="assignedTo">
-                    <SelectValue placeholder="Select user" />
+                    <SelectValue placeholder={t('selectUser')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Select user</SelectItem>
+                    <SelectItem value="none">{t('selectUser')}</SelectItem>
                     {users.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.label}
@@ -1089,12 +1092,12 @@ export default function Tickets() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Due Date</Label>
+                <Label>{t('dueDate')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newTicket.dueDate ? format(newTicket.dueDate, "PPP") : "Pick a date"}
+                      {newTicket.dueDate ? format(newTicket.dueDate, "PPP") : t('pickADate')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -1113,7 +1116,7 @@ export default function Tickets() {
               <div key={tag.id} className="grid gap-2">
                 <Label>
                   {tag.tagName}
-                  {tag.isMandatory ? " *" : ""}
+                  {tag.isMandatory ? " " + t('required') : ""}
                 </Label>
                 {(tag.tagValues?.length ?? 0) > 0 ? (
                   <Select
@@ -1132,7 +1135,7 @@ export default function Tickets() {
                       <SelectValue placeholder={`Select ${tag.tagName}`} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Select value</SelectItem>
+                      <SelectItem value="none">{t('selectValue')}</SelectItem>
                       {tag.tagValues.map((val: string) => (
                         <SelectItem key={val} value={val}>
                           {val}
@@ -1155,7 +1158,7 @@ export default function Tickets() {
             ))}
 
             <div className="grid gap-2">
-              <Label>Attachments {ticketSettings?.attachmentMandatory ? "*" : ""}</Label>
+              <Label>{t('attachments')} {ticketSettings?.attachmentMandatory ? t('required') : ""}</Label>
               <Input
                 type="file"
                 accept="image/*,video/*,.pdf"
@@ -1163,17 +1166,17 @@ export default function Tickets() {
               />
               {newTicket.attachments.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {newTicket.attachments.length} file(s) attached
+                  {newTicket.attachments.length} {t('filesAttached')}
                 </p>
               )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={isCreating}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button onClick={handleCreateTicket} disabled={isCreating}>
-              {isCreating ? "Creating..." : "Create Ticket"}
+              {isCreating ? t('creating') : t('createTicket')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1183,20 +1186,20 @@ export default function Tickets() {
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Ticket Details</DialogTitle>
+            <DialogTitle>{t('ticketDetails')}</DialogTitle>
             <DialogDescription>
-              View and manage ticket details.
+              {t('ticketDetailsDesc')}
             </DialogDescription>
           </DialogHeader>
           {selectedTicket && (
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Title</Label>
+                  <Label>{t('title')}</Label>
                   <div className="text-sm mt-1 font-medium">{selectedTicket.title}</div>
                 </div>
                 <div>
-                  <Label>Priority</Label>
+                  <Label>{t('priority')}</Label>
                   <div className="mt-1">
                     <Badge
                       variant={selectedTicket.priority === 'highest' || selectedTicket.priority === 'high' ? 'destructive' : selectedTicket.priority === 'medium' ? 'default' : 'secondary'}
@@ -1206,7 +1209,7 @@ export default function Tickets() {
                   </div>
                 </div>
                 <div>
-                  <Label>Status</Label>
+                  <Label>{t('status')}</Label>
                   <div className="mt-1">
                     <Badge
                       variant={
@@ -1220,31 +1223,31 @@ export default function Tickets() {
                   </div>
                 </div>
                 <div>
-                  <Label>Due Date</Label>
+                  <Label>{t('dueDate')}</Label>
                   <div className="text-sm mt-1">
-                    {selectedTicket.dueDate ? new Date(selectedTicket.dueDate).toLocaleString() : 'N/A'}
+                    {selectedTicket.dueDate ? new Date(selectedTicket.dueDate).toLocaleString() : t('notAvailable')}
                   </div>
                 </div>
                 <div>
-                  <Label>Assigned To</Label>
+                  <Label>{t('assignedTo')}</Label>
                   <div className="text-sm mt-1">{getUserLabel(selectedTicket.assignedTo)}</div>
                 </div>
                 <div>
-                  <Label>Created By</Label>
+                  <Label>{t('createdBy')}</Label>
                   <div className="text-sm mt-1">{getUserLabel(selectedTicket.createdBy)}</div>
                 </div>
               </div>
 
               <div>
-                <Label>Description</Label>
+                <Label>{t('description')}</Label>
                 <div className="text-sm mt-1 p-3 border rounded-lg bg-muted">
-                  {selectedTicket.description || 'No description'}
+                  {selectedTicket.description || t('noDescription')}
                 </div>
               </div>
 
               {Array.isArray(selectedTicket.attachments) && selectedTicket.attachments.length > 0 && (
                 <div>
-                  <Label>Attachments</Label>
+                  <Label>{t('attachments')}</Label>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {selectedTicket.attachments.map((att: any, index: number) => (
                       <a
@@ -1267,7 +1270,7 @@ export default function Tickets() {
                   : Object.keys(selectedTicket.tags).length > 0
               ) && (
                 <div>
-                  <Label>Tags</Label>
+                  <Label>{t('tags')}</Label>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {Array.isArray(selectedTicket.tags)
                       ? selectedTicket.tags.map((tag: any, index: number) => (
@@ -1289,7 +1292,7 @@ export default function Tickets() {
                   (key) => !key.startsWith("_"),
                 ).length > 0 && (
                   <div>
-                    <Label>Closure Answers</Label>
+                    <Label>{t('closureAnswers')}</Label>
                     <div className="mt-2 space-y-2">
                       {Object.entries(selectedTicket.closureAnswers)
                         .filter(([key]) => !key.startsWith("_"))
@@ -1310,7 +1313,7 @@ export default function Tickets() {
 
               {selectedTicket.comments && selectedTicket.comments.length > 0 && (
                 <div>
-                  <Label>Comments</Label>
+                  <Label>{t('comments')}</Label>
                   <div className="mt-2 space-y-2">
                     {selectedTicket.comments.map((comment: any, index: number) => (
                       <div key={index} className="border rounded p-3">
@@ -1328,31 +1331,31 @@ export default function Tickets() {
           )}
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsCommentDialogOpen(true)}>
-              Add Comment
+              {t('addComment')}
             </Button>
             {selectedTicket?.status === 'open' && (
               <>
                 <Button variant="outline" onClick={() => handleUpdateStatus(selectedTicket.id, 'in_progress')}>
-                  Start Progress
+                  {t('startProgress')}
                 </Button>
                 <Button onClick={() => handleUpdateStatus(selectedTicket.id, 'complete')}>
-                  Mark Complete
+                  {t('markComplete')}
                 </Button>
               </>
             )}
             {selectedTicket?.status === 'in_progress' && (
               <>
                 <Button variant="outline" onClick={() => handleUpdateStatus(selectedTicket.id, 'on_hold')}>
-                  Put on Hold
+                  {t('putOnHold')}
                 </Button>
                 <Button onClick={() => handleUpdateStatus(selectedTicket.id, 'complete')}>
-                  Mark Complete
+                  {t('markComplete')}
                 </Button>
               </>
             )}
             {selectedTicket?.status === 'complete' && (
               <Button onClick={openCloseDialog}>
-                Close Ticket
+                {t('closeTicket')}
               </Button>
             )}
             {!ticketSettings?.disableTicketDelete && (
@@ -1361,11 +1364,11 @@ export default function Tickets() {
                 onClick={() => handleDeleteTicket(selectedTicket.id)}
               >
                 <Trash2 className="w-4 h-4 mr-1" />
-                Delete
+                {t('delete')}
               </Button>
             )}
             <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
-              Close
+              {t('close')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1374,9 +1377,9 @@ export default function Tickets() {
       <Dialog open={isCloseDialogOpen} onOpenChange={setIsCloseDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Close Ticket</DialogTitle>
+            <DialogTitle>{t('closeTicketTitle')}</DialogTitle>
             <DialogDescription>
-              Answer the configured closure questions before closing this ticket.
+              {t('closeTicketDesc')}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
@@ -1384,7 +1387,7 @@ export default function Tickets() {
               <div key={question.id} className="grid gap-2">
                 <Label>
                   {question.questionText}
-                  {question.isRequired ? " *" : ""}
+                  {question.isRequired ? " " + t('required') : ""}
                 </Label>
                 {question.questionType === "yes_no" ? (
                   <Select
@@ -1397,12 +1400,12 @@ export default function Tickets() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={t('select')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Select</SelectItem>
-                      <SelectItem value="Yes">Yes</SelectItem>
-                      <SelectItem value="No">No</SelectItem>
+                      <SelectItem value="none">{t('select')}</SelectItem>
+                      <SelectItem value="Yes">{t('yes')}</SelectItem>
+                      <SelectItem value="No">{t('no')}</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : question.questionType === "dropdown" ? (
@@ -1416,10 +1419,10 @@ export default function Tickets() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={t('select')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Select</SelectItem>
+                      <SelectItem value="none">{t('select')}</SelectItem>
                       {(question.options || []).map((opt: string) => (
                         <SelectItem key={opt} value={opt}>
                           {opt}
@@ -1444,10 +1447,10 @@ export default function Tickets() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCloseDialogOpen(false)} disabled={isClosing}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button onClick={handleCloseWithAnswers} disabled={isClosing}>
-              {isClosing ? "Closing..." : "Confirm Close"}
+              {isClosing ? t('closing') : t('confirmClose')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1457,17 +1460,17 @@ export default function Tickets() {
       <Dialog open={isCommentDialogOpen} onOpenChange={setIsCommentDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Comment</DialogTitle>
+            <DialogTitle>{t('addComment')}</DialogTitle>
             <DialogDescription>
-              Add a comment to this ticket.
+              {t('addCommentDesc')}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="comment">Comment</Label>
+              <Label htmlFor="comment">{t('comment')}</Label>
               <Textarea
                 id="comment"
-                placeholder="Enter your comment..."
+                placeholder={t('enterYourComment')}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={4}
@@ -1476,10 +1479,10 @@ export default function Tickets() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCommentDialogOpen(false)}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button onClick={handleAddComment}>
-              Add Comment
+              {t('addComment')}
             </Button>
           </DialogFooter>
         </DialogContent>

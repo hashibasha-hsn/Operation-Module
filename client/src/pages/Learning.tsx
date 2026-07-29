@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Trophy, Clock, CheckCircle, Book, Star, TrendingUp, Play } from "lucide-react";
 import { fetchAssignedAssessments } from "@/lib/assessmentApi";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   countCompletedAttempts,
   fetchUserAssessmentResults,
@@ -21,21 +22,22 @@ import {
   getLatestResultForAssessment,
 } from "@/lib/assessmentSubmission";
 
-function getAssessmentStatus(assessment: any, results: any[]) {
+function getAssessmentStatus(assessment: any, results: any[], t: (key: string) => string) {
   const inProgress = getInProgressResult(results, assessment.id);
-  if (inProgress) return { label: "In Progress", variant: "secondary" as const };
+  if (inProgress) return { label: t('inProgress'), variant: "secondary" as const };
 
   const latest = getLatestResultForAssessment(
     results.filter((item) => item.assessmentId === assessment.id && item.status === "completed"),
     assessment.id,
   );
-  if (latest?.passed) return { label: "Passed", variant: "default" as const };
-  if (latest) return { label: "Failed", variant: "destructive" as const };
+  if (latest?.passed) return { label: t('passed'), variant: "default" as const };
+  if (latest) return { label: t('failed'), variant: "destructive" as const };
 
-  return { label: "Not Started", variant: "outline" as const };
+  return { label: t('notStarted'), variant: "outline" as const };
 }
 
 export default function Learning() {
+  const { t } = useLanguage();
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("courses");
   const [assessments, setAssessments] = useState<any[]>([]);
@@ -68,7 +70,7 @@ export default function Learning() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-2xl font-bold text-slate-900">Learning & Development</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t('learningAndDevelopment')}</h1>
       </motion.div>
 
       <motion.div
@@ -76,14 +78,14 @@ export default function Learning() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <h2 className="text-lg font-semibold text-slate-700 mb-4">Key Highlights</h2>
+        <h2 className="text-lg font-semibold text-slate-700 mb-4">{t('keyHighlights')}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <HighlightCard icon={Trophy} label="Assessments Passed" value={String(passedCount)} tooltip="Passed assessments" delay={0.2} />
-          <HighlightCard icon={Clock} label="Time Spent" value="-" tooltip="View time spent learning" delay={0.25} />
-          <HighlightCard icon={CheckCircle} label="Completed Courses" value="-" tooltip="View completed courses" delay={0.3} />
-          <HighlightCard icon={Book} label="Total Courses" value="-" tooltip="View all courses" delay={0.35} />
-          <HighlightCard icon={Star} label="Total Score" value="-" tooltip="View total score" delay={0.4} />
-          <HighlightCard icon={TrendingUp} label="Learning Progress" value="-" tooltip="View learning progress" delay={0.45} />
+          <HighlightCard icon={Trophy} label={t('assessmentsPassed')} value={String(passedCount)} tooltip={t('assessmentsPassedTooltip')} delay={0.2} />
+          <HighlightCard icon={Clock} label={t('timeSpent')} value="-" tooltip={t('timeSpentTooltip')} delay={0.25} />
+          <HighlightCard icon={CheckCircle} label={t('completedCourses')} value="-" tooltip={t('completedCoursesTooltip')} delay={0.3} />
+          <HighlightCard icon={Book} label={t('totalCourses')} value="-" tooltip={t('totalCoursesTooltip')} delay={0.35} />
+          <HighlightCard icon={Star} label={t('totalScore')} value="-" tooltip={t('totalScoreTooltip')} delay={0.4} />
+          <HighlightCard icon={TrendingUp} label={t('learningProgress')} value="-" tooltip={t('learningProgressTooltip')} delay={0.45} />
         </div>
       </motion.div>
 
@@ -98,29 +100,29 @@ export default function Learning() {
               value="courses"
               className="data-[state=active]:gradient-primary data-[state=active]:text-white data-[state=active]:border-transparent border border-transparent rounded-md px-6 py-2"
             >
-              Courses
+              {t('courses')}
             </TabsTrigger>
             <TabsTrigger
               value="assessments"
               className="data-[state=active]:gradient-primary data-[state=active]:text-white data-[state=active]:border-transparent border border-transparent rounded-md px-6 py-2"
             >
-              Assessment
+              {t('assessment')}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="courses" className="mt-6">
-            <EmptyState message="No courses assigned yet" />
+            <EmptyState message={t('noCoursesAssigned')} />
           </TabsContent>
 
           <TabsContent value="assessments" className="mt-6">
             {loadingAssessments ? (
-              <p className="text-muted-foreground">Loading assessments...</p>
+              <p className="text-muted-foreground">{t('loadingAssessments')}</p>
             ) : assessments.length === 0 ? (
-              <EmptyState message="No assessments assigned to you" />
+              <EmptyState message={t('noAssessmentsAssigned')} />
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 {assessments.map((assessment) => {
-                  const status = getAssessmentStatus(assessment, results);
+                  const status = getAssessmentStatus(assessment, results, t);
                   const attempts = countCompletedAttempts(results, assessment.id);
                   const latest = getLatestResultForAssessment(
                     results.filter(
@@ -146,16 +148,16 @@ export default function Learning() {
                       </CardHeader>
                       <CardContent className="flex items-center justify-between gap-3">
                         <div className="text-sm text-muted-foreground">
-                          Pass: {assessment.passingScore ?? 0}%
-                          {latest?.percentage != null && ` · Last score: ${latest.percentage}%`}
-                          {attempts > 0 && ` · Attempts: ${attempts}/${assessment.maxAttempts ?? 1}`}
+                          {t('passLabel')} {assessment.passingScore ?? 0}%
+                          {latest?.percentage != null && ` · ${t('lastScoreLabel')} ${latest.percentage}%`}
+                          {attempts > 0 && ` · ${t('attemptsLabel')} ${attempts}/${assessment.maxAttempts ?? 1}`}
                         </div>
                         <Button
                           className="gap-2"
                           onClick={() => navigate(`/learning/assessment/${assessment.id}`)}
                         >
                           <Play className="h-4 w-4" />
-                          {status.label === "In Progress" ? "Continue" : "Start"}
+                          {status.label === t('inProgress') ? t('continue') : t('start')}
                         </Button>
                       </CardContent>
                     </Card>
