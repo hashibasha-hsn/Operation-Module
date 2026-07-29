@@ -1,3 +1,4 @@
+import { GATEWAY } from "@/lib/apiConfig";
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,7 +125,7 @@ function validatePhoneNumber(phone: string, countryCode: string): string | null 
 }
 
 async function createAuthUserAccount(params: { id: string; email: string; password: string }) {
-  const response = await fetch("http://localhost:3009/api/auth/users", {
+  const response = await fetch(`${GATEWAY}/api/auth/users`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -138,7 +139,7 @@ async function createAuthUserAccount(params: { id: string; email: string; passwo
 }
 
 async function sendWelcomeEmailToUser(params: { email: string; name?: string; password: string }) {
-  const response = await fetch("http://localhost:3009/api/notification/email/welcome", {
+  const response = await fetch(`${GATEWAY}/api/notification/email/welcome`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -302,7 +303,7 @@ export default function UsersPage() {
 
   const fetchEntities = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/org/entities?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/org/entities?organizationId=${encodeURIComponent(getOrganizationId())}`);
       const data = await response.json();
       setEntities(data || []);
     } catch (err) {
@@ -312,7 +313,7 @@ export default function UsersPage() {
 
   const fetchUserTags = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/user/user-tags?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/user/user-tags?organizationId=${encodeURIComponent(getOrganizationId())}`);
       const data = await response.json();
       // Transform database response to match frontend structure
       const transformedTags = Array.isArray(data) ? data.map((tag: any) => ({
@@ -330,7 +331,7 @@ export default function UsersPage() {
 
   const fetchUserTeams = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/user/user-teams?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/user/user-teams?organizationId=${encodeURIComponent(getOrganizationId())}`);
       const data = await response.json();
       setUserTeams(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -389,7 +390,7 @@ export default function UsersPage() {
 
   const fetchDesignations = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/user/designations?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/user/designations?organizationId=${encodeURIComponent(getOrganizationId())}`);
       const data = await response.json();
 
       const designationsWithDetails = await Promise.all(
@@ -398,7 +399,7 @@ export default function UsersPage() {
           let reportingDesignationName = null;
 
           try {
-            const mappingResponse = await fetch(`http://localhost:3009/api/user/designation-role-mapping/designation/${designation.id}`);
+            const mappingResponse = await fetch(`${GATEWAY}/api/user/designation-role-mapping/designation/${designation.id}`);
             const mapping = await mappingResponse.json();
             if (mapping && mapping.systemRole) {
               systemRole = mapping.systemRole;
@@ -409,7 +410,7 @@ export default function UsersPage() {
 
           if (designation.reportingDesignationId) {
             try {
-              const reportingResponse = await fetch(`http://localhost:3009/api/user/designations/${designation.reportingDesignationId}`);
+              const reportingResponse = await fetch(`${GATEWAY}/api/user/designations/${designation.reportingDesignationId}`);
               const reportingDesignation = await reportingResponse.json();
               if (reportingDesignation) {
                 reportingDesignationName = reportingDesignation.name;
@@ -435,9 +436,9 @@ export default function UsersPage() {
 
   const fetchSystemRoles = async () => {
     try {
-      let response = await fetch('http://localhost:3009/api/user/system-roles');
+      let response = await fetch(`${GATEWAY}/api/user/system-roles`);
       if (!response.ok) {
-        response = await fetch('http://localhost:3009/api/user/system-roles');
+        response = await fetch(`${GATEWAY}/api/user/system-roles`);
       }
       const data = await response.json();
       const roles = Array.isArray(data) ? data : data?.roles || [];
@@ -453,7 +454,7 @@ export default function UsersPage() {
     systemRoleId: string,
   ) => {
     const response = await fetch(
-      `http://localhost:3009/api/user/designation-role-mapping/designation/${designationId}`,
+      `${GATEWAY}/api/user/designation-role-mapping/designation/${designationId}`,
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -484,7 +485,7 @@ export default function UsersPage() {
       let reportingDesignationId = null;
       if (designationData.reportingDesignation) {
         try {
-          const designationsResponse = await fetch(`http://localhost:3009/api/user/designations?organizationId=${encodeURIComponent(getOrganizationId())}`);
+          const designationsResponse = await fetch(`${GATEWAY}/api/user/designations?organizationId=${encodeURIComponent(getOrganizationId())}`);
           const designations = await designationsResponse.json();
           const reportingDesignation = designations.find((d: any) => d.name === designationData.reportingDesignation);
           if (reportingDesignation) {
@@ -495,7 +496,7 @@ export default function UsersPage() {
         }
       }
 
-      const response = await fetch('http://localhost:3009/api/user/designations', {
+      const response = await fetch(`${GATEWAY}/api/user/designations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -552,7 +553,7 @@ export default function UsersPage() {
       let reportingDesignationId = null;
       if (designationData.reportingDesignation) {
         try {
-          const designationsResponse = await fetch(`http://localhost:3009/api/user/designations?organizationId=${encodeURIComponent(getOrganizationId())}`);
+          const designationsResponse = await fetch(`${GATEWAY}/api/user/designations?organizationId=${encodeURIComponent(getOrganizationId())}`);
           const designations = await designationsResponse.json();
           const reportingDesignation = designations.find((d: any) => d.name === designationData.reportingDesignation);
           if (reportingDesignation) {
@@ -563,7 +564,7 @@ export default function UsersPage() {
         }
       }
 
-      const response = await fetch(`http://localhost:3009/api/user/designations/${editingDesignation.id}`, {
+      const response = await fetch(`${GATEWAY}/api/user/designations/${editingDesignation.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -598,7 +599,7 @@ export default function UsersPage() {
 
     try {
       console.log('Attempting to delete designation with ID:', id);
-      const response = await fetch(`http://localhost:3009/api/user/designations/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${GATEWAY}/api/user/designations/${id}`, { method: 'DELETE' });
       console.log('Delete response status:', response.status);
       
       if (response.ok) {
@@ -615,7 +616,8 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/user/users?limit=1000');
+      const response = await fetch(`${GATEWAY}/api/user/users?limit=1000`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       // Parse tags if they come as JSON strings from the database
       const usersWithParsedTags = (data.users || []).map((user: any) => ({
@@ -633,7 +635,7 @@ export default function UsersPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/user/users/stats/overview');
+      const response = await fetch(`${GATEWAY}/api/user/users/stats/overview`);
       const data = await response.json();
       setStats(data);
     } catch (err) {
@@ -643,7 +645,7 @@ export default function UsersPage() {
 
   const fetchRemovedUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/user/users/removed');
+      const response = await fetch(`${GATEWAY}/api/user/users/removed`);
       if (!response.ok) {
         console.error('Failed to fetch removed users:', response.statusText);
         setRemovedUsers([]);
@@ -664,7 +666,7 @@ export default function UsersPage() {
 
   const handleToggleValidEmail = async (userId: string) => {
     try {
-      const response = await fetch(`http://localhost:3009/api/user/users/${userId}/toggle-valid-email`, {
+      const response = await fetch(`${GATEWAY}/api/user/users/${userId}/toggle-valid-email`, {
         method: 'POST',
       });
       if (response.ok) {
@@ -680,7 +682,7 @@ export default function UsersPage() {
 
   const handleToggleUserStatus = async (userId: string) => {
     try {
-      const response = await fetch(`http://localhost:3009/api/user/users/${userId}/toggle-status`, {
+      const response = await fetch(`${GATEWAY}/api/user/users/${userId}/toggle-status`, {
         method: 'POST',
       });
       if (response.ok) {
@@ -727,7 +729,7 @@ export default function UsersPage() {
     try {
       setPhoneError("");
       setCreateError("");
-      const response = await fetch('http://localhost:3009/api/user/users', {
+      const response = await fetch(`${GATEWAY}/api/user/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -831,7 +833,7 @@ export default function UsersPage() {
 
   const handleCreateUserTag = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/user/user-tags', {
+      const response = await fetch(`${GATEWAY}/api/user/user-tags`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -872,7 +874,7 @@ export default function UsersPage() {
     if (!editingUserTag) return;
 
     try {
-      const response = await fetch(`http://localhost:3009/api/user/user-tags/${editingUserTag.id}`, {
+      const response = await fetch(`${GATEWAY}/api/user/user-tags/${editingUserTag.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -903,7 +905,7 @@ export default function UsersPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3009/api/user/user-tags/${id}`, {
+      const response = await fetch(`${GATEWAY}/api/user/user-tags/${id}`, {
         method: 'DELETE',
       });
 
@@ -924,7 +926,7 @@ export default function UsersPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:3009/api/user/user-teams', {
+      const response = await fetch(`${GATEWAY}/api/user/user-teams`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -951,7 +953,7 @@ export default function UsersPage() {
 
   const handleEditTeam = async (team: any) => {
     try {
-      const response = await fetch(`http://localhost:3009/api/user/user-teams/${team.id}`);
+      const response = await fetch(`${GATEWAY}/api/user/user-teams/${team.id}`);
       const data = await response.json();
       setEditingTeam(data);
       setUserTeamData({
@@ -968,7 +970,7 @@ export default function UsersPage() {
     if (!editingTeam) return;
 
     try {
-      const response = await fetch(`http://localhost:3009/api/user/user-teams/${editingTeam.id}`, {
+      const response = await fetch(`${GATEWAY}/api/user/user-teams/${editingTeam.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -994,7 +996,7 @@ export default function UsersPage() {
     if (!confirm('Are you sure you want to delete this team?')) return;
 
     try {
-      const response = await fetch(`http://localhost:3009/api/user/user-teams/${teamId}`, {
+      const response = await fetch(`${GATEWAY}/api/user/user-teams/${teamId}`, {
         method: 'DELETE',
       });
 
@@ -1131,7 +1133,7 @@ export default function UsersPage() {
     }
 
     try {
-      const userResponse = await fetch(`http://localhost:3009/api/user/users/${userId}`, {
+      const userResponse = await fetch(`${GATEWAY}/api/user/users/${userId}`, {
         method: 'DELETE',
       });
 
@@ -1159,7 +1161,7 @@ export default function UsersPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3009/api/user/users/${editingUser.userId}`, {
+      const response = await fetch(`${GATEWAY}/api/user/users/${editingUser.userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1267,7 +1269,7 @@ export default function UsersPage() {
     if (!confirm(confirmMessage)) return;
 
     try {
-      const response = await fetch(`http://localhost:3009/api/user/users/${user.userId}/advance-mapping`, {
+      const response = await fetch(`${GATEWAY}/api/user/users/${user.userId}/advance-mapping`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1325,7 +1327,7 @@ export default function UsersPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3009/api/user/users/${user.userId}/advance-mapping`, {
+      const response = await fetch(`${GATEWAY}/api/user/users/${user.userId}/advance-mapping`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1373,7 +1375,7 @@ export default function UsersPage() {
 
   const fetchFeatures = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/user/features');
+      const response = await fetch(`${GATEWAY}/api/user/features`);
       const data = await response.json();
       setFeatures(data || []);
     } catch (err) {
@@ -1396,7 +1398,7 @@ export default function UsersPage() {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:3009/api/user/role-feature-permissions/role/${roleId}`);
+      const response = await fetch(`${GATEWAY}/api/user/role-feature-permissions/role/${roleId}`);
       const data = await response.json();
       setDesignationPermissions(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -1441,14 +1443,14 @@ export default function UsersPage() {
           designationName: String(selectedDesignationForPermissions.name || ""),
         });
         const response = await fetch(
-          `http://localhost:3009/api/user/role-feature-permissions/${roleId}/${featureId}?${params}`,
+          `${GATEWAY}/api/user/role-feature-permissions/${roleId}/${featureId}?${params}`,
           { method: 'DELETE' },
         );
         if (!response.ok && response.status !== 404) {
           throw new Error(`Failed to remove permission (${response.status})`);
         }
       } else {
-        const response = await fetch('http://localhost:3009/api/user/role-feature-permissions', {
+        const response = await fetch(`${GATEWAY}/api/user/role-feature-permissions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1546,7 +1548,7 @@ export default function UsersPage() {
         tags: {},
       }));
 
-      const response = await fetch('http://localhost:3009/api/user/users/bulk', {
+      const response = await fetch(`${GATEWAY}/api/user/users/bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ users: usersToCreate }),
