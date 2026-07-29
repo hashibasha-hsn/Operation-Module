@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { GATEWAY } from "@/lib/apiConfig";
 import { getOrganizationId } from '@/lib/authStorage';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -192,7 +193,7 @@ export default function Entities() {
 
   const fetchTags = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/org/entity-tags?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/org/entity-tags?organizationId=${encodeURIComponent(getOrganizationId())}`);
       const data = await response.json();
       // Transform database response to match frontend structure
       const transformedTags = Array.isArray(data) ? data.map((tag: any) => ({
@@ -210,7 +211,7 @@ export default function Entities() {
 
   const fetchRemovedEntities = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/org/removed-entities?organizationId=${encodeURIComponent(getOrganizationId())}`);
+      const response = await fetch(`${GATEWAY}/api/org/removed-entities?organizationId=${encodeURIComponent(getOrganizationId())}`);
       const data = await response.json();
       setRemovedEntities(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -318,7 +319,7 @@ export default function Entities() {
 
   const handleToggleEntityStatus = async (entity: any) => {
     try {
-      const response = await fetch(`http://localhost:3009/api/org/entities/${entity.id}`, {
+      const response = await fetch(`${GATEWAY}/api/org/entities/${entity.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -364,7 +365,7 @@ export default function Entities() {
       formData.append('file', bulkFile);
       formData.append('organizationId', getOrganizationId());
 
-      const response = await fetch('http://localhost:3009/api/org/entities/bulk-upload', {
+      const response = await fetch(`${GATEWAY}/api/org/entities/bulk-upload`, {
         method: 'POST',
         body: formData,
       });
@@ -386,7 +387,7 @@ export default function Entities() {
 
   const handleCreateTag = async () => {
     try {
-      const response = await fetch('http://localhost:3009/api/org/entity-tags', {
+      const response = await fetch(`${GATEWAY}/api/org/entity-tags`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -434,7 +435,7 @@ export default function Entities() {
 
   const handleUpdateTag = async () => {
     try {
-      const response = await fetch(`http://localhost:3009/api/org/entity-tags/${editingTag.id}`, {
+      const response = await fetch(`${GATEWAY}/api/org/entity-tags/${editingTag.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -471,7 +472,7 @@ export default function Entities() {
 
   const handleDeleteTag = async (id: number) => {
     try {
-      const response = await fetch(`http://localhost:3009/api/org/entity-tags/${id}`, {
+      const response = await fetch(`${GATEWAY}/api/org/entity-tags/${id}`, {
         method: 'DELETE',
       });
 
