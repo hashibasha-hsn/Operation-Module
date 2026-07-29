@@ -32,6 +32,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, [language]);
 
   useEffect(() => {
+    i18n.reloadResources();
+  }, []);
+
+  useEffect(() => {
     const handleLanguageChange = (lng: string) => {
       const next = (lng === 'ar' ? 'ar' : 'en') as Language;
       setLanguage(next);

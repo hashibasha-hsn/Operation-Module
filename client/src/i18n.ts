@@ -1049,4 +1049,5 @@ i18n
     },
   });
 
+(window as any).i18n = i18n;
 export default i18n;
