@@ -508,5 +508,11 @@ INSERT INTO hashibasha_language.language_entries (key, en, ar) VALUES
 ('setTitleBeforeSavingProperties', 'Set a process title on the Title tab before saving properties.', 'عيّن عنوان العملية في علامة التبويب عنوان قبل حفظ الخصائص.'),
 ('loaded', 'Loaded', 'تم التحميل'),
 ('and', 'and', 'و'),
-('fromFile', 'from file', 'من الملف')
+('fromFile', 'from file', 'من الملف'),
+('processManagement', 'Process Management', 'إدارة العمليات'),
+('owner', 'Owner', 'المالك'),
+('period', 'Period', 'الفترة'),
+('assignees', 'Assignees', 'المسند إليهم'),
+('urlQr', 'URL / QR', 'رابط QR'),
+('schedule', 'Schedule', 'الجدول')
 ON CONFLICT (key) DO UPDATE SET en = EXCLUDED.en, ar = EXCLUDED.ar, updated_at = CURRENT_TIMESTAMP;
