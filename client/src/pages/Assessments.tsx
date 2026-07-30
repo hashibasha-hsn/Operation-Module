@@ -154,7 +154,7 @@ export default function Assessments() {
           </Button>
           <Button className="gap-2" onClick={startNewAssessment}>
             <Plus className="w-4 h-4" />
-            + Assessment
+            Assessment
           </Button>
         </div>
       </div>

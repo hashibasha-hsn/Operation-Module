@@ -40,6 +40,7 @@ import {
   type CoursePayload,
   type CategoryResponse,
 } from "@/lib/courseApi";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Lesson {
   id: string;
@@ -74,13 +75,14 @@ interface CourseData {
 }
 
 const STEPS = [
-  { id: 1, label: "Course Setup" },
-  { id: 2, label: "Quizzes" },
-  { id: 3, label: "Content & Lessons" },
-  { id: 4, label: "Publish & Assign" },
+  { id: 1, labelKey: 'courseSetup' },
+  { id: 2, labelKey: 'quizzes' },
+  { id: 3, labelKey: 'contentAndLessons' },
+  { id: 4, labelKey: 'publishAndAssign' },
 ];
 
 export default function CourseCreation() {
+  const { t } = useLanguage();
   const [, navigate] = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -159,7 +161,7 @@ export default function CourseCreation() {
 
   async function saveCourse(status: 'draft' | 'published') {
     if (!courseData.name.trim()) {
-      toast.error("Course name is required");
+      toast.error(t('courseNameRequired'));
       return;
     }
 
@@ -179,10 +181,10 @@ export default function CourseCreation() {
         });
       }
 
-      toast.success(isPublish ? "Course published successfully!" : "Course saved as draft!");
+      toast.success(isPublish ? t('coursePublishedSuccess') : t('courseSavedAsDraft'));
       navigate("/categories-and-courses");
     } catch (err: any) {
-      toast.error(err.message || "Failed to save course");
+      toast.error(err.message || t('failedToSaveCourse'));
     } finally {
       setLoading(false);
     }
@@ -239,7 +241,7 @@ export default function CourseCreation() {
       lessons: [...courseData.lessons, ...newLessons],
     });
 
-    toast.success(`${files.length} file(s) uploaded successfully`);
+    toast.success(`${files.length} ${t('filesUploaded')}`);
   };
 
   const removeLesson = (lessonId: string) => {
@@ -290,29 +292,29 @@ export default function CourseCreation() {
   const renderCourseSetup = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Course Setup</h2>
-        <p className="text-muted-foreground">Fill in the basic details for your course</p>
+        <h2 className="text-2xl font-bold mb-2">{t('courseSetup')}</h2>
+        <p className="text-muted-foreground">{t('courseSetupDesc')}</p>
       </div>
 
       <div className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="courseName" className="flex items-center gap-2">
             <BookOpen className="w-4 h-4" />
-            Course Name *
+            {t('courseNameRequired')}
           </Label>
           <Input
             id="courseName"
-            placeholder="Enter course name"
+            placeholder={t('enterCourseName')}
             value={courseData.name}
             onChange={(e) => setCourseData({ ...courseData, name: e.target.value })}
           />
-          <p className="text-sm text-muted-foreground">The name that will be displayed to users</p>
+          <p className="text-sm text-muted-foreground">{t('courseNameHint')}</p>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="category" className="flex items-center gap-2">
             <Layers className="w-4 h-4" />
-            Category *
+            {t('categoryRequired')}
           </Label>
           <select
             id="category"
@@ -320,7 +322,7 @@ export default function CourseCreation() {
             value={courseData.category}
             onChange={(e) => setCourseData({ ...courseData, category: e.target.value })}
           >
-            <option value="">Select a category</option>
+            <option value="">{t('selectCategory')}</option>
             {categories.length > 0
               ? categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
@@ -328,65 +330,65 @@ export default function CourseCreation() {
                   </option>
                 ))
               : <>
-                  <option value="personal-hygiene">Personal Hygiene</option>
-                  <option value="food-safety">Food Safety</option>
-                  <option value="customer-service">Customer Service</option>
+                  <option value="personal-hygiene">{t('personalHygiene')}</option>
+                  <option value="food-safety">{t('foodSafety')}</option>
+                  <option value="customer-service">{t('customerService')}</option>
                 </>
             }
           </select>
-          <p className="text-sm text-muted-foreground">Organize your course into categories</p>
+          <p className="text-sm text-muted-foreground">{t('categoryHint')}</p>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="description" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            Description
+            {t('description')}
           </Label>
           <Textarea
             id="description"
-            placeholder="Enter course description"
+            placeholder={t('enterCourseDescription')}
             value={courseData.description}
             onChange={(e) => setCourseData({ ...courseData, description: e.target.value })}
             rows={4}
           />
-          <p className="text-sm text-muted-foreground">Provide a brief overview of the course content</p>
+          <p className="text-sm text-muted-foreground">{t('descriptionHint')}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="readTime" className="flex items-center gap-2">
               <Timer className="w-4 h-4" />
-              Estimated Read Time (seconds) *
+              {t('estimatedReadTime')}
             </Label>
             <Input
               id="readTime"
               type="number"
-              placeholder="e.g., 300"
+              placeholder={t('estimatedReadTimePlaceholder')}
               value={courseData.estimatedReadTime}
               onChange={(e) => setCourseData({ ...courseData, estimatedReadTime: e.target.value })}
             />
-            <p className="text-sm text-muted-foreground">Time users should spend reading the content</p>
+            <p className="text-sm text-muted-foreground">{t('estimatedReadTimeHint')}</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="viewDuration" className="flex items-center gap-2">
               <Clock className="w-4 h-4" />
-              Page View Duration (seconds) *
+              {t('pageViewDuration')}
             </Label>
             <Input
               id="viewDuration"
               type="number"
-              placeholder="e.g., 60"
+              placeholder={t('pageViewDurationPlaceholder')}
               value={courseData.pageViewDuration}
               onChange={(e) => setCourseData({ ...courseData, pageViewDuration: e.target.value })}
             />
-            <p className="text-sm text-muted-foreground">Minimum time a page must be viewed</p>
+            <p className="text-sm text-muted-foreground">{t('pageViewDurationHint')}</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="startDate" className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              Start Date
+              {t('startDate')}
             </Label>
             <Input
               id="startDate"
@@ -394,13 +396,13 @@ export default function CourseCreation() {
               value={courseData.startDate}
               onChange={(e) => setCourseData({ ...courseData, startDate: e.target.value })}
             />
-            <p className="text-sm text-muted-foreground">When the course becomes available</p>
+            <p className="text-sm text-muted-foreground">{t('startDateHint')}</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="endDate" className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              End Date
+              {t('endDate')}
             </Label>
             <Input
               id="endDate"
@@ -408,7 +410,7 @@ export default function CourseCreation() {
               value={courseData.endDate}
               onChange={(e) => setCourseData({ ...courseData, endDate: e.target.value })}
             />
-            <p className="text-sm text-muted-foreground">When the course closes</p>
+            <p className="text-sm text-muted-foreground">{t('endDateHint')}</p>
           </div>
         </div>
 
@@ -416,9 +418,9 @@ export default function CourseCreation() {
           <div className="space-y-0.5">
             <Label htmlFor="showInSequence" className="flex items-center gap-2 cursor-pointer">
               <Layers className="w-4 h-4" />
-              Show in Sequence
+              {t('showInSequence')}
             </Label>
-            <p className="text-sm text-muted-foreground">Users must complete one content + quiz before seeing the next</p>
+            <p className="text-sm text-muted-foreground">{t('showInSequenceHint')}</p>
           </div>
           <Switch
             id="showInSequence"
@@ -433,15 +435,15 @@ export default function CourseCreation() {
   const renderQuizSetup = () => (
     <div className="bg-white rounded-lg border p-6 space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Quiz Setup</h2>
-        <p className="text-muted-foreground">Configure quiz settings and parameters</p>
+        <h2 className="text-2xl font-bold mb-2">{t('quizSetup')}</h2>
+        <p className="text-muted-foreground">{t('quizSetupDesc')}</p>
       </div>
 
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="minPassingPercentage" className="flex items-center gap-2">
             <Percent className="w-4 h-4" />
-            Minimum Passing Percentage
+            {t('minimumPassingPercentage')}
           </Label>
           <Input
             id="minPassingPercentage"
@@ -458,7 +460,7 @@ export default function CourseCreation() {
         <div className="space-y-2">
           <Label htmlFor="maxAttempts" className="flex items-center gap-2">
             <RefreshCw className="w-4 h-4" />
-            Maximum Attempts
+            {t('maximumAttempts')}
           </Label>
           <Input
             id="maxAttempts"
@@ -475,7 +477,7 @@ export default function CourseCreation() {
         <div className="space-y-2">
           <Label htmlFor="quizStartDate" className="flex items-center gap-2">
             <Clock className="w-4 h-4" />
-            Start Date
+            {t('quizStartDate')}
           </Label>
           <Input
             id="quizStartDate"
@@ -491,7 +493,7 @@ export default function CourseCreation() {
         <div className="space-y-2">
           <Label htmlFor="quizEndDate" className="flex items-center gap-2">
             <Clock className="w-4 h-4" />
-            End Date
+            {t('quizEndDate')}
           </Label>
           <Input
             id="quizEndDate"
@@ -507,7 +509,7 @@ export default function CourseCreation() {
         <div className="space-y-2">
           <Label htmlFor="duration" className="flex items-center gap-2">
             <Clock className="w-4 h-4" />
-            Duration
+            {t('duration')}
           </Label>
           <Input
             id="duration"
@@ -525,7 +527,7 @@ export default function CourseCreation() {
             <div className="space-y-0.5">
               <Label htmlFor="visible" className="flex items-center gap-2 cursor-pointer">
                 <Eye className="w-4 h-4" />
-                Visible
+                {t('visible')}
               </Label>
             </div>
             <Switch
@@ -542,7 +544,7 @@ export default function CourseCreation() {
             <div className="space-y-0.5">
               <Label htmlFor="showResult" className="flex items-center gap-2 cursor-pointer">
                 <EyeOff className="w-4 h-4" />
-                Show Result
+                {t('showResult')}
               </Label>
             </div>
             <Switch
@@ -559,7 +561,7 @@ export default function CourseCreation() {
             <div className="space-y-0.5">
               <Label htmlFor="showCorrectAnswer" className="flex items-center gap-2 cursor-pointer">
                 <FileText className="w-4 h-4" />
-                Show Correct Answer
+                {t('showCorrectAnswer')}
               </Label>
             </div>
             <Switch
@@ -576,7 +578,7 @@ export default function CourseCreation() {
             <div className="space-y-0.5">
               <Label htmlFor="generateCertificate" className="flex items-center gap-2 cursor-pointer">
                 <Award className="w-4 h-4" />
-                Generate Certificate
+                {t('generateCertificate')}
               </Label>
             </div>
             <Switch
@@ -593,7 +595,7 @@ export default function CourseCreation() {
             <div className="space-y-0.5">
               <Label htmlFor="disableReattempt" className="flex items-center gap-2 cursor-pointer">
                 <RefreshCw className="w-4 h-4" />
-                Disable Reattempt After Passing
+                {t('disableReattemptAfterPassing')}
               </Label>
             </div>
             <Switch
@@ -613,8 +615,8 @@ export default function CourseCreation() {
   const renderContentLessons = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Upload Content & Create Lessons</h2>
-        <p className="text-muted-foreground">Upload your course materials and organize them into lessons with custom sequencing.</p>
+        <h2 className="text-2xl font-bold mb-2">{t('uploadContentAndCreateLessons')}</h2>
+        <p className="text-muted-foreground">{t('uploadContentDesc')}</p>
       </div>
 
       <div
@@ -635,23 +637,23 @@ export default function CourseCreation() {
         />
         <label htmlFor="fileUpload" className="cursor-pointer">
           <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-semibold mb-2">Upload Course Content</h3>
+          <h3 className="text-lg font-semibold mb-2">{t('uploadCourseContent')}</h3>
           <p className="text-muted-foreground mb-4">
-            Drag and drop files or click to browse. Supports videos, PDFs, documents, and images.
+            {t('uploadContentHint')}
           </p>
           <Paperclip className="w-8 h-8 mx-auto text-muted-foreground" />
         </label>
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-4">Course Lessons</h3>
+        <h3 className="text-lg font-semibold mb-4">{t('courseLessons')}</h3>
         
         {courseData.lessons.length === 0 ? (
           <Card>
             <CardContent className="py-12">
               <div className="text-center text-muted-foreground">
                 <FolderOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No data</p>
+                <p>{t('noData')}</p>
               </div>
             </CardContent>
           </Card>
@@ -675,7 +677,7 @@ export default function CourseCreation() {
                         variant="ghost"
                         size="icon"
                         onClick={() => toggleDownload(lesson.id)}
-                        title={lesson.downloadEnabled ? "Disable download" : "Enable download"}
+                        title={lesson.downloadEnabled ? t('disableDownload') : t('enableDownload')}
                       >
                         <Upload className={`w-4 h-4 ${lesson.downloadEnabled ? "text-primary" : "text-muted-foreground"}`} />
                       </Button>
@@ -699,9 +701,9 @@ export default function CourseCreation() {
       <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-lg">
         <Lightbulb className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="font-medium text-amber-900">Pro tip:</p>
+          <p className="font-medium text-amber-900">{t('proTip')}</p>
           <p className="text-sm text-amber-800">
-            Drag lessons to reorder them. Use the download icon to enable/disable downloads for individual lessons.
+            {t('reorderLessonsHint')}
           </p>
         </div>
       </div>
@@ -711,31 +713,31 @@ export default function CourseCreation() {
   const renderPublishAssign = () => (
     <div className="bg-white rounded-lg p-6 space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Publish & Assign</h2>
-        <p className="text-muted-foreground">Review your course and assign it to stores and profiles</p>
+        <h2 className="text-2xl font-bold mb-2">{t('publishAndAssign')}</h2>
+        <p className="text-muted-foreground">{t('publishAndAssignDesc')}</p>
       </div>
 
       <Card>
         <CardContent className="p-6 space-y-4">
           <div>
-            <h3 className="font-semibold mb-2">Course Summary</h3>
+            <h3 className="font-semibold mb-2">{t('courseSummary')}</h3>
             <div className="space-y-2 text-sm">
-              <p><span className="text-muted-foreground">Name:</span> {courseData.name || "Not set"}</p>
+              <p><span className="text-muted-foreground">{t('nameLabel')}</span> {courseData.name || t('notSet')}</p>
               <p>
-                <span className="text-muted-foreground">Category:</span>{" "}
-                {categories.find(c => c.id === courseData.category)?.categoryName || courseData.category || "Not set"}
+                <span className="text-muted-foreground">{t('categoryLabel')}</span>{' '}
+                {categories.find(c => c.id === courseData.category)?.categoryName || courseData.category || t('notSet')}
               </p>
-              <p><span className="text-muted-foreground">Lessons:</span> {courseData.lessons.length}</p>
-              <p><span className="text-muted-foreground">Description:</span> {courseData.description || "Not set"}</p>
+              <p><span className="text-muted-foreground">{t('lessonsLabel')}</span> {courseData.lessons.length}</p>
+              <p><span className="text-muted-foreground">{t('descriptionLabel')}</span> {courseData.description || t('notSet')}</p>
             </div>
           </div>
 
           <div className="border-t pt-4">
-            <h3 className="font-semibold mb-2">Assign by Store</h3>
-            <p className="text-sm text-muted-foreground mb-4">Select stores to assign this course to</p>
+            <h3 className="font-semibold mb-2">{t('assignByStore')}</h3>
+            <p className="text-sm text-muted-foreground mb-4">{t('assignByStoreHint')}</p>
             {stores.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                <p>No stores available</p>
+                <p>{t('noStoresAvailable')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
@@ -764,16 +766,16 @@ export default function CourseCreation() {
               </div>
             )}
             {selectedStoreIds.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-2">{selectedStoreIds.length} store(s) selected</p>
+              <p className="text-xs text-muted-foreground mt-2">{selectedStoreIds.length}{t('storesSelected')}</p>
             )}
           </div>
 
           <div className="border-t pt-4">
-            <h3 className="font-semibold mb-2">Assignee Profiles</h3>
-            <p className="text-sm text-muted-foreground mb-4">Select user profiles to auto-assign this course</p>
+            <h3 className="font-semibold mb-2">{t('assigneeProfiles')}</h3>
+            <p className="text-sm text-muted-foreground mb-4">{t('assigneeProfilesHint')}</p>
             {profiles.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                <p>No profiles available</p>
+                <p>{t('noProfilesAvailable')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
@@ -802,7 +804,7 @@ export default function CourseCreation() {
               </div>
             )}
             {selectedProfileIds.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-2">{selectedProfileIds.length} profile(s) selected</p>
+              <p className="text-xs text-muted-foreground mt-2">{selectedProfileIds.length}{t('profilesSelected')}</p>
             )}
           </div>
         </CardContent>
@@ -817,12 +819,12 @@ export default function CourseCreation() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/categories-and-courses")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl font-semibold">Create Course</h1>
+          <h1 className="text-xl font-semibold">{t('createCourse')}</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => saveCourse('draft')} disabled={saving || publishing}>
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            Save Draft
+            {t('saveDraft')}
           </Button>
         </div>
       </div>
@@ -849,7 +851,7 @@ export default function CourseCreation() {
                       currentStep === step.id ? "text-primary font-medium" : "text-muted-foreground"
                     }`}
                   >
-                    {step.label}
+                    {t(step.labelKey)}
                   </span>
                 </div>
                 {index < STEPS.length - 1 && (
@@ -873,11 +875,11 @@ export default function CourseCreation() {
             disabled={currentStep === 1}
           >
             <ChevronLeft className="w-4 h-4 mr-2" />
-            Previous
+            {t('previous')}
           </Button>
           <Button onClick={handleNext} disabled={saving || publishing}>
             {publishing && currentStep === 4 && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {currentStep === 4 ? "Publish Course" : "Next"}
+            {currentStep === 4 ? t('publishCourse') : t('next')}
             {currentStep < 4 && <ChevronRight className="w-4 h-4 ml-2" />}
           </Button>
         </div>

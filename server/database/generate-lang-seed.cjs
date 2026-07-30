@@ -66,7 +66,7 @@ const sqlPath = path.join(__dirname, 'comprehensive-translations.sql');
 const sqlRows = fs.existsSync(sqlPath) ? parseSqlRows(fs.readFileSync(sqlPath, 'utf8')) : {};
 console.log('Comprehensive SQL entries:', Object.keys(sqlRows).length);
 
-// 4. Merge all sources for every extracted key
+// 4. Merge all sources for every extracted key + all fallback keys
 function camelToTitle(str) {
   return str
     .replace(/([A-Z])/g, ' $1')
@@ -75,10 +75,11 @@ function camelToTitle(str) {
     .trim();
 }
 
+const allKeys = new Set([...extractedKeys, ...Object.keys(fallbackEn)]);
 const entries = [];
 const missingAr = [];
 
-for (const key of extractedKeys) {
+for (const key of allKeys) {
   let en = '';
   let ar = '';
 

@@ -140,7 +140,7 @@ export default function Attendance() {
       setTodayRecord(today as AttendanceRecord | null);
     } catch (error) {
       console.error("Failed to fetch attendance data:", error);
-      toast.error("Failed to load attendance data");
+      toast.error(t('failedToLoadAttendanceData'));
     } finally {
       setLoading(false);
     }
@@ -198,10 +198,10 @@ export default function Attendance() {
         assignedUserIds: selectedUsers,
       });
       setShowConfigDialog(false);
-      toast.success("Attendance configuration saved");
+      toast.success(t('attendanceConfigSaved'));
       void loadAttendanceData();
     } catch (error: any) {
-      toast.error(error?.message || "Failed to save attendance configuration");
+      toast.error(error?.message || t('failedToSaveConfig'));
     }
   };
 
@@ -213,12 +213,10 @@ export default function Attendance() {
         assignedStoreIds: selectedStores,
         assignedUserIds: selectedUsers,
       });
-      toast.success(
-        `Attendance settings published to ${selectedStores.length} store(s) and ${selectedUsers.length} user(s)`,
-      );
+      toast.success(t('publishedTo', { stores: selectedStores.length, users: selectedUsers.length }));
       setShowPublishDialog(false);
     } catch (error: any) {
-      toast.error(error?.message || "Failed to publish attendance settings");
+      toast.error(error?.message || t('failedToPublish'));
     } finally {
       setPublishing(false);
     }
@@ -239,9 +237,9 @@ export default function Attendance() {
       }
       setSelectedStores(Array.from(nextStores));
       setSelectedUsers(Array.from(nextUsers));
-      toast.success("Assignee list imported from file");
+      toast.success(t('assigneeListImported'));
     } catch (error: any) {
-      toast.error(error?.message || "Failed to import file");
+      toast.error(error?.message || t('failedToImport'));
     }
   };
 
@@ -279,19 +277,18 @@ export default function Attendance() {
   });
 
   const handleExportCSV = () => {
-    // Taqtics note: CSV excludes photo binaries; keep URL placeholders only when present as text refs
     const headers = [
-      "Date",
-      "Name",
-      "Employee ID",
-      "Email",
-      "Store",
-      "Punch In",
-      "Punch Out",
-      "Time Spent",
-      "Working Hours",
-      "Deviation",
-      "Device Info",
+      t('date'),
+      t('name'),
+      t('employeeId'),
+      t('email'),
+      t('store'),
+      t('punchIn'),
+      t('punchOut'),
+      t('timeSpent'),
+      t('workingHours'),
+      t('deviation'),
+      t('deviceInfo'),
     ];
     const escape = (value: string) =>
       /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
@@ -320,7 +317,7 @@ export default function Attendance() {
     a.download = `attendance_report_${format(new Date(), "yyyy-MM-dd")}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
-    toast.success("Attendance CSV downloaded");
+    toast.success(t('attendanceCsvDownloaded'));
   };
 
   const getStatusBadge = (status?: string) => {
@@ -349,7 +346,7 @@ export default function Attendance() {
         title={label}
       >
         <ImageIcon className="h-3.5 w-3.5" />
-        View
+        {t('view')}
       </a>
     );
   };
@@ -366,8 +363,7 @@ export default function Attendance() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("attendanceTracking")}</h1>
               <p className="text-sm text-muted-foreground mt-0.5 max-w-2xl">
-                Monitor store-level check-ins and check-outs — in-time, out-time, and total hours on-site.
-                Configure working-hour rules, publish to stores or users, then review the attendance log below.
+                {t('attendanceTrackingDesc')}
               </p>
             </div>
           </div>
@@ -377,55 +373,55 @@ export default function Attendance() {
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Settings className="w-4 h-4 mr-2" />
-                1. Configure
+                {t('stepOneConfigure')}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Configure Attendance Settings</DialogTitle>
+                <DialogTitle>{t('configureAttendanceSettings')}</DialogTitle>
                 <DialogDescription>
-                  Define how attendance should be captured and calculated for your organization.
+                  {t('configureAttendanceSettingsDesc')}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-6 py-2">
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Capture rules
+                    {t('captureRules')}
                   </h3>
                   {[
                     {
                       id: "status",
-                      label: "Status",
-                      desc: "Toggle attendance on/off for the org",
+                      labelKey: "status" as const,
+                      descKey: "statusDesc" as const,
                       checked: attendanceConfig.status,
                       key: "status" as const,
                     },
                     {
                       id: "geolocation",
-                      label: "Geolocation",
-                      desc: "Enforces GPS-based check-in/out (mobile)",
+                      labelKey: "geolocation" as const,
+                      descKey: "geolocationDesc" as const,
                       checked: attendanceConfig.geolocation,
                       key: "geolocation" as const,
                     },
                     {
                       id: "checkInImage",
-                      label: "Check-in image",
-                      desc: "Requires user to take a selfie while checking in",
+                      labelKey: "checkInImage" as const,
+                      descKey: "checkInImageDesc" as const,
                       checked: attendanceConfig.checkInImage,
                       key: "checkInImage" as const,
                     },
                     {
                       id: "checkOutImage",
-                      label: "Check-out image",
-                      desc: "Requires selfie on check-out",
+                      labelKey: "checkOutImage" as const,
+                      descKey: "checkOutImageDesc" as const,
                       checked: attendanceConfig.checkOutImage,
                       key: "checkOutImage" as const,
                     },
                   ].map((item) => (
                     <div key={item.id} className="flex items-start justify-between gap-4 py-2 border-b border-border/60">
                       <div>
-                        <Label htmlFor={item.id}>{item.label}</Label>
-                        <p className="text-sm text-muted-foreground">{item.desc}</p>
+                        <Label htmlFor={item.id}>{t(item.labelKey)}</Label>
+                        <p className="text-sm text-muted-foreground">{t(item.descKey)}</p>
                       </div>
                       <Switch
                         id={item.id}
@@ -440,11 +436,11 @@ export default function Attendance() {
 
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Operating hours
+                    {t('operatingHours')}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="operatingHoursStart">Start time</Label>
+                      <Label htmlFor="operatingHoursStart">{t('startTime')}</Label>
                       <Input
                         id="operatingHoursStart"
                         type="time"
@@ -456,10 +452,10 @@ export default function Attendance() {
                           })
                         }
                       />
-                      <p className="text-xs text-muted-foreground">When a store&apos;s workday starts</p>
+                      <p className="text-xs text-muted-foreground">{t('startTimeHint')}</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="operatingHoursEnd">End time</Label>
+                      <Label htmlFor="operatingHoursEnd">{t('endTime')}</Label>
                       <Input
                         id="operatingHoursEnd"
                         type="time"
@@ -471,11 +467,11 @@ export default function Attendance() {
                           })
                         }
                       />
-                      <p className="text-xs text-muted-foreground">When a store&apos;s workday ends</p>
+                      <p className="text-xs text-muted-foreground">{t('endTimeHint')}</p>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="dailyWorkingHours">Daily working hours</Label>
+                    <Label htmlFor="dailyWorkingHours">{t('dailyWorkingHours')}</Label>
                     <Input
                       id="dailyWorkingHours"
                       type="number"
@@ -490,14 +486,14 @@ export default function Attendance() {
                       }
                     />
                     <p className="text-xs text-muted-foreground">
-                      Hours that count as a complete workday
+                      {t('dailyWorkingHoursHint')}
                     </p>
                   </div>
                   <div className="flex items-start justify-between gap-4 py-2">
                     <div>
-                      <Label htmlFor="calculateOvertime">Calculate time difference (overtime)</Label>
+                      <Label htmlFor="calculateOvertime">{t('calculateOvertime')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Automatically calculate over/under time
+                        {t('calculateOvertimeHint')}
                       </p>
                     </div>
                     <Switch
@@ -511,12 +507,12 @@ export default function Attendance() {
                 </div>
 
                 <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
-                  <h3 className="text-sm font-semibold">Web session capture</h3>
+                  <h3 className="text-sm font-semibold">{t('webSessionCapture')}</h3>
                   <p className="text-xs text-muted-foreground">
-                    Punch-in can also be recorded on web login and punch-out on logout (in addition to mobile).
+                    {t('webSessionCaptureHint')}
                   </p>
                   <div className="flex items-center justify-between gap-4">
-                    <Label htmlFor="autoCheckInOnLogin">Auto check-in on login</Label>
+                    <Label htmlFor="autoCheckInOnLogin">{t('autoCheckInOnLogin')}</Label>
                     <Switch
                       id="autoCheckInOnLogin"
                       checked={attendanceConfig.autoCheckInOnLogin}
@@ -526,7 +522,7 @@ export default function Attendance() {
                     />
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <Label htmlFor="autoCheckOutOnLogout">Auto check-out on logout</Label>
+                    <Label htmlFor="autoCheckOutOnLogout">{t('autoCheckOutOnLogout')}</Label>
                     <Switch
                       id="autoCheckOutOnLogout"
                       checked={attendanceConfig.autoCheckOutOnLogout}
@@ -550,41 +546,41 @@ export default function Attendance() {
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Upload className="w-4 h-4 mr-2" />
-                2. Publish
+                {t('stepTwoPublish')}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Publish Attendance Settings</DialogTitle>
+                <DialogTitle>{t('publishAttendanceSettings')}</DialogTitle>
                 <DialogDescription>
-                  Assign attendance policies by store or by user — same assignment pattern as Processes.
+                  {t('publishAttendanceSettingsDesc')}
                 </DialogDescription>
               </DialogHeader>
               <Tabs value={assignByTab} onValueChange={setAssignByTab}>
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="store">By Store</TabsTrigger>
-                  <TabsTrigger value="user">By User</TabsTrigger>
-                  <TabsTrigger value="profile">Assignee Profile</TabsTrigger>
+                  <TabsTrigger value="store">{t('byStore')}</TabsTrigger>
+                  <TabsTrigger value="user">{t('byUser')}</TabsTrigger>
+                  <TabsTrigger value="profile">{t('assigneeProfile')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="store" className="space-y-3 pt-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm text-muted-foreground">
-                      {selectedStores.length} store(s) selected
+                      {selectedStores.length}{t('storesSelected')}
                     </p>
                     <Button variant="outline" size="sm" onClick={() => setShowPickerDialog(true)}>
                       <Building2 className="w-4 h-4 mr-2" />
-                      Add stores
+                      {t('addStores')}
                     </Button>
                   </div>
                   <Input
-                    placeholder="Search selected stores…"
+                    placeholder={t('searchSelectedStores')}
                     value={storeSearch}
                     onChange={(e) => setStoreSearch(e.target.value)}
                   />
                   <div className="max-h-56 overflow-y-auto space-y-2 border rounded-lg p-3">
                     {selectedStores.length === 0 ? (
-                      <p className="text-sm text-muted-foreground py-6 text-center">No stores selected</p>
+                      <p className="text-sm text-muted-foreground py-6 text-center">{t('noStoresSelected')}</p>
                     ) : (
                       selectedStores
                         .map((id) => availableStores.find((s) => s.id === id))
@@ -616,21 +612,21 @@ export default function Attendance() {
                 <TabsContent value="user" className="space-y-3 pt-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm text-muted-foreground">
-                      {selectedUsers.length} user(s) selected
+                      {selectedUsers.length}{t('usersSelected')}
                     </p>
                     <Button variant="outline" size="sm" onClick={() => setShowPickerDialog(true)}>
                       <User className="w-4 h-4 mr-2" />
-                      Add users
+                      {t('addUsers')}
                     </Button>
                   </div>
                   <Input
-                    placeholder="Search selected users…"
+                    placeholder={t('searchSelectedUsers')}
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                   />
                   <div className="max-h-56 overflow-y-auto space-y-2 border rounded-lg p-3">
                     {selectedUsers.length === 0 ? (
-                      <p className="text-sm text-muted-foreground py-6 text-center">No users selected</p>
+                      <p className="text-sm text-muted-foreground py-6 text-center">{t('noUsersSelected')}</p>
                     ) : (
                       selectedUsers
                         .map((id) => availableUsers.find((u) => u.id === id))
@@ -667,8 +663,7 @@ export default function Attendance() {
                 <TabsContent value="profile" className="space-y-4 pt-3">
                   <div className="rounded-lg border border-dashed p-6 text-center space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      You can also assign via an Assignee Profile (same as Processes). Import a CSV of
-                      store/user IDs, or manage profiles under Users → Hybrid Assignee.
+                      {t('assigneeProfileHint')}
                     </p>
                     <input
                       ref={fileInputRef}
@@ -679,7 +674,7 @@ export default function Attendance() {
                     />
                     <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
                       <Upload className="w-4 h-4 mr-2" />
-                      Import CSV (type,id)
+                      {t('importCsv')}
                     </Button>
                   </div>
                 </TabsContent>
@@ -689,7 +684,7 @@ export default function Attendance() {
                   {t("cancel")}
                 </Button>
                 <Button onClick={() => void handlePublishAttendance()} disabled={publishing}>
-                  {publishing ? "Publishing…" : "Publish"}
+                  {publishing ? t('publishing') : t('publish')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -697,7 +692,7 @@ export default function Attendance() {
 
           <Button onClick={handleExportCSV}>
             <Download className="w-4 h-4 mr-2" />
-            DOWNLOAD CSV
+            {t('downloadCsv')}
           </Button>
         </div>
       </div>
@@ -707,20 +702,20 @@ export default function Attendance() {
         {[
           {
             step: "1",
-            title: "Configure",
-            body: "Status, geolocation, selfie rules, operating hours, overtime.",
+            titleKey: "stepConfigure" as const,
+            bodyKey: "stepConfigureDesc" as const,
             icon: Settings,
           },
           {
             step: "2",
-            title: "Publish",
-            body: "Assign policies by store, user, or assignee profile.",
+            titleKey: "stepPublish" as const,
+            bodyKey: "stepPublishDesc" as const,
             icon: Upload,
           },
           {
             step: "3",
-            title: "View report",
-            body: "Punch logs stay on this page — filter by date and export CSV.",
+            titleKey: "stepViewReport" as const,
+            bodyKey: "stepViewReportDesc" as const,
             icon: Calendar,
           },
         ].map((item) => (
@@ -734,9 +729,9 @@ export default function Attendance() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <item.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="font-semibold text-sm">{item.title}</p>
+                <p className="font-semibold text-sm">{t(item.titleKey)}</p>
               </div>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{item.body}</p>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{t(item.bodyKey)}</p>
             </div>
           </div>
         ))}
@@ -746,68 +741,67 @@ export default function Attendance() {
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="lg:col-span-8 rounded-xl border bg-background p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-semibold">Active policy</h2>
+            <h2 className="font-semibold">{t('activePolicy')}</h2>
             <Badge variant={attendanceConfig.status ? "default" : "secondary"}>
-              {attendanceConfig.status ? "Attendance ON" : "Attendance OFF"}
+              {attendanceConfig.status ? t('attendanceOn') : t('attendanceOff')}
             </Badge>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
             <div className="rounded-lg bg-muted/40 px-3 py-2">
               <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <MapPin className="h-3 w-3" /> Geolocation
+                <MapPin className="h-3 w-3" /> {t('geolocation')}
               </p>
-              <p className="font-medium mt-1">{attendanceConfig.geolocation ? "On" : "Off"}</p>
+              <p className="font-medium mt-1">{attendanceConfig.geolocation ? t('on') : t('off')}</p>
             </div>
             <div className="rounded-lg bg-muted/40 px-3 py-2">
-              <p className="text-xs text-muted-foreground">Selfie in / out</p>
+              <p className="text-xs text-muted-foreground">{t('selfieInOut')}</p>
               <p className="font-medium mt-1">
-                {attendanceConfig.checkInImage ? "In" : "—"} /{" "}
-                {attendanceConfig.checkOutImage ? "Out" : "—"}
+                {attendanceConfig.checkInImage ? t('in') : "—"} /{" "}
+                {attendanceConfig.checkOutImage ? t('out') : "—"}
               </p>
             </div>
             <div className="rounded-lg bg-muted/40 px-3 py-2">
-              <p className="text-xs text-muted-foreground">Operating hours</p>
+              <p className="text-xs text-muted-foreground">{t('operatingHours')}</p>
               <p className="font-medium mt-1">
                 {attendanceConfig.operatingHoursStart} – {attendanceConfig.operatingHoursEnd}
               </p>
             </div>
             <div className="rounded-lg bg-muted/40 px-3 py-2">
-              <p className="text-xs text-muted-foreground">Daily hours</p>
+              <p className="text-xs text-muted-foreground">{t('dailyHours')}</p>
               <p className="font-medium mt-1">{attendanceConfig.dailyWorkingHours} h</p>
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Published to <strong>{selectedStores.length}</strong> store(s) and{" "}
-            <strong>{selectedUsers.length}</strong> user(s).
+            {t('publishedTo', { stores: selectedStores.length, users: selectedUsers.length })}
           </p>
         </div>
 
         <div className="lg:col-span-4 rounded-xl border bg-background p-5 space-y-3">
           <h2 className="font-semibold flex items-center gap-2 text-sm">
             <User className="h-4 w-4" />
-            My attendance today
+            {t('myAttendanceToday')}
           </h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground">Name</span>
+              <span className="text-muted-foreground">{t('name')}</span>
               <span className="font-medium truncate">
                 {(currentUser.name as string) || (currentUser.email as string) || "—"}
               </span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground">Punch in</span>
-              <span className="font-medium">{todayRecord?.checkInTime || "Not yet"}</span>
+              <span className="text-muted-foreground">{t('punchIn')}</span>
+              <span className="font-medium">{todayRecord?.checkInTime || t('notYet')}</span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground">Punch out</span>
-              <span className="font-medium">{todayRecord?.checkOutTime || "Not yet"}</span>
+              <span className="text-muted-foreground">{t('punchOut')}</span>
+              <span className="font-medium">{todayRecord?.checkOutTime || t('notYet')}</span>
             </div>
             <div className="flex justify-between gap-2 items-center">
-              <span className="text-muted-foreground">Status</span>
+              <span className="text-muted-foreground">{t('status')}</span>
               {getStatusBadge(todayRecord?.status)}
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-muted-foreground">Time spent</span>
+              <span className="text-muted-foreground">{t('timeSpent')}</span>
               <span className="font-medium">
                 {todayRecord?.totalHours ? `${todayRecord.totalHours} h` : "—"}
               </span>
@@ -816,7 +810,7 @@ export default function Attendance() {
           {(attendanceConfig.autoCheckInOnLogin || attendanceConfig.autoCheckOutOnLogout) && (
             <p className="text-[11px] text-muted-foreground leading-snug pt-1 border-t">
               <CheckCircle className="inline h-3 w-3 mr-1 text-primary" />
-              Web login/logout can create punch records when auto capture is enabled.
+              {t('autoCaptureNote')}
             </p>
           )}
         </div>
@@ -826,9 +820,9 @@ export default function Attendance() {
       <section className="space-y-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold">3. Attendance report</h2>
+            <h2 className="text-lg font-semibold">{t('attendanceReport')}</h2>
             <p className="text-sm text-muted-foreground">
-              Real-time punch-in / punch-out records. Filter by date, then export with DOWNLOAD CSV.
+              {t('attendanceReportDesc')}
             </p>
           </div>
         </div>
@@ -838,7 +832,7 @@ export default function Attendance() {
             <div className="lg:col-span-4 relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by name, employee ID, or email"
+                placeholder={t('searchByNameOrId')}
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -856,7 +850,7 @@ export default function Attendance() {
                 }}
                 className="w-full sm:w-[150px]"
               />
-              <span className="text-muted-foreground text-sm">to</span>
+              <span className="text-muted-foreground text-sm">{t('to')}</span>
               <Input
                 type="date"
                 value={dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : ""}
@@ -871,10 +865,10 @@ export default function Attendance() {
             <div className="lg:col-span-3 flex flex-wrap gap-2">
               <Select value={selectedStore} onValueChange={setSelectedStore}>
                 <SelectTrigger className="w-full sm:flex-1">
-                  <SelectValue placeholder="All stores" />
+                  <SelectValue placeholder={t('allStores')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All stores</SelectItem>
+                  <SelectItem value="all">{t('allStores')}</SelectItem>
                   {availableStores.map((store) => (
                     <SelectItem key={store.id} value={store.name}>
                       {store.name}
@@ -883,7 +877,7 @@ export default function Attendance() {
                 </SelectContent>
               </Select>
               <Button variant="outline" onClick={() => void loadAttendanceData()}>
-                Apply
+                {t('apply')}
               </Button>
             </div>
           </div>
@@ -891,13 +885,13 @@ export default function Attendance() {
 
         <div className="rounded-xl border bg-background overflow-hidden">
           {loading ? (
-            <div className="text-center py-16 text-muted-foreground">Loading attendance records…</div>
+            <div className="text-center py-16 text-muted-foreground">{t('loadingAttendanceRecords')}</div>
           ) : filteredRecords.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground space-y-2 px-6">
               <AlertCircle className="h-8 w-8 mx-auto opacity-40" />
-              <p>No attendance entries for this filter.</p>
+              <p>{t('noAttendanceEntries')}</p>
               <p className="text-xs">
-                Configure and publish settings, then punches appear here after check-in/out.
+                {t('noAttendanceEntriesHint')}
               </p>
             </div>
           ) : (
@@ -905,19 +899,19 @@ export default function Attendance() {
               <table className="w-full min-w-[1280px] text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50 text-left">
-                    <th className="p-3 font-medium whitespace-nowrap">Date</th>
-                    <th className="p-3 font-medium whitespace-nowrap">Name</th>
-                    <th className="p-3 font-medium whitespace-nowrap">Employee ID</th>
-                    <th className="p-3 font-medium whitespace-nowrap">Email</th>
-                    <th className="p-3 font-medium whitespace-nowrap">Store</th>
-                    <th className="p-3 font-medium whitespace-nowrap">Punch In</th>
-                    <th className="p-3 font-medium whitespace-nowrap">Punch In Image</th>
-                    <th className="p-3 font-medium whitespace-nowrap">Punch Out</th>
-                    <th className="p-3 font-medium whitespace-nowrap">Punch Out Image</th>
-                    <th className="p-3 font-medium whitespace-nowrap">Time Spent</th>
-                    <th className="p-3 font-medium whitespace-nowrap">Working Hours</th>
-                    <th className="p-3 font-medium whitespace-nowrap">Deviation</th>
-                    <th className="p-3 font-medium whitespace-nowrap">Device Info</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('date')}</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('name')}</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('employeeId')}</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('email')}</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('store')}</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('punchIn')}</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('punchInImage')}</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('punchOut')}</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('punchOutImage')}</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('timeSpent')}</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('workingHours')}</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('deviation')}</th>
+                    <th className="p-3 font-medium whitespace-nowrap">{t('deviceInfo')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -930,11 +924,11 @@ export default function Attendance() {
                       <td className="p-3 max-w-[140px] truncate">{record.store}</td>
                       <td className="p-3 whitespace-nowrap">{record.checkInTime || "-"}</td>
                       <td className="p-3">
-                        <ImageCell url={record.selfieUrl} label="Punch in image" />
+                        <ImageCell url={record.selfieUrl} label={t('punchInImage')} />
                       </td>
                       <td className="p-3 whitespace-nowrap">{record.checkOutTime || "-"}</td>
                       <td className="p-3">
-                        <ImageCell url={record.punchOutImage} label="Punch out image" />
+                        <ImageCell url={record.punchOutImage} label={t('punchOutImage')} />
                       </td>
                       <td className="p-3 whitespace-nowrap">{record.totalHours || "-"}</td>
                       <td className="p-3 whitespace-nowrap">
@@ -966,8 +960,7 @@ export default function Attendance() {
             </div>
           )}
           <p className="text-[11px] text-muted-foreground px-4 py-3 border-t bg-muted/20">
-            Note: Selfie and GPS data are captured on mobile when camera/location permissions are on.
-            CSV export includes all fields except photo binaries (view images in the web table).
+            {t('attendanceTableNote')}
           </p>
         </div>
       </section>
@@ -976,19 +969,19 @@ export default function Attendance() {
       <Dialog open={showPickerDialog} onOpenChange={setShowPickerDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{assignByTab === "user" ? "Add users" : "Add stores"}</DialogTitle>
+            <DialogTitle>{assignByTab === "user" ? t('addUsers') : t('addStores')}</DialogTitle>
             <DialogDescription>
               {assignByTab === "user"
-                ? "Select users to assign attendance policies"
-                : "Select stores to assign attendance policies"}
+                ? t('selectUsersForPolicy')
+                : t('selectStoresForPolicy')}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-96 overflow-y-auto space-y-2 py-2">
             {loadingEntities ? (
-              <p className="text-center text-muted-foreground py-8">Loading…</p>
+              <p className="text-center text-muted-foreground py-8">{t('loading')}</p>
             ) : assignByTab === "user" ? (
               filteredPublishUsers.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No users available</p>
+                <p className="text-center text-muted-foreground py-8">{t('noUsersAvailable')}</p>
               ) : (
                 filteredPublishUsers.map((user) => (
                   <div
@@ -1010,13 +1003,13 @@ export default function Attendance() {
                         );
                       }}
                     >
-                      {selectedUsers.includes(user.id) ? "Added" : "Add"}
+                      {selectedUsers.includes(user.id) ? t('added') : t('add')}
                     </Button>
                   </div>
                 ))
               )
             ) : filteredPublishStores.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No stores available</p>
+              <p className="text-center text-muted-foreground py-8">{t('noStoresAvailable')}</p>
             ) : (
               filteredPublishStores.map((store) => (
                 <div
@@ -1035,7 +1028,7 @@ export default function Attendance() {
                       );
                     }}
                   >
-                    {selectedStores.includes(store.id) ? "Added" : "Add"}
+                    {selectedStores.includes(store.id) ? t('added') : t('add')}
                   </Button>
                 </div>
               ))
@@ -1043,7 +1036,7 @@ export default function Attendance() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPickerDialog(false)}>
-              Close
+              {t('close')}
             </Button>
           </DialogFooter>
         </DialogContent>
