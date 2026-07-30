@@ -275,7 +275,7 @@ function renderLogView({
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {/^[0-9a-f-]{36}$/i.test(log.performedBy) ? "System" : log.performedBy}
+                      {/^[0-9a-f-]{36}$/i.test(log.performedBy) ? t("unknownUser") : log.performedBy}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground whitespace-nowrap tabular-nums">
                       {formatCreatedAt(log.createdAt)}

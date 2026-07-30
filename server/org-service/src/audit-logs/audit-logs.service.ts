@@ -111,6 +111,23 @@ export class AuditLogsService {
 
     const [logs, total] = await qb.skip(skip).take(limit).getManyAndCount();
 
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uniqueIds = [...new Set(logs.map((l) => l.performedBy).filter((p) => uuidPattern.test(p)))];
+    const nameCache: Record<string, string> = {};
+    if (uniqueIds.length) {
+      const axios = require('axios');
+      const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3002';
+      for (const id of uniqueIds) {
+        try {
+          const resp = await axios.get(`${userServiceUrl}/users/${id}`, { timeout: 3000 });
+          nameCache[id] = resp.data?.name || resp.data?.email || resp.data?.data?.name || resp.data?.data?.email || id;
+        } catch { nameCache[id] = id; }
+      }
+      for (const log of logs) {
+        if (nameCache[log.performedBy]) log.performedBy = nameCache[log.performedBy];
+      }
+    }
+
     return {
       logs,
       total,
