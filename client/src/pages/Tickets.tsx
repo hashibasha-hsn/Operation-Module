@@ -82,6 +82,7 @@ import {
 import { fetchEntities, fetchUsers, getUserDisplayName } from "@/lib/processApi";
 import { humanLabel } from "@/lib/displayLabels";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getStoredUser } from "@/lib/authStorage";
 
 type AssignOption = { id: string; label: string };
 
@@ -101,6 +102,8 @@ const ALL_EXPORT_COLUMNS = [
 
 export default function Tickets() {
   const { t } = useLanguage();
+  const currentUser = getStoredUser();
+  const currentUserId = String(currentUser.userId ?? currentUser.id ?? "");
 
   const COLUMN_DEFS: { key: string; label: string; sortable?: boolean }[] = useMemo(() => [
     { key: "title", label: t('title'), sortable: true },
@@ -1358,7 +1361,7 @@ export default function Tickets() {
                 {t('closeTicket')}
               </Button>
             )}
-            {!ticketSettings?.disableTicketDelete && (
+            {!ticketSettings?.disableTicketDelete && selectedTicket?.createdBy === currentUserId && (
               <Button
                 variant="destructive"
                 onClick={() => handleDeleteTicket(selectedTicket.id)}

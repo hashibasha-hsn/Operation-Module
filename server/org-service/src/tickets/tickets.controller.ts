@@ -217,8 +217,12 @@ export class TicketsController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateTicketDto: Partial<Ticket>) {
-    return this.ticketsService.update(id, updateTicketDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateTicketDto: Partial<Ticket>,
+    @Query('userId') userId?: string,
+  ) {
+    return this.ticketsService.update(id, updateTicketDto, userId);
   }
 
   @Put(':id/status')

@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
   OnModuleDestroy,
   OnModuleInit,
   Logger,
@@ -219,8 +220,14 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  async update(id: string, ticketData: Partial<Ticket>): Promise<Ticket> {
+  async update(id: string, ticketData: Partial<Ticket>, requestingUserId?: string): Promise<Ticket> {
     const existing = await this.findOne(id);
+    if (!existing) throw new NotFoundException('Ticket not found');
+
+    if (requestingUserId && existing.createdBy !== requestingUserId) {
+      throw new ForbiddenException('Only the creator can edit this ticket');
+    }
+
     await this.ticketsRepository.update(id, ticketData);
     const updated = await this.findOne(id);
     if (ticketData.assignedTo && ticketData.assignedTo !== existing?.assignedTo) {
@@ -242,6 +249,10 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
   ): Promise<Ticket> {
     const ticket = await this.findOne(id);
     if (!ticket) throw new NotFoundException('Ticket not found');
+
+    if (ticket.createdBy !== userId && ticket.assignedTo !== userId) {
+      throw new ForbiddenException('Only the creator or assignee can change the ticket status');
+    }
 
     const actionHistory = ticket.actionHistory || [];
     actionHistory.push({
@@ -295,6 +306,14 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     const ticket = await this.findOne(id);
     if (!ticket) {
       throw new NotFoundException('Ticket not found');
+    }
+
+    if (!userId) {
+      throw new BadRequestException('userId is required');
+    }
+
+    if (ticket.createdBy !== userId) {
+      throw new ForbiddenException('Only the creator can delete this ticket');
     }
 
     const settings = await this.getSettings(ticket.organizationId);
