@@ -111,7 +111,7 @@ export async function createTicket(payload: Partial<TicketRecord>) {
       ticketType: 'custom',
       ...payload,
       organizationId: payload.organizationId || organizationId,
-      createdBy: payload.createdBy || userName || userId,
+      createdBy: payload.createdBy || userId || userName,
     }),
   });
 }
