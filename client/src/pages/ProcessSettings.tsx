@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import ProcessHeader from "@/components/ProcessHeader";
+import { useLanguage } from "@/contexts/LanguageContext";
 import ProcessPropertiesPanel, { PROPERTY_SECTIONS } from "@/components/process/ProcessPropertiesPanel";
 import { assignProcess, publishProcess, saveProcessDraft } from "@/lib/processApi";
 import {
@@ -19,6 +20,7 @@ import { toast } from "sonner";
 import { AlertCircle, Check } from "lucide-react";
 
 export default function ProcessSettings() {
+  const { t } = useLanguage();
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("properties");
   const [selectedSection, setSelectedSection] = useState("process");
@@ -48,9 +50,9 @@ export default function ProcessSettings() {
       });
       setProcessDraft(saved);
       setProperties(mergeProcessProperties(saved.properties));
-      toast.success("Process properties saved");
+      toast.success(t('processPropertiesSaved'));
     } catch (error: any) {
-      toast.error(error.message || "Failed to save process properties");
+      toast.error(error.message || t('failedToSaveProcessProperties'));
     } finally {
       setIsSaving(false);
     }
@@ -58,26 +60,26 @@ export default function ProcessSettings() {
 
   const handlePublish = async () => {
     if (!processDraft?.id) {
-      toast.error("Save the process draft first");
+      toast.error(t('saveDraftFirst'));
       return;
     }
     const assigneeIds = processDraft.assigneeIds ?? [];
     const storeIds = processDraft.storeIds ?? [];
     if (assigneeIds.length === 0 && storeIds.length === 0) {
-      toast.error("Assign users or stores on the Assign tab before publishing");
+      toast.error(t('assignBeforePublishing'));
       return;
     }
     if (properties.processWithReview && !isReviewConfigComplete(properties.reviewConfig)) {
-      toast.error("Assign a unique reviewer for each review level before publishing");
+      toast.error(t('assignReviewerBeforePublishing'));
       return;
     }
     try {
       await assignProcess(processDraft.id, { assigneeIds, storeIds });
       await publishProcess(processDraft.id);
-      toast.success("Process published");
+      toast.success(t('processPublished'));
       navigate("/process");
     } catch (error: any) {
-      toast.error(error.message || "Failed to publish process");
+      toast.error(error.message || t('failedToPublishProcess'));
     }
   };
 
@@ -101,7 +103,7 @@ export default function ProcessSettings() {
 
       <div className="flex h-[calc(100vh-48px)]">
         <div className="w-64 border-r bg-white p-4 shrink-0">
-          <h3 className="font-semibold mb-4">Settings</h3>
+          <h3 className="font-semibold mb-4">{t('settings')}</h3>
           <div className="space-y-1">
             {PROPERTY_SECTIONS.map((section) => (
               <button
@@ -128,7 +130,7 @@ export default function ProcessSettings() {
         <div className="flex-1 bg-gray-50 p-6 overflow-y-auto">
           {!processDraft?.title?.trim() && (
             <div className="mb-4 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-              Set a process title on the Title tab before saving properties.
+              {t('setTitleBeforeSavingProperties')}
             </div>
           )}
           <ProcessPropertiesPanel
@@ -137,7 +139,7 @@ export default function ProcessSettings() {
             selectedSection={selectedSection}
           />
           {isSaving && (
-            <p className="mt-6 text-sm text-muted-foreground">Saving...</p>
+            <p className="mt-6 text-sm text-muted-foreground">{t('saving')}</p>
           )}
         </div>
       </div>

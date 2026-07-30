@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import ProcessHeader from "@/components/ProcessHeader";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import {
   emptyProcessDraft,
@@ -11,6 +12,7 @@ import {
 import { fetchProcessTags, saveProcessDraft } from "@/lib/processApi";
 
 export default function TitleSetup() {
+  const { t } = useLanguage();
   const [location, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("title");
   const [draft, setDraft] = useState<ProcessDraftState>(emptyProcessDraft);
@@ -36,7 +38,7 @@ export default function TitleSetup() {
 
   const handleSave = async () => {
     if (!draft.title.trim()) {
-      toast.error("Process title is required");
+      toast.error(t('processTitleRequired'));
       return;
     }
 
@@ -44,16 +46,16 @@ export default function TitleSetup() {
     try {
       const saved = await saveProcessDraft(draft);
       setDraft(saved);
-      toast.success("Process saved as draft");
+      toast.success(t('processSavedAsDraft'));
     } catch (error: any) {
-      toast.error(error.message || "Failed to save process");
+      toast.error(error.message || t('failedToSaveProcess'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handlePublish = () => {
-    toast.message("Publish is available after build, properties, and assign are configured");
+    toast.message(t('publishAfterConfigDesc'));
   };
 
   const goToBuild = () => {
@@ -72,32 +74,32 @@ export default function TitleSetup() {
 
       <div className="mx-auto max-w-3xl space-y-6 p-6">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700">Process title</label>
+          <label className="text-sm font-medium text-slate-700">{t('processTitle')}</label>
           <input
             type="text"
             value={draft.title}
             onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-            placeholder="e.g., Daily Opening Checklist"
+            placeholder={t('processTitlePlaceholder')}
             className="workflow-input text-base"
           />
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700">Description</label>
+          <label className="text-sm font-medium text-slate-700">{t('description')}</label>
           <textarea
             value={draft.description}
             onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-            placeholder="Describe what this process is for"
+            placeholder={t('describeProcessPlaceholder')}
             rows={4}
             className="workflow-input"
           />
         </div>
 
         <div className="rounded-xl border border-sky-100 bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-base font-semibold text-slate-900">Assign Process Tags</h3>
+          <h3 className="mb-4 text-base font-semibold text-slate-900">{t('assignProcessTags')}</h3>
           {processTags.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No process tags yet. Create them in Manage Tags → Process Tag.
+              {t('noProcessTagsYet')}
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -123,14 +125,14 @@ export default function TitleSetup() {
 
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
           <p className="text-sm text-muted-foreground">
-            {draft.id ? "Draft saved" : "Not saved yet"}
+            {draft.id ? t('draftSaved') : t('notSavedYet')}
           </p>
           <div className="flex gap-2">
             <button type="button" onClick={handleSave} disabled={isSaving} className="workflow-btn-outline">
-              {isSaving ? "Saving..." : "Save Draft"}
+              {isSaving ? t('saving') : t('saveDraft')}
             </button>
             <button type="button" onClick={goToBuild} className="workflow-btn-primary">
-              Continue to Build
+              {t('continueToBuild')}
             </button>
           </div>
         </div>

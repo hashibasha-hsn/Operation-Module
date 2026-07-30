@@ -1,5 +1,6 @@
 import { ArrowLeft, Type, Hammer, Settings, User, Save, Upload } from "lucide-react";
 import { useLocation } from "wouter";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ProcessHeaderProps {
   activeTab: string;
@@ -12,6 +13,7 @@ const HEADER_BG = "linear-gradient(90deg, #0284c7 0%, #0ea5e9 50%, #06b6d4 100%)
 const ACTIVE_COLOR = "#0284c7";
 
 export default function ProcessHeader({ activeTab, onTabChange, onSave, onPublish }: ProcessHeaderProps) {
+  const { t } = useLanguage();
   const [, navigate] = useLocation();
 
   const handleTabChange = (value: string) => {
@@ -68,21 +70,21 @@ export default function ProcessHeader({ activeTab, onTabChange, onSave, onPublis
         }}
       >
         <ArrowLeft size={15} />
-        Back
+        {t('back')}
       </button>
 
       <div style={{ display: "flex", gap: "2px", background: "rgba(255,255,255,0.12)", borderRadius: "8px", padding: "3px" }}>
         <button type="button" onClick={() => handleTabChange("title")} style={tabStyle("title")}>
-          <Type size={15} /> Title
+          <Type size={15} /> {t('title')}
         </button>
         <button type="button" onClick={() => handleTabChange("build")} style={tabStyle("build")}>
-          <Hammer size={15} /> Build
+          <Hammer size={15} /> {t('build')}
         </button>
         <button type="button" onClick={() => handleTabChange("properties")} style={tabStyle("properties")}>
-          <Settings size={15} /> Properties
+          <Settings size={15} /> {t('properties')}
         </button>
         <button type="button" onClick={() => handleTabChange("assign")} style={tabStyle("assign")}>
-          <User size={15} /> Assign
+          <User size={15} /> {t('assign')}
         </button>
       </div>
 
@@ -103,7 +105,7 @@ export default function ProcessHeader({ activeTab, onTabChange, onSave, onPublis
             gap: "5px",
           }}
         >
-          <Save size={15} /> SAVE
+          <Save size={15} /> {t('save')}
         </button>
         <button
           type="button"
@@ -122,7 +124,7 @@ export default function ProcessHeader({ activeTab, onTabChange, onSave, onPublis
             gap: "5px",
           }}
         >
-          <Upload size={15} /> Publish
+          <Upload size={15} /> {t('publish')}
         </button>
       </div>
     </nav>

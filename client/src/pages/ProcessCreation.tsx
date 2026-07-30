@@ -3,6 +3,7 @@ import { Search, Plus, Check, Download, Upload } from "lucide-react";
 import { useLocation } from "wouter";
 import * as XLSX from "xlsx";
 import ProcessHeader from "@/components/ProcessHeader";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -106,6 +107,7 @@ function parseBulkAssignmentRows(
 }
 
 export default function ProcessCreation() {
+  const { t } = useLanguage();
   const [, navigate] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState("assign");
@@ -159,7 +161,7 @@ export default function ProcessCreation() {
         );
       })
       .catch(() => {
-        toast.error("Could not load users, stores, or assignee profiles");
+        toast.error(t('failedToLoadAssignData'));
       });
   }, []);
 
@@ -198,11 +200,11 @@ export default function ProcessCreation() {
 
   const handleSave = async () => {
     if (!processDraft?.id) {
-      toast.error("Save the process draft on Title/Build tabs first");
+      toast.error(t('saveDraftOnTitleBuildFirst'));
       return;
     }
     if (!hasAssignment()) {
-      toast.error("Select at least one assignee option before saving");
+      toast.error(t('selectAtLeastOneAssignee'));
       return;
     }
 
@@ -219,9 +221,9 @@ export default function ProcessCreation() {
       });
       setProcessDraft(saved);
       persistAssignmentLocally();
-      toast.success("Assignment saved");
+      toast.success(t('assignmentSaved'));
     } catch (error: any) {
-      toast.error(error.message || "Failed to save assignment");
+      toast.error(error.message || t('failedToSaveAssignment'));
     } finally {
       setIsSaving(false);
     }
@@ -229,11 +231,11 @@ export default function ProcessCreation() {
 
   const handlePublish = async () => {
     if (!processDraft?.id) {
-      toast.error("Save the process draft first");
+      toast.error(t('saveDraftFirst'));
       return;
     }
     if (!hasAssignment()) {
-      toast.error("Assign at least one store, user, profile, or bulk mapping before publishing");
+      toast.error(t('assignBeforePublishing'));
       return;
     }
 
@@ -242,10 +244,10 @@ export default function ProcessCreation() {
     try {
       await assignProcess(processDraft.id, { assigneeIds, storeIds });
       await publishProcess(processDraft.id);
-      toast.success("Process published");
+      toast.success(t('processPublished'));
       navigate("/process");
     } catch (error: any) {
-      toast.error(error.message || "Failed to publish process");
+      toast.error(error.message || t('failedToPublishProcess'));
     } finally {
       setIsSaving(false);
     }
@@ -269,7 +271,7 @@ export default function ProcessCreation() {
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName]);
       const parsed = parseBulkAssignmentRows(rows, userRows, stores);
       if (parsed.assigneeIds.length === 0 && parsed.storeIds.length === 0) {
-        toast.error("No valid store or user mappings found in the uploaded file");
+        toast.error(t('noValidMappings'));
         return;
       }
       setBulkAssigneeIds(parsed.assigneeIds);
@@ -278,11 +280,9 @@ export default function ProcessCreation() {
       setSelectedUserIds(parsed.assigneeIds);
       setSelectedStoreIds(parsed.storeIds);
       persistAssignmentLocally();
-      toast.success(
-        `Loaded ${parsed.storeIds.length} store(s) and ${parsed.assigneeIds.length} user(s) from file`,
-      );
+      toast.success(`${t('loaded')} ${parsed.storeIds.length} ${t('stores')}(s) ${t('and')} ${parsed.assigneeIds.length} ${t('users')}(s) ${t('fromFile')}`);
     } catch {
-      toast.error("Could not read the uploaded Excel/CSV file");
+      toast.error(t('couldNotReadFile'));
     }
   };
 
@@ -312,7 +312,7 @@ export default function ProcessCreation() {
       />
 
       <div className="border-b bg-white px-4 py-2 flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-muted-foreground">Assign By</span>
+        <span className="text-sm text-muted-foreground">{t('assignBy')}</span>
         {ASSIGN_MODES.map((mode) => (
           <button
             key={mode.key}
@@ -331,7 +331,7 @@ export default function ProcessCreation() {
         ))}
         {processDraft?.title && (
           <span className="ml-auto text-sm text-muted-foreground">
-            Process: <strong>{processDraft.title}</strong>
+            {t('process')}: <strong>{processDraft.title}</strong>
           </span>
         )}
       </div>
@@ -339,7 +339,7 @@ export default function ProcessCreation() {
       <div className="p-6 max-w-4xl">
         {!processDraft?.id && (
           <div className="mb-4 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-            Complete Title and Build steps and save a draft before assigning.
+            {t('completeTitleBuildFirst')}
           </div>
         )}
 
@@ -351,10 +351,10 @@ export default function ProcessCreation() {
                 type="search"
                 placeholder={
                   assignBy === "store"
-                    ? "Search stores"
+                    ? t('searchStoresPlaceholder')
                     : assignBy === "user"
-                      ? "Search users"
-                      : "Search assignee profiles"
+                      ? t('searchUsersPlaceholder')
+                      : t('searchAssigneeProfilesPlaceholder')
                 }
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -363,7 +363,7 @@ export default function ProcessCreation() {
             </div>
             <div className="rounded-lg border bg-white divide-y max-h-96 overflow-y-auto">
               {filteredOptions.length === 0 ? (
-                <p className="p-4 text-sm text-muted-foreground text-center">No options found</p>
+                <p className="p-4 text-sm text-muted-foreground text-center">{t('noOptionsFound')}</p>
               ) : (
                 filteredOptions.map((option) => {
                   const checked =
@@ -404,22 +404,22 @@ export default function ProcessCreation() {
                 })
               )}
             </div>
-            <p className="text-sm text-muted-foreground">Selected: {selectedCount}</p>
+            <p className="text-sm text-muted-foreground">{t('selectedLabel')} {selectedCount}</p>
           </div>
         )}
 
         {assignBy === "bulk" && (
           <div className="space-y-4 rounded-lg border bg-white p-4">
             <div>
-              <h3 className="text-sm font-medium">Bulk Assignee (XL)</h3>
+              <h3 className="text-sm font-medium">{t('bulkAssignee')}</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Download the template, fill store and user email mappings, then upload the Excel file.
+                {t('bulkDescription')}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" className="gap-2" onClick={handleDownloadBulkTemplate}>
                 <Download className="h-4 w-4" />
-                Download Template
+                {t('downloadTemplate')}
               </Button>
               <Button
                 type="button"
@@ -428,7 +428,7 @@ export default function ProcessCreation() {
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="h-4 w-4" />
-                Upload Excel / CSV
+                {t('uploadExcelCsv')}
               </Button>
               <input
                 ref={fileInputRef}
@@ -443,16 +443,16 @@ export default function ProcessCreation() {
               />
             </div>
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              Required columns: <strong>EntityId</strong>, <strong>Store Name</strong>, <strong>Emails</strong>
-              (comma-separated).
+              {t('requiredColumns')} <strong>{t('entityId')}</strong>, <strong>{t('storeName')}</strong>, <strong>{t('emails')}</strong>
+              {t('commaSeparated')}
             </div>
             {bulkFileName ? (
               <p className="text-sm">
-                Loaded file: <strong>{bulkFileName}</strong> — {bulkStoreIds.length} store(s),{" "}
-                {bulkAssigneeIds.length} user(s)
+                {t('loadedFile')} <strong>{bulkFileName}</strong> — {bulkStoreIds.length} {t('stores')}(s),{" "}
+                {bulkAssigneeIds.length} {t('users')}(s)
               </p>
             ) : (
-              <p className="text-sm text-muted-foreground">No bulk file uploaded yet.</p>
+              <p className="text-sm text-muted-foreground">{t('noBulkFile')}</p>
             )}
           </div>
         )}
@@ -465,7 +465,7 @@ export default function ProcessCreation() {
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
-            Save Assignment
+            {t('saveAssignment')}
           </button>
           <button
             type="button"
@@ -474,7 +474,7 @@ export default function ProcessCreation() {
             className="inline-flex items-center gap-2 rounded-md border border-primary px-4 py-2 text-sm text-primary hover:bg-muted/50 disabled:opacity-50"
           >
             <Check className="h-4 w-4" />
-            Publish Process
+            {t('publishProcess')}
           </button>
         </div>
       </div>
