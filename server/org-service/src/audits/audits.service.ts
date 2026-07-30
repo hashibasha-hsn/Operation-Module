@@ -6,6 +6,7 @@ import { AuditSection } from './audit-section.entity';
 import { AuditQuestion } from './audit-question.entity';
 import { SaveAuditDraftDto } from './save-audit-draft.dto';
 import { AuditLogClient } from '../shared/audit-log.client';
+import { notifyAuditAssigned } from '../shared/notification-client';
 
 @Injectable()
 export class AuditsService {
@@ -166,6 +167,7 @@ export class AuditsService {
       const audit = await this.findOne(auditId);
       const assigneeIds = [...new Set([...(audit.assigneeIds ?? []), userId])];
       await this.auditsRepository.update(auditId, { assigneeIds });
+      notifyAuditAssigned({ userId, auditId, auditTitle: audit.title, assignedBy: audit.updatedBy || audit.createdBy });
     }
   }
 
@@ -238,8 +240,15 @@ export class AuditsService {
     assigneeIds?: string[];
     storeIds?: string[];
   }): Promise<Audit> {
+    const audit = await this.findOne(id);
+    const oldAssigneeIds = audit.assigneeIds ?? [];
     await this.auditsRepository.update(id, data);
     const updated = await this.findOne(id);
+    const newAssigneeIds = updated.assigneeIds ?? [];
+    const added = newAssigneeIds.filter((uid) => !oldAssigneeIds.includes(uid));
+    for (const uid of added) {
+      notifyAuditAssigned({ userId: uid, auditId: id, auditTitle: updated.title, assignedBy: updated.updatedBy || updated.createdBy });
+    }
     await this.logAuditAction(updated, 'Update', updated.updatedBy || updated.createdBy);
     return updated;
   }

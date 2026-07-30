@@ -56,6 +56,26 @@ export class NotificationsController {
     );
   }
 
+  @Get('preferences/:userId/simple')
+  getSimplePreferences(@Param('userId') userId: string) {
+    return this.notificationsService.getSimplePreferences(userId);
+  }
+
+  @Put('preferences/:userId/simple')
+  updateSimplePreferences(
+    @Param('userId') userId: string,
+    @Body()
+    body: {
+      enabled: boolean;
+      process: boolean;
+      actionPoint: boolean;
+      ticket: boolean;
+      learning: boolean;
+    },
+  ) {
+    return this.notificationsService.updateSimplePreferences(userId, body);
+  }
+
   @Post('delivery-logs')
   createDeliveryLog(@Body() body: Record<string, unknown>) {
     return this.notificationsService.createDeliveryLog(body);

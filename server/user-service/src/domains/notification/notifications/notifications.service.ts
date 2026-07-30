@@ -8,6 +8,10 @@ import { NotificationPreference } from './notification-preference.entity';
 import {
   GLOBAL_PREFERENCE_TYPE,
   WEEKLY_DIGEST_TYPE,
+  PROCESS_ASSIGNED_TYPE,
+  ACTION_POINT_ASSIGNED_TYPE,
+  TICKET_ASSIGNED_TYPE,
+  LEARNING_ASSIGNMENT_TYPE,
   buildDefaultPreferences,
 } from './notification-preferences.defaults';
 
@@ -207,5 +211,47 @@ export class NotificationsService {
       await this.updatePreferences(userId, notificationType, updates);
     }
     return this.getUserPreferences(userId);
+  }
+
+  async getSimplePreferences(userId: string): Promise<{
+    enabled: boolean;
+    process: boolean;
+    actionPoint: boolean;
+    ticket: boolean;
+    learning: boolean;
+  }> {
+    const prefs = await this.getUserPreferences(userId);
+    const byType = new Map(prefs.map((p) => [p.notificationType, p]));
+    return {
+      enabled: byType.get(GLOBAL_PREFERENCE_TYPE)?.inAppEnabled ?? true,
+      process: byType.get(PROCESS_ASSIGNED_TYPE)?.inAppEnabled ?? true,
+      actionPoint: byType.get(ACTION_POINT_ASSIGNED_TYPE)?.inAppEnabled ?? true,
+      ticket: byType.get(TICKET_ASSIGNED_TYPE)?.inAppEnabled ?? true,
+      learning: byType.get(LEARNING_ASSIGNMENT_TYPE)?.inAppEnabled ?? true,
+    };
+  }
+
+  async updateSimplePreferences(
+    userId: string,
+    body: {
+      enabled: boolean;
+      process: boolean;
+      actionPoint: boolean;
+      ticket: boolean;
+      learning: boolean;
+    },
+  ): Promise<{
+    enabled: boolean;
+    process: boolean;
+    actionPoint: boolean;
+    ticket: boolean;
+    learning: boolean;
+  }> {
+    await this.updatePreferences(userId, GLOBAL_PREFERENCE_TYPE, { inAppEnabled: body.enabled });
+    await this.updatePreferences(userId, PROCESS_ASSIGNED_TYPE, { inAppEnabled: body.process });
+    await this.updatePreferences(userId, ACTION_POINT_ASSIGNED_TYPE, { inAppEnabled: body.actionPoint });
+    await this.updatePreferences(userId, TICKET_ASSIGNED_TYPE, { inAppEnabled: body.ticket });
+    await this.updatePreferences(userId, LEARNING_ASSIGNMENT_TYPE, { inAppEnabled: body.learning });
+    return body;
   }
 }

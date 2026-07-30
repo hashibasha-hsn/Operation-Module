@@ -8,6 +8,9 @@ export const WEEKLY_DIGEST_TYPE = 'weekly_digest';
 export const CERTIFICATE_ISSUED_TYPE = 'certificate_issued';
 export const LEARNING_ASSIGNMENT_TYPE = 'learning_assignment';
 export const COURSE_COMPLETION_REMINDER_TYPE = 'course_completion_reminder';
+export const PROCESS_ASSIGNED_TYPE = 'process_assigned';
+export const ACTION_POINT_ASSIGNED_TYPE = 'action_point_assigned';
+export const TICKET_ASSIGNED_TYPE = 'ticket_assigned';
 
 export const ALL_PREFERENCE_TYPES = [
   GLOBAL_PREFERENCE_TYPE,
@@ -18,6 +21,9 @@ export const ALL_PREFERENCE_TYPES = [
   CERTIFICATE_ISSUED_TYPE,
   LEARNING_ASSIGNMENT_TYPE,
   COURSE_COMPLETION_REMINDER_TYPE,
+  PROCESS_ASSIGNED_TYPE,
+  ACTION_POINT_ASSIGNED_TYPE,
+  TICKET_ASSIGNED_TYPE,
 ] as const;
 
 export type PreferenceType = (typeof ALL_PREFERENCE_TYPES)[number];
@@ -89,6 +95,30 @@ export function buildDefaultPreferences(userId: string): Omit<NotificationPrefer
       notificationType: COURSE_COMPLETION_REMINDER_TYPE,
       emailEnabled: true,
       pushEnabled: true,
+      smsEnabled: false,
+      inAppEnabled: true,
+    },
+    {
+      ...base,
+      notificationType: PROCESS_ASSIGNED_TYPE,
+      emailEnabled: false,
+      pushEnabled: false,
+      smsEnabled: false,
+      inAppEnabled: true,
+    },
+    {
+      ...base,
+      notificationType: ACTION_POINT_ASSIGNED_TYPE,
+      emailEnabled: false,
+      pushEnabled: false,
+      smsEnabled: false,
+      inAppEnabled: true,
+    },
+    {
+      ...base,
+      notificationType: TICKET_ASSIGNED_TYPE,
+      emailEnabled: false,
+      pushEnabled: false,
       smsEnabled: false,
       inAppEnabled: true,
     },

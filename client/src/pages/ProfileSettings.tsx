@@ -14,7 +14,6 @@ import {
 import {
   User,
   Lock,
-  Bell,
   Mail,
   Save,
   CheckCircle,
@@ -30,9 +29,6 @@ import { getStoredUser,
   updateStoredUser, getOrganizationId } from '@/lib/authStorage';
 import { getProfileCompletionProgress } from "@/lib/profileCompletion";
 import PasswordChangeForm from "@/components/PasswordChangeForm";
-import NotificationSettingsPanel from "@/components/NotificationSettingsPanel";
-import NotificationPreferencesSummary from "@/components/NotificationPreferencesSummary";
-import { DEFAULT_NOTIFICATION_SETTINGS, type NotificationSettingsForm } from "@/lib/notificationApi";
 import { fetchTwoFactorSettings, updateTwoFactorSettings } from "@/lib/twoFactorApi";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { GATEWAY } from "@/lib/apiConfig";
@@ -77,9 +73,7 @@ export default function ProfileSettings() {
     forcePasswordChange ||
     (!setupMode && (tabParam === "password" || tabParam === "change-password"))
       ? "Change Password"
-      : tabParam === "notifications"
-        ? "Notifications"
-        : "My Profile";
+      : "My Profile";
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -106,15 +100,10 @@ export default function ProfileSettings() {
     storeName: "",
     manager: "",
   });
-  const [notificationPreview, setNotificationPreview] = useState<NotificationSettingsForm>({
-    ...DEFAULT_NOTIFICATION_SETTINGS,
-  });
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [isSavingTwoFactor, setIsSavingTwoFactor] = useState(false);
 
-  const tabs = setupMode
-    ? ["My Profile", "Change Password"]
-    : ["My Profile", "Change Password", "Notifications"];
+  const tabs = ["My Profile", "Change Password"];
 
   const storedUser = getStoredUser();
   const currentUserId = String(storedUser.userId ?? storedUser.id ?? "");
@@ -138,8 +127,6 @@ export default function ProfileSettings() {
     }
     if (tabParam === "password" || tabParam === "change-password") {
       setActiveTab("Change Password");
-    } else if (tabParam === "notifications") {
-      setActiveTab("Notifications");
     }
   }, [tabParam, setupMode, forcePasswordChange]);
 
@@ -499,8 +486,6 @@ export default function ProfileSettings() {
                         ? "/profile-settings?setup=1&tab=password"
                         : "/profile-settings?tab=password",
                     );
-                  } else if (tab === "Notifications") {
-                    navigate("/profile-settings?tab=notifications");
                   } else {
                     navigate(setupMode ? "/profile-settings?setup=1" : "/profile-settings");
                   }
@@ -512,7 +497,7 @@ export default function ProfileSettings() {
                     ? setupMode
                       ? t("profileStepOne")
                       : t("myProfile")
-                    : t("notifications")}
+                    : ""}
               </Button>
             ))}
           </div>
@@ -831,27 +816,7 @@ export default function ProfileSettings() {
         </Card>
       )}
 
-      {activeTab === "Notifications" && (
-        <div className="space-y-6">
-          <NotificationPreferencesSummary settings={notificationPreview} />
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5" />
-                {t("notificationPreferences")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <NotificationSettingsPanel
-                userId={currentUserId}
-                variant="embedded"
-                idPrefix="profile"
-                onSettingsChange={setNotificationPreview}
-              />
-            </CardContent>
-          </Card>
-        </div>
-      )}
+
     </div>
   );
 }

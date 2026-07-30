@@ -11,6 +11,10 @@ export const WEEKLY_DIGEST_TYPE = 'weekly_digest';
 export const CERTIFICATE_ISSUED_TYPE = 'certificate_issued';
 export const LEARNING_ASSIGNMENT_TYPE = 'learning_assignment';
 export const COURSE_COMPLETION_REMINDER_TYPE = 'course_completion_reminder';
+export const PROCESS_ASSIGNED_TYPE = 'process_assigned';
+export const AUDIT_ASSIGNED_TYPE = 'audit_assigned';
+export const ACTION_POINT_ASSIGNED_TYPE = 'action_point_assigned';
+export const TICKET_ASSIGNED_TYPE = 'ticket_assigned';
 
 export type AppNotification = {
   id: string;
@@ -311,6 +315,37 @@ export function getEmailFrequencyLabel(frequency: EmailFrequency): string {
   }
 }
 
+export type SimplePreferences = {
+  enabled: boolean;
+  process: boolean;
+  actionPoint: boolean;
+  ticket: boolean;
+  learning: boolean;
+};
+
+export async function getSimplePreferences(userId: string): Promise<SimplePreferences> {
+  try {
+    const response = await fetch(`${NOTIFICATION_API}/notifications/preferences/${userId}/simple`);
+    if (!response.ok) return { enabled: true, process: true, actionPoint: true, ticket: true, learning: true };
+    return await response.json();
+  } catch {
+    return { enabled: true, process: true, actionPoint: true, ticket: true, learning: true };
+  }
+}
+
+export async function updateSimplePreferences(
+  userId: string,
+  prefs: SimplePreferences,
+): Promise<SimplePreferences> {
+  const response = await fetch(`${NOTIFICATION_API}/notifications/preferences/${userId}/simple`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(prefs),
+  });
+  if (!response.ok) return prefs;
+  return await response.json();
+}
+
 export async function fetchUserNotifications(userId: string): Promise<AppNotification[]> {
   const response = await fetch(`${NOTIFICATION_API}/notifications/user/${userId}`);
   if (!response.ok) return [];
@@ -343,6 +378,14 @@ export function getNotificationTypeLabel(type: string, t?: (key: string) => stri
       return translate('mentions') || 'Mentions';
     case WEEKLY_DIGEST_TYPE:
       return translate('weeklyDigest') || 'Weekly digest';
+    case PROCESS_ASSIGNED_TYPE:
+      return 'Process';
+    case AUDIT_ASSIGNED_TYPE:
+      return 'Audit';
+    case ACTION_POINT_ASSIGNED_TYPE:
+      return 'Action Point';
+    case TICKET_ASSIGNED_TYPE:
+      return 'Ticket';
     default:
       return type.replace(/_/g, ' ');
   }

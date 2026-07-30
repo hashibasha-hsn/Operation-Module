@@ -18,6 +18,7 @@ import {
   DEFAULT_PRIORITY_LEVELS,
   normalizePriorityLevels,
 } from './ticket-priority.defaults';
+import { notifyTicketAssigned } from '../shared/notification-client';
 
 @Injectable()
 export class TicketsService implements OnModuleInit, OnModuleDestroy {
@@ -169,7 +170,16 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
     ];
 
     const ticket = this.ticketsRepository.create(payload);
-    return await this.ticketsRepository.save(ticket);
+    const saved = await this.ticketsRepository.save(ticket);
+    if (saved.assignedTo) {
+      notifyTicketAssigned({
+        userId: saved.assignedTo,
+        ticketId: saved.id,
+        ticketTitle: saved.title,
+        assignedBy: saved.createdBy,
+      });
+    }
+    return saved;
   }
 
   async findAll(organizationId: string, startDate?: Date, endDate?: Date): Promise<Ticket[]> {
@@ -210,8 +220,18 @@ export class TicketsService implements OnModuleInit, OnModuleDestroy {
   }
 
   async update(id: string, ticketData: Partial<Ticket>): Promise<Ticket> {
+    const existing = await this.findOne(id);
     await this.ticketsRepository.update(id, ticketData);
-    return await this.findOne(id);
+    const updated = await this.findOne(id);
+    if (ticketData.assignedTo && ticketData.assignedTo !== existing?.assignedTo) {
+      notifyTicketAssigned({
+        userId: ticketData.assignedTo,
+        ticketId: id,
+        ticketTitle: updated.title,
+        assignedBy: updated.updatedBy || updated.createdBy,
+      });
+    }
+    return updated;
   }
 
   async updateStatus(

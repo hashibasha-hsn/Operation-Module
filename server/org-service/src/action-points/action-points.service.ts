@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ActionPoint } from './action-point.entity';
+import { notifyActionPointAssigned } from '../shared/notification-client';
 
 @Injectable()
 export class ActionPointsService {
@@ -12,7 +13,16 @@ export class ActionPointsService {
 
   async create(actionPointData: Partial<ActionPoint>): Promise<ActionPoint> {
     const actionPoint = this.actionPointsRepository.create(actionPointData);
-    return await this.actionPointsRepository.save(actionPoint);
+    const saved = await this.actionPointsRepository.save(actionPoint);
+    if (saved.assignedTo) {
+      notifyActionPointAssigned({
+        userId: saved.assignedTo,
+        actionPointId: saved.id,
+        actionPointTitle: saved.title,
+        assignedBy: saved.createdBy,
+      });
+    }
+    return saved;
   }
 
   async findAll(organizationId: string): Promise<ActionPoint[]> {
@@ -55,8 +65,18 @@ export class ActionPointsService {
   }
 
   async update(id: string, actionPointData: Partial<ActionPoint>): Promise<ActionPoint> {
+    const existing = await this.findOne(id);
     await this.actionPointsRepository.update(id, actionPointData);
-    return await this.findOne(id);
+    const updated = await this.findOne(id);
+    if (actionPointData.assignedTo && actionPointData.assignedTo !== existing?.assignedTo) {
+      notifyActionPointAssigned({
+        userId: actionPointData.assignedTo,
+        actionPointId: id,
+        actionPointTitle: updated.title,
+        assignedBy: updated.updatedBy || updated.createdBy,
+      });
+    }
+    return updated;
   }
 
   async updateStatus(id: string, status: string, userId: string): Promise<ActionPoint> {

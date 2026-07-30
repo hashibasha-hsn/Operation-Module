@@ -327,7 +327,7 @@ export default function Layout({ children }: LayoutProps) {
               <DropdownMenuContent align="end" className="w-52">
                 <DropdownMenuItem
                   className="flex items-center gap-2 cursor-pointer"
-                  onClick={() => navigate("/profile-settings?tab=notifications")}
+                  onClick={() => navigate("/notifications")}
                 >
                   <Bell className="w-4 h-4" />
                   {t("notifications") || "Notifications"}

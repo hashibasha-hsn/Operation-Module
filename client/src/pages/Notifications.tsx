@@ -1,21 +1,73 @@
-import { Bell, Settings } from "lucide-react";
-import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Bell, CheckCircle, Loader2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getStoredUser } from "@/lib/authStorage";
-import NotificationPreferencesSummary from "@/components/NotificationPreferencesSummary";
-import NotificationSettingsPanel from "@/components/NotificationSettingsPanel";
-import { useState } from "react";
-import { DEFAULT_NOTIFICATION_SETTINGS, type NotificationSettingsForm } from "@/lib/notificationApi";
+import { useState, useEffect, useCallback } from "react";
+import {
+  fetchUserNotifications,
+  markNotificationRead,
+  getSimplePreferences,
+  updateSimplePreferences,
+  type AppNotification,
+  type SimplePreferences,
+  getNotificationTypeLabel,
+} from "@/lib/notificationApi";
+import { useLocation } from "wouter";
 
 export default function Notifications() {
   const { t } = useLanguage();
   const user = getStoredUser();
   const userId = String(user.userId || user.id || "");
-  const [previewSettings, setPreviewSettings] = useState<NotificationSettingsForm>({
-    ...DEFAULT_NOTIFICATION_SETTINGS,
+  const [, setLocation] = useLocation();
+
+  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [prefs, setPrefs] = useState<SimplePreferences>({
+    enabled: true,
+    process: true,
+    actionPoint: true,
+    ticket: true,
+    learning: true,
   });
+
+  const loadData = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    const [fetchedPrefs, fetchedNotifications] = await Promise.all([
+      getSimplePreferences(userId),
+      fetchUserNotifications(userId),
+    ]);
+    setPrefs(fetchedPrefs);
+    setNotifications(fetchedNotifications);
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleToggle = async (key: keyof SimplePreferences) => {
+    const updated = { ...prefs, [key]: !prefs[key] };
+    setPrefs(updated);
+    await updateSimplePreferences(userId, updated);
+  };
+
+  const handleNotificationClick = async (notification: AppNotification) => {
+    if (notification.status !== "READ") {
+      await markNotificationRead(notification.id);
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notification.id ? { ...n, status: "READ" } : n,
+        ),
+      );
+    }
+    const link = (notification.data as any)?.link;
+    if (link) setLocation(link);
+  };
+
+  const unreadCount = notifications.filter((n) => n.status !== "READ").length;
 
   if (!userId) {
     return (
@@ -23,20 +75,14 @@ export default function Notifications() {
         <div className="flex items-center gap-2">
           <Bell className="w-8 h-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">{t("notificationSettings") || "Notification Settings"}</h1>
-            <p className="text-muted-foreground mt-1">
-              {t("manageNotificationPreferences") || "Manage notification preferences"}
-            </p>
+            <h1 className="text-3xl font-bold">{t("notifications") || "Notifications"}</h1>
           </div>
         </div>
         <Card>
           <CardContent className="py-10 text-center space-y-4">
             <p className="text-muted-foreground">
-              {t("loginToManageNotifications") || "Sign in to manage your notification preferences."}
+              {t("loginToManageNotifications") || "Sign in to manage your notifications."}
             </p>
-            <Link href="/login">
-              <Button>{t("signIn") || "Sign in"}</Button>
-            </Link>
           </CardContent>
         </Card>
       </div>
@@ -45,32 +91,110 @@ export default function Notifications() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-2">
-          <Bell className="w-8 h-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">{t("notificationSettings") || "Notification Settings"}</h1>
-            <p className="text-muted-foreground mt-1">
-              {t("manageNotificationPreferences") || "Manage notification preferences"}
-            </p>
-          </div>
+      <div className="flex items-center gap-2">
+        <Bell className="w-8 h-8 text-primary" />
+        <div>
+          <h1 className="text-3xl font-bold">{t("notifications") || "Notifications"}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {unreadCount > 0
+              ? `${unreadCount} unread`
+              : t("noUnreadNotifications") || "No unread notifications"}
+          </p>
         </div>
-        <Link href="/profile-settings?tab=notifications">
-          <Button variant="outline" className="gap-2">
-            <Settings className="w-4 h-4" />
-            {t("profileSettings") || "Profile Settings"}
-          </Button>
-        </Link>
       </div>
 
-      <NotificationPreferencesSummary settings={previewSettings} />
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">{t("notificationPreferences") || "Notification Preferences"}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="master-toggle" className="font-medium">{t("enableNotifications") || "Enable Notifications"}</Label>
+              <p className="text-xs text-muted-foreground">{t("masterToggleDescription") || "Master toggle for all notifications"}</p>
+            </div>
+            <Switch id="master-toggle" checked={prefs.enabled} onCheckedChange={() => handleToggle("enabled")} />
+          </div>
 
-      <NotificationSettingsPanel
-        userId={userId}
-        variant="page"
-        idPrefix="page"
-        onSettingsChange={setPreviewSettings}
-      />
+          <div className="border-t pt-4 space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("notificationTypes") || "Notification Types"}</p>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="process-toggle" className="text-sm">{t("process") || "Process"}</Label>
+              <Switch id="process-toggle" checked={prefs.process} onCheckedChange={() => handleToggle("process")} disabled={!prefs.enabled} />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="actionpoint-toggle" className="text-sm">{t("actionPoint") || "Action Point"}</Label>
+              <Switch id="actionpoint-toggle" checked={prefs.actionPoint} onCheckedChange={() => handleToggle("actionPoint")} disabled={!prefs.enabled} />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="ticket-toggle" className="text-sm">{t("ticket") || "Ticket"}</Label>
+              <Switch id="ticket-toggle" checked={prefs.ticket} onCheckedChange={() => handleToggle("ticket")} disabled={!prefs.enabled} />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="learning-toggle" className="text-sm">{t("learning") || "Learning"}</Label>
+              <Switch id="learning-toggle" checked={prefs.learning} onCheckedChange={() => handleToggle("learning")} disabled={!prefs.enabled} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">{t("recentNotifications") || "Recent Notifications"}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : notifications.length === 0 ? (
+            <p className="text-center py-6 text-muted-foreground text-sm">
+              {t("noNotifications") || "No notifications yet"}
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${
+                    notification.status !== "READ" ? "bg-muted/30 border-l-2 border-primary" : ""
+                  }`}
+                  onClick={() => handleNotificationClick(notification)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium truncate">{notification.title}</p>
+                      {notification.status !== "READ" && (
+                        <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                      )}
+                    </div>
+                    {notification.content && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notification.content}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                        {getNotificationTypeLabel(notification.type || "")}
+                      </span>
+                      {notification.createdAt && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(notification.createdAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {notification.status !== "READ" && (
+                    <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-1" />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

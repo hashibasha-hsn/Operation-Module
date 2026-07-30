@@ -6,6 +6,7 @@ import { ProcessSection } from './process-section.entity';
 import { ProcessQuestion } from './process-question.entity';
 import { SaveProcessDraftDto } from './save-process-draft.dto';
 import { AuditLogClient } from '../shared/audit-log.client';
+import { notifyProcessAssigned } from '../shared/notification-client';
 
 @Injectable()
 export class ProcessesService {
@@ -173,6 +174,7 @@ export class ProcessesService {
       const process = await this.findOne(processId);
       const assigneeIds = [...new Set([...(process.assigneeIds ?? []), userId])];
       await this.processesRepository.update(processId, { assigneeIds });
+      notifyProcessAssigned({ userId, processId, processTitle: process.title, assignedBy: process.updatedBy || process.createdBy });
     }
   }
 
@@ -207,11 +209,17 @@ export class ProcessesService {
     assignment: { assigneeIds?: string[]; storeIds?: string[] },
   ): Promise<Process> {
     const process = await this.findOne(id);
+    const oldAssigneeIds = process.assigneeIds ?? [];
     await this.processesRepository.update(id, {
       assigneeIds: assignment.assigneeIds ?? process.assigneeIds ?? [],
       storeIds: assignment.storeIds ?? process.storeIds ?? [],
     });
     const updated = await this.findOne(id);
+    const newAssigneeIds = updated.assigneeIds ?? [];
+    const added = newAssigneeIds.filter((uid) => !oldAssigneeIds.includes(uid));
+    for (const uid of added) {
+      notifyProcessAssigned({ userId: uid, processId: id, processTitle: updated.title, assignedBy: updated.updatedBy || updated.createdBy });
+    }
     await this.logProcessAction(updated, 'Update', updated.updatedBy || updated.createdBy);
     return updated;
   }
