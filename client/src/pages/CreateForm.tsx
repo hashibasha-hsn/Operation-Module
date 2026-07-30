@@ -1050,11 +1050,11 @@ export default function CreateForm() {
           <div className="flex h-[calc(100vh-73px)]">
             {/* Left Sidebar - Sections */}
             <div className="w-64 border-r bg-white p-4">
-              {isAssessmentMode && (
+              {isAssessmentMode && fieldValues.field1 && (
                 <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
                   <p className="text-xs font-medium uppercase tracking-wide text-sky-600">Assessment</p>
                   <p className="text-sm font-semibold text-gray-900 truncate">
-                    {fieldValues.field1 || "Untitled assessment"}
+                    {fieldValues.field1}
                   </p>
                 </div>
               )}
