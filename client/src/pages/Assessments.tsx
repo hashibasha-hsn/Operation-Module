@@ -145,7 +145,7 @@ export default function Assessments() {
           <Link href="/standard-reports/assessment-results">
             <Button variant="outline" className="gap-2">
               <BarChart3 className="w-4 h-4" />
-              Results Dashboard
+              {t("resultsDashboard")}
             </Button>
           </Link>
           <Button variant="outline" className="gap-2" onClick={loadAssessments}>
@@ -216,10 +216,10 @@ export default function Assessments() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t("title")}</TableHead>
-                    <TableHead>Creation Date</TableHead>
-                    <TableHead>Last modified on</TableHead>
-                    <TableHead>Users</TableHead>
-                    <TableHead>Stores</TableHead>
+                    <TableHead>{t("creationDate")}</TableHead>
+                    <TableHead>{t("lastModifiedOn")}</TableHead>
+                    <TableHead>{t("users")}</TableHead>
+                    <TableHead>{t("stores")}</TableHead>
                     <TableHead>{t("status")}</TableHead>
                     <TableHead>{t("actions")}</TableHead>
                   </TableRow>
@@ -262,7 +262,7 @@ export default function Assessments() {
                               }
                             >
                               <BarChart3 className="w-4 h-4 mr-2" />
-                              View Results
+                              {t("viewResults")}
                             </DropdownMenuItem>
                             {assessment.status !== "archived" && (
                               <DropdownMenuItem onClick={() => openAssessmentEditor(assessment)}>

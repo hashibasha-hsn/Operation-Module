@@ -1,5 +1,5 @@
 -- Auto-generated complete language entries for hashibasha_language schema
--- Total keys: 1487
+-- Total keys: 1490
 -- Sources: i18n.ts fallback, comprehensive-translations.sql, code extraction
 
 CREATE SCHEMA IF NOT EXISTS hashibasha_language;
@@ -112,7 +112,7 @@ INSERT INTO hashibasha_language.language_entries (key, en, ar) VALUES
 ('approvalsTab', 'Approvals', 'الموافقات'),
 ('arabicLanguage', 'Arabic Language', 'العربية'),
 ('arabicName', 'Arabic Name', 'الاسم بالعربية'),
-('archived', 'Archived', 'أرشيف'),
+('archived', 'Archived', 'مؤرشف'),
 ('area', 'Area', 'المنطقة'),
 ('areYouSureDeletePost', 'Are you sure you want to delete this post?', 'هل أنت متأكد من أنك تريد حذف هذا المنشور؟'),
 ('areYouSureYouWantToDeleteThisProfile', 'Are you sure you want to delete this profile?', 'هل أنت متأكد أنك تريد حذف هذا الملف التعريفي؟'),
@@ -365,7 +365,7 @@ Configure working-hour rules, publish to stores or users, then review the attend
 ('createAdminAccountDescription', 'Create your admin account to get started', 'أنشئ حساب المسؤول الخاص بك للبدء'),
 ('createAdminAccountTooltip', 'Create admin account and complete setup', 'إنشاء حساب المسؤول وإكمال الإعداد'),
 ('createAdvancedDropdownTag', 'Create Advanced Dropdown Tag', 'إنشاء علامة قائمة منسدلة متقدمة'),
-('createAndManage', 'Create and manage assessments', 'إنشاء وإدارة التقييمات'),
+('createAndManage', 'Create and manage assessments and quizzes for your organization', 'إنشاء وإدارة التقييمات والاختبارات لمؤسستك'),
 ('createAsset', 'Create Asset', 'Create Asset'),
 ('createAssigneeProfile', 'Create Assignee Profile', 'إنشاء ملف تعيين المكلف'),
 ('createCategory', 'Create Category', 'إنشاء فئة'),
@@ -404,7 +404,7 @@ Configure working-hour rules, publish to stores or users, then review the attend
 ('createUserTeam', 'Create User Team', 'إنشاء فريق مستخدمين'),
 ('creating', 'Creating...', 'جارٍ الإنشاء...'),
 ('creationAndConfigurations', 'Creation & Configurations', 'الإنشاء والتكوين'),
-('creationDate', 'Creation Date', 'Creation Date'),
+('creationDate', 'Creation Date', 'تاريخ الإنشاء'),
 ('creatorAccess', 'Creator Access', 'وصول المنشئ'),
 ('creatorMode', 'Creator Mode', 'وضع المبدع'),
 ('critical', 'Critical', 'Critical'),
@@ -785,6 +785,7 @@ Configure working-hour rules, publish to stores or users, then review the attend
 ('kpiOverview', 'KPI Overview', 'نظرة عامة على المؤشرات'),
 ('language', 'Language', 'اللغة'),
 ('lastLogin', 'Last Login', 'آخر تسجيل دخول'),
+('lastModifiedOn', 'Last modified on', 'آخر تعديل'),
 ('lastScoreLabel', 'Last score: ', 'آخر درجة: '),
 ('lastUpdatedAt', 'Last Updated At:', 'آخر تحديث:'),
 ('lastUpdatedToday', 'Last updated: Today', 'آخر تحديث: اليوم'),
@@ -907,7 +908,7 @@ Configure working-hour rules, publish to stores or users, then review the attend
 ('noData', 'No data', 'لا توجد بيانات'),
 ('noDataAvailable', 'No data available', 'لا توجد بيانات متاحة'),
 ('noDataForFilters', 'No data found for the selected filters.', 'لا توجد بيانات للفلاتر المحددة'),
-('noDataFound', 'No data found', 'لم يتم العثور على بيانات'),
+('noDataFound', 'No data found', 'لا توجد بيانات'),
 ('noDescription', 'No description', 'لا يوجد وصف'),
 ('noDesignationsAvailable', 'No designations available', 'لا يوجد مسميات وظيفية متاحة'),
 ('noDueDate', 'No due date', 'لا يوجد تاريخ استحقاق'),
@@ -1151,6 +1152,7 @@ Configure working-hour rules, publish to stores or users, then review the attend
 ('requiresUserToTakeSelfie', 'Require selfie on check-in', 'يتطلب selfie عند الدخول'),
 ('reset', 'Reset', 'إعادة تعيين'),
 ('resetFilters', 'Reset Filters', 'إعادة تعيين الفلاتر'),
+('resultsDashboard', 'Results Dashboard', 'لوحة النتائج'),
 ('roleBasedAccessControl', 'Role-Based Access Control', 'التحكم في الوصول على أساس الدور'),
 ('rootTagName', 'Root Tag Name', 'اسم العلامة الجذرية'),
 ('rotationActive', 'Rotation active \u2014 passwords expire every {{days}} days', 'التحديث نشط \u2014 تنتهي صلاحية كلمات المرور كل {{days}} يوماً'),
@@ -1476,6 +1478,7 @@ Configure working-hour rules, publish to stores or users, then review the attend
 ('viewers', 'Viewers', 'المشاهدون'),
 ('viewInSnapshot', 'View in Snapshot', 'عرض في اللقطة'),
 ('viewLogs', 'View Logs', 'عرض السجلات'),
+('viewResults', 'View Results', 'عرض النتائج'),
 ('viewSummaryAnalytics', 'View Summary Analytics', 'عرض التحليلات الملخصة'),
 ('viewSystemHealthMetrics', 'View system health metrics', 'عرض مقاييس صحة النظام'),
 ('viewTaskDetails', 'View Task Details', 'عرض تفاصيل المهمة'),
