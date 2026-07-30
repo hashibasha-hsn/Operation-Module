@@ -522,5 +522,15 @@ INSERT INTO hashibasha_language.language_entries (key, en, ar) VALUES
 ('reviewSection', 'Review', 'المراجعة'),
 ('advanceSettingsSection', 'Advance Settings', 'الإعدادات المتقدمة'),
 ('publicFormSection', 'Public Form', 'النموذج العام'),
-('languageSettingsSection', 'Language Settings', 'إعدادات اللغة')
+('languageSettingsSection', 'Language Settings', 'إعدادات اللغة'),
+('enableNotifications', 'Enable Notifications', 'تفعيل الإشعارات'),
+('masterToggleDescription', 'Enable all notifications', 'تفعيل جميع الإشعارات'),
+('notificationTypes', 'Notification Types', 'أنواع الإشعارات'),
+('recentNotifications', 'Recent Notifications', 'أحدث الإشعارات'),
+('noNotifications', 'No notifications yet', 'لا توجد إشعارات بعد'),
+('noUnreadNotifications', 'No unread notifications', 'لا توجد إشعارات غير مقروءة'),
+('process_assigned', 'Process', 'عملية'),
+('audit_assigned', 'Audit', 'تدقيق'),
+('action_point_assigned', 'Action Point', 'نقطة عمل'),
+('ticket_assigned', 'Ticket', 'تذكرة')
 ON CONFLICT (key) DO UPDATE SET en = EXCLUDED.en, ar = EXCLUDED.ar, updated_at = CURRENT_TIMESTAMP;
