@@ -437,32 +437,7 @@ export default function Dashboard() {
               <p>{t("viewActivityOverview")}</p>
             </TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <TabsTrigger
-                value="analytics"
-                className="flex-1 text-center py-2 px-4 rounded-md transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              >
-                {t("summaryAnalytics")}
-              </TabsTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t("viewSummaryAnalytics")}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <TabsTrigger
-                value="reports"
-                className="flex-1 text-center py-2 px-4 rounded-md transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              >
-                {t("customReports")}
-              </TabsTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t("viewCustomReports")}</p>
-            </TooltipContent>
-          </Tooltip>
+
         </TabsList>
 
         <TabsContent value="activity" className="space-y-6 mt-6">
@@ -691,25 +666,7 @@ export default function Dashboard() {
           </div>
         </TabsContent>
 
-        <TabsContent value="analytics" className="mt-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground">{t("summaryAnalyticsContentComingSoon")}</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </TabsContent>
 
-        <TabsContent value="reports" className="mt-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <Card className="bg-white shadow-md hover:shadow-lg transition-all duration-300">
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground">{t("customReportsContentComingSoon")}</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </TabsContent>
       </Tabs>
     </div>
   );
