@@ -1,4 +1,4 @@
-import { getCurrentUserId, getOrganizationId } from '@/lib/authStorage';
+import { getOrganizationId } from '@/lib/authStorage';
 import { buildDraftPayload, ProcessDraftState, saveProcessDraftLocal } from './processDraft';
 import { mergeProcessProperties, propertiesFromApiProcess, propertiesToApiPayload } from './processProperties';
 import { humanLabel } from './displayLabels';
@@ -57,10 +57,7 @@ export async function fetchProcesses(organizationId?: string) {
 }
 
 export async function deleteProcess(id: string) {
-  const headers: Record<string, string> = {};
-  const userId = getCurrentUserId();
-  if (userId) headers['x-user-id'] = userId;
-  const response = await fetch(`${ORG_API}/processes/${id}`, { method: 'DELETE', headers });
+  const response = await fetch(`${ORG_API}/processes/${id}`, { method: 'DELETE' });
   if (!response.ok) {
     throw new Error('Failed to delete process');
   }
