@@ -6,8 +6,11 @@ export const AUDIT_ASSIGNED_TYPE = 'audit_assigned';
 export const ACTION_POINT_ASSIGNED_TYPE = 'action_point_assigned';
 export const TICKET_ASSIGNED_TYPE = 'ticket_assigned';
 
-const NOTIFICATION_SERVICE_URL =
-  process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004';
+const GATEWAY_URL =
+  process.env.GATEWAY_URL || 'https://hashibasha-gateway.up.railway.app';
+
+const NOTIFICATION_API_URL =
+  process.env.NOTIFICATION_SERVICE_URL || `${GATEWAY_URL}/api/notification`;
 
 type NotificationPayload = {
   userId: string;
@@ -19,24 +22,38 @@ type NotificationPayload = {
   deliveryMethod?: 'IN_APP' | 'EMAIL' | 'PUSH' | 'SMS';
 };
 
-async function sendUserNotification(payload: NotificationPayload): Promise<void> {
+async function tryPost(url: string, body: string): Promise<boolean> {
   try {
-    const response = await fetch(`${NOTIFICATION_SERVICE_URL}/notifications`, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...payload,
-        priority: payload.priority ?? 'NORMAL',
-        deliveryMethod: payload.deliveryMethod ?? 'IN_APP',
-        status: 'PENDING',
-      }),
+      body,
     });
-    if (!response.ok) {
-      const text = await response.text();
-      console.warn('[notification-client] failed', payload.type, response.status, text);
-    }
+    if (response.ok) return true;
+    const text = await response.text();
+    console.warn('[notification-client] failed', url, response.status, text);
   } catch (error) {
-    console.warn('[notification-client] error', payload.type, error);
+    console.warn('[notification-client] error', url, error);
+  }
+  return false;
+}
+
+async function sendUserNotification(payload: NotificationPayload): Promise<void> {
+  const body = JSON.stringify({
+    ...payload,
+    priority: payload.priority ?? 'NORMAL',
+    deliveryMethod: payload.deliveryMethod ?? 'IN_APP',
+    status: 'PENDING',
+  });
+
+  const primary = `${NOTIFICATION_API_URL}/notifications`;
+  const ok = await tryPost(primary, body);
+  if (ok) return;
+
+  // Fallback: try direct notification service URL
+  const directUrl = process.env.NOTIFICATION_SERVICE_URL;
+  if (directUrl && !primary.startsWith(directUrl)) {
+    await tryPost(`${directUrl}/notifications`, body);
   }
 }
 
