@@ -324,7 +324,7 @@ export default function AuditLogs() {
                       </Badge>
                     </TableCell>
                     <TableCell className="truncate" title={log.performedBy}>
-                      {log.performedBy}
+                      {/^[0-9a-f-]{36}$/i.test(log.performedBy) ? "Unknown User" : log.performedBy}
                     </TableCell>
                     <TableCell
                       className="text-sm text-muted-foreground whitespace-normal break-words align-top"
