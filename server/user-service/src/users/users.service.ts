@@ -198,6 +198,15 @@ export class UsersService {
     return buildProfileCompletionStatus(profile);
   }
 
+  private async resolveActorName(actorId: string): Promise<string> {
+    if (!actorId || actorId === 'system' || actorId.includes('@')) return actorId;
+    try {
+      const actor = await this.userProfileRepository.findOne({ where: { userId: actorId } });
+      if (actor) return actor.name || actor.email || actorId;
+    } catch {}
+    return actorId;
+  }
+
   async create(createUserDto: any) {
     const { payload: prepared, performedBy: dtoPerformedBy, actorEmail } = this.prepareProfilePayload(
       createUserDto,
@@ -222,16 +231,7 @@ export class UsersService {
     const userProfile = this.userProfileRepository.create(payload);
     const savedProfile = await this.userProfileRepository.save(userProfile);
     const saved = Array.isArray(savedProfile) ? savedProfile[0] : savedProfile;
-    const actorId = auditContext.getActorId();
-    let performedBy = dtoPerformedBy || actorEmail || actorId;
-    if (!dtoPerformedBy && !actorEmail) {
-      try {
-        const axios = require('axios');
-        const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3002';
-        const response = await axios.get(`${userServiceUrl}/users/${actorId}`, { timeout: 3000 });
-        performedBy = response.data?.name || response.data?.email || response.data?.data?.name || response.data?.data?.email || actorId;
-      } catch {}
-    }
+    const performedBy = dtoPerformedBy || actorEmail || await this.resolveActorName(auditContext.getActorId());
     await this.writeAuditLog({
       target: 'User',
       operation: 'Create',
@@ -291,16 +291,7 @@ export class UsersService {
   async update(id: string, updateUserDto: any) {
     const { payload, performedBy: dtoPerformedBy, actorEmail } = this.prepareProfilePayload(updateUserDto);
     const before = await this.userProfileRepository.findOne({ where: { userId: id } });
-    const actorId = auditContext.getActorId();
-    let performedBy = dtoPerformedBy || actorEmail || actorId;
-    if (!dtoPerformedBy && !actorEmail) {
-      try {
-        const axios = require('axios');
-        const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3002';
-        const response = await axios.get(`${userServiceUrl}/users/${actorId}`, { timeout: 3000 });
-        performedBy = response.data?.name || response.data?.email || response.data?.data?.name || response.data?.data?.email || actorId;
-      } catch {}
-    }
+    const performedBy = dtoPerformedBy || actorEmail || await this.resolveActorName(auditContext.getActorId());
     await this.userProfileRepository.update({ userId: id }, payload);
     const updated = await this.findOne(id);
     await this.writeAuditLog({
@@ -319,14 +310,7 @@ export class UsersService {
 
   async remove(id: string) {
     const before = await this.findOne(id);
-    const actorId = auditContext.getActorId();
-    let performedBy = actorId;
-    try {
-      const axios = require('axios');
-      const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3002';
-      const response = await axios.get(`${userServiceUrl}/users/${actorId}`, { timeout: 3000 });
-      performedBy = response.data?.name || response.data?.email || response.data?.data?.name || response.data?.data?.email || actorId;
-    } catch {}
+    const performedBy = await this.resolveActorName(auditContext.getActorId());
     await this.userProfileRepository.update(
       { userId: id },
       { isRemoved: true, isActive: false },
