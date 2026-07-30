@@ -39,7 +39,7 @@ export class AuditLogClient {
       const axios = require('axios');
       const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3002';
       const response = await axios.get(`${userServiceUrl}/users/${userId}`, { timeout: 3000 });
-      return response.data?.email || userId;
+      return response.data?.name || response.data?.email || response.data?.data?.name || response.data?.data?.email || userId;
     } catch {
       return userId;
     }
