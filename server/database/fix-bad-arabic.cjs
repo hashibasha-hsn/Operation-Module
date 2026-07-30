@@ -10,6 +10,12 @@ const fixes = {
   noAssignedAudits: { ar: 'لا توجد تدقيقات مسندة' },
   assignedAudit: { ar: 'تدقيق مسند' },
   assignedChecklist: { ar: 'قائمة تحقق مسندة' },
+  newAudit: { ar: 'تدقيق جديد' },
+  confirmDeleteAudit: { ar: 'تأكيد حذف التدقيق' },
+  failedToDeleteAudit: { ar: 'فشل حذف التدقيق' },
+  confirmDeleteDraftProcess: { ar: 'تأكيد حذف مسودة العملية' },
+  confirmDeletePublishedProcess: { ar: 'تأكيد حذف العملية المنشورة' },
+  failedToDeleteProcess: { ar: 'فشل حذف العملية' },
 };
 
 (async () => {
