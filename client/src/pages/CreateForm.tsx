@@ -42,8 +42,10 @@ import {
   type AssessmentSectionDraft,
 } from "@/lib/assessmentDraft";
 import { saveAssessmentDraft } from "@/lib/assessmentApi";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function CreateForm() {
+  const { t } = useLanguage();
   const [location, navigate] = useLocation();
   const isAuditMode = location.includes("audit-create-form");
   const isAssessmentMode = location.includes("assessment-create-form");
@@ -265,7 +267,7 @@ export default function CreateForm() {
         setProcessDraft(saved);
         setSections(saved.sections);
         saveAssessmentDraftLocalOnly(saved);
-        toast.success("Assessment draft saved");
+        toast.success(t("assessmentDraftSaved"));
       } else if (isAuditMode) {
         const saved = await saveAuditDraft(payload as AuditDraftState);
         setProcessDraft(saved);
@@ -288,7 +290,11 @@ export default function CreateForm() {
     } catch (error: any) {
       toast.error(
         error.message ||
-          `Failed to save ${isAssessmentMode ? "assessment" : isAuditMode ? "audit" : "process"} draft`,
+          (isAssessmentMode
+            ? t("failedToSaveAssessmentDraft")
+            : isAuditMode
+              ? t("failedToSaveAuditDraft")
+              : t("failedToSaveProcessDraft")),
       );
     } finally {
       setIsSaving(false);
@@ -312,7 +318,7 @@ export default function CreateForm() {
           sections: syncedSections,
         });
       }
-      toast.message("Configure properties and assign, then publish");
+      toast.message(t("configureThenPublish"));
       navigate("/assessment-settings");
       return;
     }
@@ -446,7 +452,7 @@ export default function CreateForm() {
                     onKeyDown={(e) => e.key === "Enter" && setEditingField(null)}
                     autoFocus
                     className="border-0 p-0 h-8 focus-visible:ring-0"
-                    placeholder="Enter title"
+                    placeholder={t("enterTitle")}
                   />
                 ) : (
                   <Tooltip>
@@ -455,11 +461,11 @@ export default function CreateForm() {
                         className="text-gray-400 cursor-pointer hover:text-gray-600"
                         onClick={() => setEditingField("field1")}
                       >
-                        {fieldValues.field1 || "Click to edit"}
+                        {fieldValues.field1 || t("clickToEditTitle")}
                       </p>
                     </TooltipTrigger>
                     <TooltipContent side="top" align="start">
-                      <p>Edit Form Name</p>
+                      <p>{t("editFormName")}</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -477,7 +483,7 @@ export default function CreateForm() {
                     onKeyDown={(e) => e.key === "Enter" && setEditingField(null)}
                     autoFocus
                     className="border-0 p-0 h-8 focus-visible:ring-0"
-                    placeholder="Enter description"
+                    placeholder={t("enterDescription")}
                   />
                 ) : (
                   <Tooltip>
@@ -486,11 +492,11 @@ export default function CreateForm() {
                         className="text-gray-400 cursor-pointer hover:text-gray-600"
                         onClick={() => setEditingField("field2")}
                       >
-                        {fieldValues.field2 || "Click to edit"}
+                        {fieldValues.field2 || t("clickToEditDesc")}
                       </p>
                     </TooltipTrigger>
                     <TooltipContent side="top" align="start">
-                      <p>Edit Form Description</p>
+                      <p>{t("editFormDesc")}</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -500,10 +506,10 @@ export default function CreateForm() {
 
           {/* Assign Process Tags */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Assign Process Tags</label>
+            <label className="text-sm font-medium">{t("assignProcessTags")}</label>
             <div className="relative">
               <select className="w-full px-3 py-2 border border-input rounded-md bg-background appearance-none pr-10">
-                <option value="">Select Process Tags</option>
+                <option value="">{t("selectProcessTags")}</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>

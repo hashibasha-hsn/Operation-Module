@@ -100,7 +100,6 @@ export default function AssessmentCreation() {
     return () => {
       cancelled = true;
     };
-    // Load once on mount — do not depend on `t` (unstable identity cancels in-flight loads).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -175,12 +174,12 @@ export default function AssessmentCreation() {
 
   const handleSave = async () => {
     if (!draft?.title?.trim()) {
-      toast.error("Set assessment title in Properties first");
+      toast.error(t("setTitleFirst"));
       navigate("/assessment-settings");
       return;
     }
     if (!hasAssignment()) {
-      toast.error("Select at least one store, designation, or assignee profile");
+      toast.error(t("selectAtLeastOneAssignment"));
       return;
     }
 
@@ -201,9 +200,9 @@ export default function AssessmentCreation() {
       const saved = await saveAssessmentDraft(payload);
       setDraft(saved);
       saveAssessmentDraftLocal(saved);
-      toast.success("Assignment saved");
+      toast.success(t("assignmentSaved"));
     } catch (error: any) {
-      toast.error(error.message || "Failed to save assignment");
+      toast.error(error.message || t("failedToSaveAssignment"));
     } finally {
       setIsSaving(false);
     }
@@ -211,11 +210,11 @@ export default function AssessmentCreation() {
 
   const handlePublish = async () => {
     if (!draft?.title?.trim()) {
-      toast.error("Set assessment title in Properties first");
+      toast.error(t("setTitleFirst"));
       return;
     }
     if (!hasAssignment()) {
-      toast.error("Assign stores, designations, or profiles before publishing");
+      toast.error(t("assignBeforePublishing"));
       return;
     }
 
@@ -233,19 +232,19 @@ export default function AssessmentCreation() {
         },
       });
       await publishAssessment(synced.id!);
-      toast.success("Assessment published");
+      toast.success(t("assessmentPublished"));
       navigate("/assessments");
     } catch (error: any) {
-      toast.error(error.message || "Failed to publish assessment");
+      toast.error(error.message || t("failedToPublishAssessment"));
     } finally {
       setIsSaving(false);
     }
   };
 
   const assignModes: { key: AssignBy; label: string }[] = [
-    { key: "store", label: "By Store" },
-    { key: "designation", label: "By Designation" },
-    { key: "profile", label: "By Assignee Profile" },
+    { key: "store", label: t("byStore") },
+    { key: "designation", label: t("byDesignation") },
+    { key: "profile", label: t("byAssigneeProfile") },
   ];
 
   return (
@@ -259,9 +258,9 @@ export default function AssessmentCreation() {
 
       <div className="mx-auto max-w-4xl space-y-6 p-6">
         <div>
-          <h2 className="text-xl font-semibold">Publish Assessment</h2>
+          <h2 className="text-xl font-semibold">{t("publishAssessment")}</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Assign by store, designation, or assignee profile, then publish for submitters.
+            {t("publishAssessmentDesc")}
           </p>
         </div>
 
@@ -288,10 +287,10 @@ export default function AssessmentCreation() {
               className="pl-9"
               placeholder={
                 assignBy === "store"
-                  ? "Search stores"
+                  ? t("searchStores")
                   : assignBy === "designation"
-                    ? "Search designations"
-                    : "Search assignee profiles"
+                    ? t("searchDesignations")
+                    : t("searchAssigneeProfiles")
               }
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -299,7 +298,7 @@ export default function AssessmentCreation() {
           </div>
           <div className="max-h-72 overflow-y-auto space-y-2">
             {filteredOptions.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">No options found</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">{t("noOptionsFound")}</p>
             ) : (
               filteredOptions.map((option) => (
                 <button
@@ -320,14 +319,14 @@ export default function AssessmentCreation() {
 
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => navigate("/assessment-settings")}>
-            Back to Properties
+            {t("backToProperties")}
           </Button>
           <Button variant="outline" onClick={handleSave} disabled={isSaving}>
-            Save Assignment
+            {t("saveAssignment")}
           </Button>
           <Button onClick={handlePublish} disabled={isSaving}>
             <Plus className="mr-2 h-4 w-4" />
-            Publish Assessment
+            {t("publishAssessment")}
           </Button>
         </div>
       </div>

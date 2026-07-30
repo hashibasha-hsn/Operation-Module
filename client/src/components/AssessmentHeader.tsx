@@ -1,4 +1,4 @@
-import { Hammer, Settings, Award, Upload, Save } from "lucide-react";
+import { Type, Hammer, Settings, Award, Upload, Save } from "lucide-react";
 import { useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { loadAssessmentDraft } from "@/lib/assessmentDraft";
@@ -25,7 +25,8 @@ export default function AssessmentHeader({
 
   const handleTabChange = (value: string) => {
     onTabChange?.(value);
-    if (value === "build") navigate("/assessment-create-form");
+    if (value === "title") navigate("/assessment-title-setup");
+    else if (value === "build") navigate("/assessment-create-form");
     else if (value === "properties") navigate("/assessment-settings");
     else if (value === "certificate") navigate("/assessment-certificate-settings");
     else if (value === "publish") navigate("/assessment-creation");
@@ -72,19 +73,22 @@ export default function AssessmentHeader({
           overflowX: "auto",
         }}
       >
+        <button type="button" onClick={() => handleTabChange("title")} style={tabStyle("title")}>
+          <Type size={15} /> {t("title")}
+        </button>
         <button type="button" onClick={() => handleTabChange("build")} style={tabStyle("build")}>
-          <Hammer size={15} /> Builder
+          <Hammer size={15} /> {t("builder")}
         </button>
         <button type="button" onClick={() => handleTabChange("properties")} style={tabStyle("properties")}>
-          <Settings size={15} /> Properties
+          <Settings size={15} /> {t("properties")}
         </button>
         {showCertificate && (
           <button type="button" onClick={() => handleTabChange("certificate")} style={tabStyle("certificate")}>
-            <Award size={15} /> Certificate
+            <Award size={15} /> {t("certificate")}
           </button>
         )}
         <button type="button" onClick={() => handleTabChange("publish")} style={tabStyle("publish")}>
-          <Upload size={15} /> Publish
+          <Upload size={15} /> {t("publish")}
         </button>
       </div>
 

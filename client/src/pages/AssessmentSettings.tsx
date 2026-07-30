@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   ensureAssessmentDraftSaved,
   publishAssessment,
@@ -19,6 +20,7 @@ import {
 
 export default function AssessmentSettings() {
   const [, navigate] = useLocation();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("properties");
   const [draft, setDraft] = useState<AssessmentDraftState>(() => loadAssessmentDraft());
   const [isSaving, setIsSaving] = useState(false);
@@ -29,16 +31,16 @@ export default function AssessmentSettings() {
 
   const handleSave = async () => {
     if (!draft.title.trim()) {
-      toast.error("Assessment title is required");
+      toast.error(t("assessmentTitleRequired"));
       return;
     }
     setIsSaving(true);
     try {
       const saved = await saveAssessmentDraft(draft);
       setDraft(saved);
-      toast.success("Assessment properties saved");
+      toast.success(t("assessmentPropertiesSaved"));
     } catch (error: any) {
-      toast.error(error.message || "Failed to save assessment");
+      toast.error(error.message || t("failedToSaveAssessment"));
     } finally {
       setIsSaving(false);
     }
@@ -53,17 +55,26 @@ export default function AssessmentSettings() {
         (synced.assigneeProfileIds?.length ?? 0) > 0 ||
         (synced.designationNames?.length ?? 0) > 0;
       if (!hasAssignment) {
-        toast.error("Assign stores, designations, or profiles on the Publish tab first");
+        toast.error(t("assignStoresOrProfilesFirst"));
         navigate("/assessment-creation");
         return;
       }
       await publishAssessment(synced.id!);
-      toast.success("Assessment published");
+      toast.success(t("assessmentPublished"));
       navigate("/assessments");
     } catch (error: any) {
-      toast.error(error.message || "Failed to publish assessment");
+      toast.error(error.message || t("failedToPublishAssessment"));
     }
   };
+
+  const switches = [
+    { key: "visible", label: t("visible"), desc: t("visibleDesc") },
+    { key: "showResult", label: t("showResult"), desc: t("showResultDesc") },
+    { key: "showCorrectAnswer", label: t("showCorrectAnswer"), desc: t("showCorrectAnswerDesc") },
+    { key: "dynamicAssignment", label: t("dynamicAssignment"), desc: t("dynamicAssignmentDesc") },
+    { key: "generateCertificate", label: t("generateCertificate"), desc: t("generateCertificateDesc") },
+    { key: "allowRetake", label: t("allowRetake"), desc: t("allowRetakeDesc") },
+  ];
 
   return (
     <div className="workflow-page text-sm text-slate-700">
@@ -76,36 +87,36 @@ export default function AssessmentSettings() {
 
       <div className="mx-auto max-w-3xl space-y-6 p-6">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Assessment Properties</h2>
+          <h2 className="text-xl font-semibold text-slate-900">{t("assessmentProperties")}</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Configure title, scoring, attempts, visibility, and result options.
+            {t("assessmentPropertiesDesc")}
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="assessmentTitle">Title *</Label>
+          <Label htmlFor="assessmentTitle">{t("titleRequired")}</Label>
           <Input
             id="assessmentTitle"
             value={draft.title}
             onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
-            placeholder="e.g., Monthly Safety Check"
+            placeholder={t("assessmentTitlePlaceholder")}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="assessmentDescription">Description</Label>
+          <Label htmlFor="assessmentDescription">{t("description")}</Label>
           <Textarea
             id="assessmentDescription"
             rows={3}
             value={draft.description}
             onChange={(e) => setDraft((prev) => ({ ...prev, description: e.target.value }))}
-            placeholder="Short description of what this assessment covers"
+            placeholder={t("assessmentDescPlaceholder")}
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="passingScore">Minimum Passing %</Label>
+            <Label htmlFor="passingScore">{t("minimumPassingPercentage")}</Label>
             <Input
               id="passingScore"
               type="number"
@@ -118,7 +129,7 @@ export default function AssessmentSettings() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="maxAttempts">Max Attempts</Label>
+            <Label htmlFor="maxAttempts">{t("maxAttempts")}</Label>
             <Input
               id="maxAttempts"
               type="number"
@@ -130,7 +141,7 @@ export default function AssessmentSettings() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="startDate">Start Date</Label>
+            <Label htmlFor="startDate">{t("startDate")}</Label>
             <Input
               id="startDate"
               type="datetime-local"
@@ -139,7 +150,7 @@ export default function AssessmentSettings() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="endDate">End Date</Label>
+            <Label htmlFor="endDate">{t("endDate")}</Label>
             <Input
               id="endDate"
               type="datetime-local"
@@ -148,7 +159,7 @@ export default function AssessmentSettings() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="duration">Duration (minutes)</Label>
+            <Label htmlFor="duration">{t("durationMinutes")}</Label>
             <Input
               id="duration"
               type="number"
@@ -162,30 +173,7 @@ export default function AssessmentSettings() {
         </div>
 
         <div className="space-y-3 rounded-xl border bg-white p-4">
-          {[
-            { key: "visible", label: "Visible", desc: "Show assessment to submitters" },
-            { key: "showResult", label: "Show Result", desc: "Allow users to view their result" },
-            {
-              key: "showCorrectAnswer",
-              label: "Show Correct Answer",
-              desc: "Show correct answers after submission",
-            },
-            {
-              key: "dynamicAssignment",
-              label: "Dynamic Assignment",
-              desc: "Auto-assign based on store/entity logic",
-            },
-            {
-              key: "generateCertificate",
-              label: "Generate Certificate",
-              desc: "Enable certificate generation for passing users",
-            },
-            {
-              key: "allowRetake",
-              label: "Allow Retake",
-              desc: "Allow users to retake after failing",
-            },
-          ].map((item) => (
+          {switches.map((item) => (
             <div key={item.key} className="flex items-center justify-between gap-4">
               <div>
                 <p className="font-medium">{item.label}</p>
@@ -203,14 +191,14 @@ export default function AssessmentSettings() {
 
         <div className="flex justify-end gap-2">
           <ButtonLike outline onClick={() => navigate("/assessment-create-form")}>
-            Back to Builder
+            {t("backToBuilder")}
           </ButtonLike>
           <ButtonLike onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save Properties"}
+            {isSaving ? t("saving") : t("saveProperties")}
           </ButtonLike>
           {draft.generateCertificate && (
             <ButtonLike outline onClick={() => navigate("/assessment-certificate-settings")}>
-              Certificate Settings
+              {t("certificateSettings")}
             </ButtonLike>
           )}
         </div>

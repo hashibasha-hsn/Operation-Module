@@ -70,6 +70,7 @@ import AssessmentCreateForm from "./pages/AssessmentCreateForm";
 import AssessmentSettings from "./pages/AssessmentSettings";
 import AssessmentCertificateSettings from "./pages/AssessmentCertificateSettings";
 import AssessmentCreation from "./pages/AssessmentCreation";
+import AssessmentTitleSetup from "./pages/AssessmentTitleSetup";
 import TicketOrgReport from "./pages/TicketOrgReport";
 import TicketAdvanceSearch from "./pages/TicketAdvanceSearch";
 import TicketTagReport from "./pages/TicketTagReport";
@@ -109,6 +110,7 @@ function Router() {
       <Route path={"/categories-and-courses"} component={() => <Layout><CategoriesAndCourses /></Layout>} />
       <Route path={"/course-creation"} component={() => <Layout><CourseCreation /></Layout>} />
       <Route path={"/assessments"} component={() => <Layout><Assessments /></Layout>} />
+      <Route path={"/assessment-title-setup"} component={() => <Layout><AssessmentTitleSetup /></Layout>} />
       <Route path={"/assessment-create-form"} component={() => <Layout><AssessmentCreateForm /></Layout>} />
       <Route path={"/assessment-settings"} component={() => <Layout><AssessmentSettings /></Layout>} />
       <Route path={"/assessment-certificate-settings"} component={() => <Layout><AssessmentCertificateSettings /></Layout>} />
