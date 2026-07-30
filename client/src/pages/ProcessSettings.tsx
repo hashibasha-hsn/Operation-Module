@@ -116,7 +116,7 @@ export default function ProcessSettings() {
                     : "hover:bg-gray-100"
                 }`}
               >
-                <span>{section.label}</span>
+                <span>{t(section.key)}</span>
                 {sectionStatus[section.id as keyof typeof sectionStatus] === "completed" ? (
                   <Check className="w-4 h-4 text-primary" />
                 ) : (

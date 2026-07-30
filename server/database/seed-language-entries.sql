@@ -514,5 +514,13 @@ INSERT INTO hashibasha_language.language_entries (key, en, ar) VALUES
 ('period', 'Period', 'الفترة'),
 ('assignees', 'Assignees', 'المسند إليهم'),
 ('urlQr', 'URL / QR', 'رابط QR'),
-('schedule', 'Schedule', 'الجدول')
+('schedule', 'Schedule', 'الجدول'),
+('processSection', 'Process', 'العملية'),
+('periodicitySection', 'Periodicity', 'الدورية'),
+('remindersSection', 'Reminders and Notifications', 'التذكيرات والإشعارات'),
+('submissionReportSection', 'Submission Report', 'تقرير الإرسال'),
+('reviewSection', 'Review', 'المراجعة'),
+('advanceSettingsSection', 'Advance Settings', 'الإعدادات المتقدمة'),
+('publicFormSection', 'Public Form', 'النموذج العام'),
+('languageSettingsSection', 'Language Settings', 'إعدادات اللغة')
 ON CONFLICT (key) DO UPDATE SET en = EXCLUDED.en, ar = EXCLUDED.ar, updated_at = CURRENT_TIMESTAMP;

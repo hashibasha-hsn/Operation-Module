@@ -742,12 +742,12 @@ export default function ProcessPropertiesPanel({
 }
 
 export const PROPERTY_SECTIONS = [
-  { id: 'process', label: 'Process' },
-  { id: 'periodicity', label: 'Periodicity' },
-  { id: 'reminders', label: 'Reminders and Notifications' },
-  { id: 'submissionReport', label: 'Submission Report' },
-  { id: 'review', label: 'Review' },
-  { id: 'advanceSettings', label: 'Advance Settings' },
-  { id: 'publicForm', label: 'Public Form' },
-  { id: 'language', label: 'Language Settings' },
+  { id: 'process', label: 'Process', key: 'processSection' },
+  { id: 'periodicity', label: 'Periodicity', key: 'periodicitySection' },
+  { id: 'reminders', label: 'Reminders and Notifications', key: 'remindersSection' },
+  { id: 'submissionReport', label: 'Submission Report', key: 'submissionReportSection' },
+  { id: 'review', label: 'Review', key: 'reviewSection' },
+  { id: 'advanceSettings', label: 'Advance Settings', key: 'advanceSettingsSection' },
+  { id: 'publicForm', label: 'Public Form', key: 'publicFormSection' },
+  { id: 'language', label: 'Language Settings', key: 'languageSettingsSection' },
 ];
