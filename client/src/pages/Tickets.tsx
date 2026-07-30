@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -185,6 +185,20 @@ export default function Tickets() {
     fetchTicketSettings().then(setTicketSettings).catch(() => null);
     fetchTicketClosureQuestions(true).then(setClosureQuestions).catch(() => setClosureQuestions([]));
   }, [primaryFilter]);
+
+  const [, searchParams] = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.split("?")[1] || "");
+    const ticketId = params.get("id");
+    if (ticketId) {
+      fetchTicketById(ticketId).then((ticket) => {
+        if (ticket) {
+          setSelectedTicket(ticket);
+          setIsDetailDialogOpen(true);
+        }
+      }).catch(() => {});
+    }
+  }, [searchParams]);
 
   const applicableTags = useMemo(
     () =>

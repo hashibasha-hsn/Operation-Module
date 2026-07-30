@@ -52,7 +52,7 @@ export async function notifyCertificateIssued(input: {
   const link =
     input.itemType === 'assessment'
       ? `/learning/assessment/${input.itemId}`
-      : `/learning/courses/${input.itemId}`;
+      : `/learning`;
 
   await sendUserNotification({
     userId: input.userId,
@@ -82,7 +82,7 @@ export async function notifyLearningAssignment(input: {
   const link =
     input.itemType === 'assessment'
       ? `/learning/assessment/${input.itemId}`
-      : `/learning/courses/${input.itemId}`;
+      : `/learning`;
 
   const dueText = input.dueAt
     ? ` Due date: ${new Date(input.dueAt).toLocaleDateString()}.`
@@ -151,7 +151,7 @@ export async function notifyCourseCompletionReminder(input: {
       progressPercent: input.progressPercent,
       dueAt: input.dueAt ?? null,
       reminderKind: input.reminderKind,
-      link: `/learning/courses/${input.courseId}`,
+      link: `/learning`,
     },
     deliveryMethod: 'IN_APP',
     priority: input.reminderKind === 'overdue' ? 'HIGH' : 'NORMAL',
@@ -173,7 +173,7 @@ export async function notifyProcessAssigned(input: {
       itemType: 'process',
       itemId: input.processId,
       assignedBy: input.assignedBy ?? null,
-      link: `/process/${input.processId}`,
+      link: `/tasks/process/${input.processId}`,
     },
     deliveryMethod: 'IN_APP',
     priority: 'NORMAL',
@@ -195,7 +195,7 @@ export async function notifyAuditAssigned(input: {
       itemType: 'audit',
       itemId: input.auditId,
       assignedBy: input.assignedBy ?? null,
-      link: `/audit/${input.auditId}`,
+      link: `/tasks/audit/${input.auditId}`,
     },
     deliveryMethod: 'IN_APP',
     priority: 'NORMAL',
@@ -217,7 +217,7 @@ export async function notifyActionPointAssigned(input: {
       itemType: 'action_point',
       itemId: input.actionPointId,
       assignedBy: input.assignedBy ?? null,
-      link: `/action-points/${input.actionPointId}`,
+      link: `/action-points?id=${input.actionPointId}`,
     },
     deliveryMethod: 'IN_APP',
     priority: 'NORMAL',
@@ -239,7 +239,7 @@ export async function notifyTicketAssigned(input: {
       itemType: 'ticket',
       itemId: input.ticketId,
       assignedBy: input.assignedBy ?? null,
-      link: `/tickets/${input.ticketId}`,
+      link: `/tickets?id=${input.ticketId}`,
     },
     deliveryMethod: 'IN_APP',
     priority: 'NORMAL',
