@@ -98,13 +98,21 @@ export default function Learning() {
           <TabsList className="bg-white border border-sky-100 rounded-lg p-1">
             <TabsTrigger
               value="courses"
-              className="text-gray-700 data-[state=active]:gradient-primary data-[state=active]:text-white data-[state=active]:border-transparent border border-transparent rounded-md px-6 py-2"
+              className={`border rounded-md px-6 py-2 ${
+                activeTab === "courses"
+                  ? "gradient-primary border-transparent"
+                  : "border-gray-200 text-gray-700 bg-white"
+              }`}
             >
               {t('courses')}
             </TabsTrigger>
             <TabsTrigger
               value="assessments"
-              className="text-gray-700 data-[state=active]:gradient-primary data-[state=active]:text-white data-[state=active]:border-transparent border border-transparent rounded-md px-6 py-2"
+              className={`border rounded-md px-6 py-2 ${
+                activeTab === "assessments"
+                  ? "gradient-primary border-transparent"
+                  : "border-gray-200 text-gray-700 bg-white"
+              }`}
             >
               {t('assessment')}
             </TabsTrigger>
