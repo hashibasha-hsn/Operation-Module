@@ -587,7 +587,14 @@ export class AuthService {
   async createUser(createUserDto: { id: string; email: string; password: string; verificationStatus: string }) {
     assertPasswordValid(createUserDto.password);
 
-    // Create user in auth-service database
+    const existing = await this.usersService.findByEmail(createUserDto.email);
+    if (existing) {
+      return {
+        message: 'Auth user already exists',
+        user: { id: existing.id, email: existing.email },
+      };
+    }
+
     const user = await this.usersService.create({
       id: createUserDto.id,
       email: createUserDto.email,
