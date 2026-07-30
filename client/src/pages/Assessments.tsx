@@ -101,7 +101,7 @@ export default function Assessments() {
   const startNewAssessment = () => {
     clearAssessmentDraftLocal();
     saveAssessmentDraftLocal(emptyAssessmentDraft());
-    navigate("/assessment-create-form");
+    navigate("/assessment-title-setup");
   };
 
   const openAssessmentEditor = (assessment: any) => {
