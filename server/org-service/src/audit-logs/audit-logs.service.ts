@@ -97,9 +97,9 @@ export class AuditLogsService {
       });
     }
     if (query.category === 'workflow') {
-      qb.andWhere('log.target ILIKE :formTarget', { formTarget: 'Form Submission%' });
       qb.andWhere(
-        "(log.details->>'workflowType' = 'process' OR log.details->>'workflowType' = 'audit')",
+        `(log.target IN (:...workflowTargets) OR log.target ILIKE :formTarget OR (log.details->>'workflowType' = 'process' OR log.details->>'workflowType' = 'audit'))`,
+        { workflowTargets: ['Process', 'Audit'], formTarget: 'Form Submission%' },
       );
     } else if (query.category === 'system') {
       qb.andWhere('log.target IN (:...systemTargets)', {
