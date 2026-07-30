@@ -32,26 +32,25 @@ export class AuditContextMiddleware implements NestMiddleware {
     const body = (req.body ?? {}) as Record<string, unknown>;
     const query = req.query as Record<string, unknown>;
 
-    let userId =
-      pickString(req.headers['x-user-id']) ||
+    const authHeader = pickString(req.headers.authorization);
+    let userId = pickString(req.headers['x-user-id']);
+    let email = pickString(req.headers['x-user-email']);
+
+    if (authHeader?.startsWith('Bearer ')) {
+      const payload = decodeJwtPayload(authHeader.slice(7));
+      userId = userId || pickString(payload?.sub) || pickString(payload?.userId) || pickString(payload?.id);
+      email = email || pickString(payload?.email);
+    }
+
+    userId =
+      userId ||
       pickString(body.userId) ||
       pickString(body.performedBy) ||
       pickString(body.createdBy) ||
       pickString(query.userId) ||
       pickString(query.performedBy);
 
-    let email = pickString(req.headers['x-user-email']) || pickString(body.email);
-
-    const authHeader = pickString(req.headers.authorization);
-    if (authHeader?.startsWith('Bearer ')) {
-      const payload = decodeJwtPayload(authHeader.slice(7));
-      userId =
-        userId ||
-        pickString(payload?.sub) ||
-        pickString(payload?.userId) ||
-        pickString(payload?.id);
-      email = email || pickString(payload?.email);
-    }
+    email = email || pickString(body.email);
 
     const organizationId =
       pickString(req.headers['x-organization-id']) ||

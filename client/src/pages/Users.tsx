@@ -69,7 +69,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { validatePassword } from "@/lib/passwordValidation";
-import { getStoredUser, getOrganizationId } from '@/lib/authStorage';
+import { getStoredUser, getOrganizationId, getCurrentUserId } from '@/lib/authStorage';
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 import {
@@ -607,7 +607,7 @@ export default function UsersPage() {
 
     try {
       console.log('Attempting to delete designation with ID:', id);
-      const response = await fetch(`${GATEWAY}/api/user/designations/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${GATEWAY}/api/user/designations/${id}`, { method: 'DELETE', headers: { 'x-user-id': getCurrentUserId() } });
       console.log('Delete response status:', response.status);
       
       if (response.ok) {
@@ -740,7 +740,7 @@ export default function UsersPage() {
       setCreateError("");
       const response = await fetch(`${GATEWAY}/api/user/users`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-user-id': getCurrentUserId() },
         body: JSON.stringify({
           userId: crypto.randomUUID(),
           name: formData.name.trim(),
@@ -918,6 +918,7 @@ export default function UsersPage() {
     try {
       const response = await fetch(`${GATEWAY}/api/user/user-tags/${id}`, {
         method: 'DELETE',
+        headers: { 'x-user-id': getCurrentUserId() },
       });
 
       if (response.ok) {
@@ -1009,6 +1010,7 @@ export default function UsersPage() {
     try {
       const response = await fetch(`${GATEWAY}/api/user/user-teams/${teamId}`, {
         method: 'DELETE',
+        headers: { 'x-user-id': getCurrentUserId() },
       });
 
       if (response.ok) {
@@ -1147,6 +1149,7 @@ export default function UsersPage() {
       setIsDeleting(true);
       const userResponse = await fetch(`${GATEWAY}/api/user/users/${userId}`, {
         method: 'DELETE',
+        headers: { 'x-user-id': getCurrentUserId() },
       });
 
       if (userResponse.ok) {
@@ -1178,7 +1181,7 @@ export default function UsersPage() {
       setIsUpdating(true);
       const response = await fetch(`${GATEWAY}/api/user/users/${editingUser.userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-user-id': getCurrentUserId() },
         body: JSON.stringify({
           name: editFormData.name,
           email: editFormData.email,
@@ -1461,7 +1464,7 @@ export default function UsersPage() {
         });
         const response = await fetch(
           `${GATEWAY}/api/user/role-feature-permissions/${roleId}/${featureId}?${params}`,
-          { method: 'DELETE' },
+          { method: 'DELETE', headers: { 'x-user-id': getCurrentUserId() } },
         );
         if (!response.ok && response.status !== 404) {
           throw new Error(`Failed to remove permission (${response.status})`);
