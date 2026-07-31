@@ -174,9 +174,9 @@ export default function CourseCreation() {
 
       if (selectedStoreIds.length > 0 || selectedProfileIds.length > 0) {
         await assignCourse(created.id, {
-          assigneeIds: selectedStoreIds.length > 0 ? selectedStoreIds : undefined,
+          storeIds: selectedStoreIds.length > 0 ? selectedStoreIds : undefined,
           assigneeProfiles: selectedProfileIds.length > 0
-            ? Object.fromEntries(selectedProfileIds.map(id => [id, true]))
+            ? { profileIds: selectedProfileIds }
             : undefined,
         });
       }

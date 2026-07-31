@@ -11,8 +11,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Trophy, Clock, CheckCircle, Book, Star, TrendingUp, Play } from "lucide-react";
+import { FileText, Trophy, Clock, CheckCircle, Book, Star, TrendingUp, Play, BookOpen } from "lucide-react";
 import { fetchAssignedAssessments } from "@/lib/assessmentApi";
+import { fetchAssignedCourses } from "@/lib/courseApi";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
   countCompletedAttempts,
@@ -42,12 +43,15 @@ export default function Learning() {
   const [activeTab, setActiveTab] = useState("courses");
   const [assessments, setAssessments] = useState<any[]>([]);
   const [results, setResults] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [loadingAssessments, setLoadingAssessments] = useState(true);
+  const [loadingCourses, setLoadingCourses] = useState(true);
   const userId = getCurrentUserId();
 
   useEffect(() => {
     if (!userId) {
       setLoadingAssessments(false);
+      setLoadingCourses(false);
       return;
     }
     Promise.all([fetchAssignedAssessments(userId), fetchUserAssessmentResults(userId)])
@@ -56,11 +60,20 @@ export default function Learning() {
         setResults(Array.isArray(userResults) ? userResults : []);
       })
       .finally(() => setLoadingAssessments(false));
+    fetchAssignedCourses(userId)
+      .then(setCourses)
+      .catch(() => {})
+      .finally(() => setLoadingCourses(false));
   }, [userId]);
 
   const passedCount = useMemo(
     () => results.filter((item) => item.status === "completed" && item.passed).length,
     [results],
+  );
+
+  const completedCourses = useMemo(
+    () => courses.filter((item) => item.status === "completed").length,
+    [courses],
   );
 
   return (
@@ -82,8 +95,8 @@ export default function Learning() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <HighlightCard icon={Trophy} label={t('assessmentsPassed')} value={String(passedCount)} tooltip={t('assessmentsPassedTooltip')} delay={0.2} />
           <HighlightCard icon={Clock} label={t('timeSpent')} value="-" tooltip={t('timeSpentTooltip')} delay={0.25} />
-          <HighlightCard icon={CheckCircle} label={t('completedCourses')} value="-" tooltip={t('completedCoursesTooltip')} delay={0.3} />
-          <HighlightCard icon={Book} label={t('totalCourses')} value="-" tooltip={t('totalCoursesTooltip')} delay={0.35} />
+          <HighlightCard icon={CheckCircle} label={t('completedCourses')} value={String(completedCourses)} tooltip={t('completedCoursesTooltip')} delay={0.3} />
+          <HighlightCard icon={Book} label={t('totalCourses')} value={String(courses.length)} tooltip={t('totalCoursesTooltip')} delay={0.35} />
           <HighlightCard icon={Star} label={t('totalScore')} value="-" tooltip={t('totalScoreTooltip')} delay={0.4} />
           <HighlightCard icon={TrendingUp} label={t('learningProgress')} value="-" tooltip={t('learningProgressTooltip')} delay={0.45} />
         </div>
@@ -111,7 +124,68 @@ export default function Learning() {
           </TabsList>
 
           <TabsContent value="courses" className="mt-6">
-            <EmptyState message={t('noCoursesAssigned')} />
+            {loadingCourses ? (
+              <p className="text-muted-foreground">{t('loadingAssessments')}</p>
+            ) : courses.length === 0 ? (
+              <EmptyState message={t('noCoursesAssigned')} />
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {courses.map((item) => {
+                  const course = item.course;
+                  const statusLabel =
+                    item.status === "completed"
+                      ? t('completed')
+                      : item.status === "in_progress"
+                        ? t('inProgress')
+                        : t('notStarted');
+                  const statusVariant =
+                    item.status === "completed"
+                      ? "default"
+                      : item.status === "in_progress"
+                        ? "secondary"
+                        : "outline";
+
+                  return (
+                    <Card key={item.id} className="border-sky-100">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <CardTitle className="text-lg">{course.title}</CardTitle>
+                            {course.description && (
+                              <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                                {course.description}
+                              </p>
+                            )}
+                          </div>
+                          <Badge variant={statusVariant as "default" | "secondary" | "outline"}>
+                            {statusLabel}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-sm text-muted-foreground">
+                            {t('progressLabel')} {item.progress ?? 0}%
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="h-4 w-4 text-sky-600" />
+                            <span className="text-sm text-sky-600 font-medium">
+                              {item.status === "completed" ? t('completed') : t('inProgress') === statusLabel ? t('continue') : t('start')}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="h-2 w-full bg-sky-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full gradient-primary transition-all"
+                            style={{ width: `${Math.min(100, Number(item.progress ?? 0))}%` }}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="assessments" className="mt-6">

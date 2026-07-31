@@ -8,6 +8,7 @@ import { CourseProgress } from './course-progress.entity';
 import { AssessmentResult } from '../assessments/assessment-result.entity';
 import { notifyCertificateIssued, notifyLearningAssignment } from '../shared/notification-client';
 import { sendCourseCompletionReminderIfNeeded } from '../shared/course-completion-reminders';
+import { resolveCourseAssigneeUserIds } from '../shared/course-assignment.util';
 
 @Injectable()
 export class CoursesService {
@@ -50,7 +51,7 @@ export class CoursesService {
 
   async assignCourse(
     id: string,
-    assignment: { assigneeIds?: string[]; assigneeProfiles?: Record<string, unknown> },
+    assignment: { assigneeIds?: string[]; storeIds?: string[]; assigneeProfiles?: Record<string, unknown> },
   ): Promise<Course> {
     const existing = await this.findOne(id);
     if (!existing) {
@@ -58,36 +59,49 @@ export class CoursesService {
     }
 
     const nextAssignees = assignment.assigneeIds ?? existing.assigneeIds ?? [];
-    const previousAssignees = new Set(existing.assigneeIds ?? []);
+    const nextStoreIds = assignment.storeIds ?? existing.storeIds ?? [];
+    const nextProfiles = assignment.assigneeProfiles ?? existing.assigneeProfiles ?? null;
 
     await this.coursesRepository.update(id, {
       assigneeIds: nextAssignees,
-      assigneeProfiles: assignment.assigneeProfiles ?? existing.assigneeProfiles ?? null,
+      storeIds: nextStoreIds,
+      assigneeProfiles: nextProfiles,
     });
 
-    for (const userId of nextAssignees) {
-      if (!previousAssignees.has(userId)) {
-        void notifyLearningAssignment({
-          userId,
-          itemTitle: existing.title,
-          itemType: 'course',
-          itemId: id,
-        });
+    const resolvedUserIds = await resolveCourseAssigneeUserIds({
+      assigneeIds: nextAssignees,
+      storeIds: nextStoreIds,
+      assigneeProfiles: nextProfiles,
+    });
 
-        const existingProgress = await this.courseProgressRepository.findOne({
-          where: { userId, courseId: id, organizationId: existing.organizationId },
-        });
-        if (!existingProgress) {
-          await this.createProgress({
-            userId,
-            courseId: id,
-            organizationId: existing.organizationId,
-            status: 'not_started',
-            progress: 0,
-            startedAt: null,
-          });
-        }
+    const existingProgress = await this.courseProgressRepository.find({
+      where: { courseId: id, organizationId: existing.organizationId },
+    });
+    const progressUserIds = new Set(existingProgress.map((row) => row.userId));
+    const progressCourseIdToUserId = new Map(
+      existingProgress.map((row) => [`${row.courseId}:${row.userId}`, row]),
+    );
+
+    for (const userId of resolvedUserIds) {
+      if (progressUserIds.has(userId)) {
+        continue;
       }
+
+      void notifyLearningAssignment({
+        userId,
+        itemTitle: existing.title,
+        itemType: 'course',
+        itemId: id,
+      });
+
+      await this.createProgress({
+        userId,
+        courseId: id,
+        organizationId: existing.organizationId,
+        status: 'not_started',
+        progress: 0,
+        startedAt: null,
+      });
     }
 
     return this.findOne(id);
@@ -186,6 +200,7 @@ export class CoursesService {
   async findUserProgress(userId: string, organizationId: string): Promise<CourseProgress[]> {
     return await this.courseProgressRepository.find({
       where: { userId, organizationId },
+      relations: ['course'],
       order: { createdAt: 'DESC' },
     });
   }

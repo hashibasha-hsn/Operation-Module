@@ -31,6 +31,7 @@ export interface CoursePayload {
   content?: Record<string, unknown>;
   status?: 'draft' | 'published' | 'archived';
   assigneeIds?: string[];
+  storeIds?: string[];
   assigneeProfiles?: Record<string, unknown>;
   publishedAt?: string | null;
   expiresAt?: string | null;
@@ -48,6 +49,7 @@ export interface CourseResponse {
   content: Record<string, unknown> | null;
   status: string;
   assigneeIds: string[] | null;
+  storeIds: string[] | null;
   assigneeProfiles: Record<string, unknown> | null;
   publishedAt: string | null;
   expiresAt: string | null;
@@ -181,7 +183,7 @@ export async function deleteQuiz(id: string): Promise<void> {
 
 export async function assignCourse(
   id: string,
-  body: { assigneeIds?: string[]; assigneeProfiles?: Record<string, unknown> },
+  body: { assigneeIds?: string[]; storeIds?: string[]; assigneeProfiles?: Record<string, unknown> },
 ): Promise<CourseResponse> {
   const response = await fetch(`${ORG_API}/courses/${id}/assignment`, {
     method: 'PUT',
@@ -189,6 +191,36 @@ export async function assignCourse(
     body: JSON.stringify(body),
   });
   return parseJson<CourseResponse>(response);
+}
+
+export interface AssignedCourse {
+  id: string;
+  courseId: string;
+  course: CourseResponse;
+  status: string;
+  progress: number;
+  quizScore: unknown;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export async function fetchAssignedCourses(userId: string): Promise<AssignedCourse[]> {
+  const response = await fetch(
+    `${ORG_API}/courses/progress/user/${encodeURIComponent(userId)}?organizationId=${encodeURIComponent(getOrgId())}`,
+  );
+  const data = await parseJson<any[]>(response);
+  return (Array.isArray(data) ? data : [])
+    .filter((row) => row?.course)
+    .map((row) => ({
+      id: row.id,
+      courseId: row.courseId,
+      course: row.course,
+      status: row.status,
+      progress: Number(row.progress ?? 0),
+      quizScore: row.quizScore ?? null,
+      startedAt: row.startedAt ?? null,
+      completedAt: row.completedAt ?? null,
+    }));
 }
 
 export async function fetchStores(): Promise<{ id: string; name: string }[]> {

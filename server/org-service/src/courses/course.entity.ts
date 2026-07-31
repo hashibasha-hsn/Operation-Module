@@ -34,6 +34,9 @@ export class Course {
   @Column({ name: 'assigneeids', type: 'json', nullable: true })
   assigneeIds: string[];
 
+  @Column({ name: 'storeids', type: 'json', nullable: true })
+  storeIds: string[];
+
   @Column({ type: 'timestamp', nullable: true })
   publishedAt: Date;
 

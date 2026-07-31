@@ -9,7 +9,7 @@ type OrgUser = {
   designation?: string | null;
 };
 
-async function fetchOrgUsers(): Promise<OrgUser[]> {
+export async function fetchOrgUsers(): Promise<OrgUser[]> {
   try {
     const response = await fetch(`${USER_SERVICE_URL}/users?limit=1000`);
     if (!response.ok) return [];
@@ -28,7 +28,7 @@ async function fetchOrgUsers(): Promise<OrgUser[]> {
   }
 }
 
-async function fetchUsersFromAssigneeProfiles(profileIds: string[]): Promise<string[]> {
+export async function fetchUsersFromAssigneeProfiles(profileIds: string[]): Promise<string[]> {
   const userIds = new Set<string>();
   for (const profileId of profileIds) {
     try {

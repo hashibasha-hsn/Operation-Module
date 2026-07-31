@@ -157,7 +157,7 @@ export class CoursesController {
   @Put(':id/assignment')
   assignCourse(
     @Param('id') id: string,
-    @Body() body: { assigneeIds?: string[]; assigneeProfiles?: Record<string, unknown> },
+    @Body() body: { assigneeIds?: string[]; storeIds?: string[]; assigneeProfiles?: Record<string, unknown> },
   ) {
     return this.coursesService.assignCourse(id, body);
   }
