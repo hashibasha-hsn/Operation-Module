@@ -37,6 +37,8 @@ import {
   fetchCategories,
   fetchStores,
   fetchProfiles,
+  fetchQuizzes,
+  uploadCourseFile,
   type CoursePayload,
   type CategoryResponse,
 } from "@/lib/courseApi";
@@ -48,6 +50,7 @@ interface Lesson {
   file: File | null;
   type: string;
   downloadEnabled: boolean;
+  url?: string;
 }
 
 interface CourseData {
@@ -59,7 +62,18 @@ interface CourseData {
   showInSequence: boolean;
   startDate: string;
   endDate: string;
+  quizId: string;
   lessons: Lesson[];
+  certificateSettings?: {
+    primaryColor?: string;
+    certificateHeader?: { enabled?: boolean; text?: string };
+    assessmentName?: { enabled?: boolean; text?: string };
+    trainerName?: { enabled?: boolean; text?: string };
+    issuedDate?: { enabled?: boolean };
+    validityType?: 'duration' | 'fixed' | 'none';
+    validityDuration?: string;
+    fixedExpiryDate?: string;
+  };
   quizSettings: {
     minimumPassingPercentage: string;
     maximumAttempts: string;
@@ -90,6 +104,7 @@ export default function CourseCreation() {
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
   const [selectedProfileIds, setSelectedProfileIds] = useState<string[]>([]);
   const [courseData, setCourseData] = useState<CourseData>({
@@ -101,6 +116,7 @@ export default function CourseCreation() {
     showInSequence: false,
     startDate: "",
     endDate: "",
+    quizId: "",
     lessons: [],
     quizSettings: {
       minimumPassingPercentage: "30",
@@ -121,6 +137,7 @@ export default function CourseCreation() {
     fetchCategories().then(setCategories).catch(() => {});
     fetchStores().then(setStores).catch(() => {});
     fetchProfiles().then(setProfiles).catch(() => {});
+    fetchQuizzes().then((data) => setQuizzes(Array.isArray(data) ? data : [])).catch(() => {});
   }, []);
 
   function buildPayload(status: 'draft' | 'published'): CoursePayload {
@@ -132,6 +149,7 @@ export default function CourseCreation() {
       generateCertificate: courseData.quizSettings.generateCertificate,
       publishedAt: status === 'published' ? new Date().toISOString() : undefined,
       expiresAt: courseData.endDate ? new Date(courseData.endDate).toISOString() : undefined,
+      quizId: courseData.quizId || undefined,
       content: {
         estimatedReadTime: courseData.estimatedReadTime ? Number(courseData.estimatedReadTime) : undefined,
         pageViewDuration: courseData.pageViewDuration ? Number(courseData.pageViewDuration) : undefined,
@@ -143,6 +161,7 @@ export default function CourseCreation() {
           name: l.name,
           type: l.type,
           downloadEnabled: l.downloadEnabled,
+          url: l.url,
         })),
         quizSettings: {
           minimumPassingPercentage: Number(courseData.quizSettings.minimumPassingPercentage) || 30,
@@ -155,6 +174,9 @@ export default function CourseCreation() {
           showCorrectAnswer: courseData.quizSettings.showCorrectAnswer,
           disableReattemptAfterPassing: courseData.quizSettings.disableReattemptAfterPassing,
         },
+        certificateSettings: courseData.quizSettings.generateCertificate
+          ? courseData.certificateSettings
+          : undefined,
       },
     };
   }
@@ -170,7 +192,34 @@ export default function CourseCreation() {
     setLoading(true);
 
     try {
-      const created = await createCourse(buildPayload(status));
+      const lessonsWithUrls = [];
+      for (const lesson of courseData.lessons) {
+        if (lesson.file && !lesson.url) {
+          const url = await uploadCourseFile(lesson.file);
+          lessonsWithUrls.push({ ...lesson, url: url ?? undefined });
+        } else {
+          lessonsWithUrls.push(lesson);
+        }
+      }
+      if (lessonsWithUrls.length !== courseData.lessons.length) {
+        setCourseData({ ...courseData, lessons: lessonsWithUrls });
+      }
+
+      const payload = buildPayload(status);
+      const payloadContent = payload.content as Record<string, unknown> | undefined;
+      if (payloadContent && lessonsWithUrls.some((l) => l.url)) {
+        payload.content = {
+          ...payloadContent,
+          lessons: lessonsWithUrls.map((l, i) => ({
+            order: i,
+            name: l.name,
+            type: l.type,
+            downloadEnabled: l.downloadEnabled,
+            url: l.url,
+          })),
+        };
+      }
+      const created = await createCourse(payload);
 
       if (selectedStoreIds.length > 0 || selectedProfileIds.length > 0) {
         await assignCourse(created.id, {
@@ -437,6 +486,27 @@ export default function CourseCreation() {
       <div>
         <h2 className="text-2xl font-bold mb-2">{t('quizSetup')}</h2>
         <p className="text-muted-foreground">{t('quizSetupDesc')}</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="attachedQuiz" className="flex items-center gap-2">
+          <BookOpen className="w-4 h-4" />
+          {t('attachQuiz')}
+        </Label>
+        <select
+          id="attachedQuiz"
+          className="w-full p-2 border rounded-md"
+          value={courseData.quizId}
+          onChange={(e) => setCourseData({ ...courseData, quizId: e.target.value })}
+        >
+          <option value="">{t('noQuizAttached')}</option>
+          {quizzes.map((quiz) => (
+            <option key={quiz.id} value={quiz.id}>
+              {quiz.quizTitle || quiz.title}
+            </option>
+          ))}
+        </select>
+        <p className="text-sm text-muted-foreground">{t('attachQuizHint')}</p>
       </div>
 
       <div className="space-y-4">
@@ -807,6 +877,169 @@ export default function CourseCreation() {
               <p className="text-xs text-muted-foreground mt-2">{selectedProfileIds.length}{t('profilesSelected')}</p>
             )}
           </div>
+
+          {courseData.quizSettings.generateCertificate && (
+            <div className="border-t pt-4 space-y-4">
+              <div>
+                <h3 className="font-semibold mb-1 flex items-center gap-2">
+                  <Award className="w-4 h-4 text-primary" />
+                  {t('certificateConfiguration')}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">{t('certificateConfigurationHint')}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('primaryColor')}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="color"
+                    className="w-12 h-10 p-1"
+                    value={courseData.certificateSettings?.primaryColor ?? "#0284c7"}
+                    onChange={(e) =>
+                      setCourseData({
+                        ...courseData,
+                        certificateSettings: { ...courseData.certificateSettings, primaryColor: e.target.value },
+                      })
+                    }
+                  />
+                  <Input
+                    value={courseData.certificateSettings?.primaryColor ?? "#0284c7"}
+                    onChange={(e) =>
+                      setCourseData({
+                        ...courseData,
+                        certificateSettings: { ...courseData.certificateSettings, primaryColor: e.target.value },
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <CertificateToggleField
+                label={t('certificateHeader')}
+                enabled={courseData.certificateSettings?.certificateHeader?.enabled ?? true}
+                onToggle={(enabled) =>
+                  setCourseData({
+                    ...courseData,
+                    certificateSettings: {
+                      ...courseData.certificateSettings,
+                      certificateHeader: { enabled, text: courseData.certificateSettings?.certificateHeader?.text ?? "" },
+                    },
+                  })
+                }
+                value={courseData.certificateSettings?.certificateHeader?.text ?? ""}
+                onValueChange={(text) =>
+                  setCourseData({
+                    ...courseData,
+                    certificateSettings: {
+                      ...courseData.certificateSettings,
+                      certificateHeader: { enabled: courseData.certificateSettings?.certificateHeader?.enabled ?? true, text },
+                    },
+                  })
+                }
+                placeholder="Certificate of Achievement"
+              />
+
+              <CertificateToggleField
+                label={t('trainerName')}
+                enabled={courseData.certificateSettings?.trainerName?.enabled ?? false}
+                onToggle={(enabled) =>
+                  setCourseData({
+                    ...courseData,
+                    certificateSettings: {
+                      ...courseData.certificateSettings,
+                      trainerName: { enabled, text: courseData.certificateSettings?.trainerName?.text ?? "" },
+                    },
+                  })
+                }
+                value={courseData.certificateSettings?.trainerName?.text ?? ""}
+                onValueChange={(text) =>
+                  setCourseData({
+                    ...courseData,
+                    certificateSettings: {
+                      ...courseData.certificateSettings,
+                      trainerName: { enabled: courseData.certificateSettings?.trainerName?.enabled ?? false, text },
+                    },
+                  })
+                }
+                placeholder="John Smith"
+              />
+
+              <div className="flex items-center justify-between">
+                <Label>{t('issuedDate')}</Label>
+                <Switch
+                  checked={courseData.certificateSettings?.issuedDate?.enabled ?? true}
+                  onCheckedChange={(enabled) =>
+                    setCourseData({
+                      ...courseData,
+                      certificateSettings: {
+                        ...courseData.certificateSettings,
+                        issuedDate: { enabled },
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('validity')}</Label>
+                <select
+                  className="w-full p-2 border rounded-md"
+                  value={courseData.certificateSettings?.validityType ?? "duration"}
+                  onChange={(e) =>
+                    setCourseData({
+                      ...courseData,
+                      certificateSettings: {
+                        ...courseData.certificateSettings,
+                        validityType: e.target.value as any,
+                      },
+                    })
+                  }
+                >
+                  <option value="duration">{t('validityDurationLabel')}</option>
+                  <option value="fixed">{t('validityFixedLabel')}</option>
+                  <option value="none">{t('validityNoneLabel')}</option>
+                </select>
+              </div>
+
+              {courseData.certificateSettings?.validityType === "duration" && (
+                <div className="space-y-2">
+                  <Label>{t('duration')}</Label>
+                  <select
+                    className="w-full p-2 border rounded-md"
+                    value={courseData.certificateSettings?.validityDuration ?? "1 year"}
+                    onChange={(e) =>
+                      setCourseData({
+                        ...courseData,
+                        certificateSettings: { ...courseData.certificateSettings, validityDuration: e.target.value },
+                      })
+                    }
+                  >
+                    <option value="1 month">1 month</option>
+                    <option value="6 months">6 months</option>
+                    <option value="1 year">1 year</option>
+                    <option value="3 years">3 years</option>
+                    <option value="5 years">5 years</option>
+                  </select>
+                </div>
+              )}
+
+              {courseData.certificateSettings?.validityType === "fixed" && (
+                <div className="space-y-2">
+                  <Label>{t('fixedExpiryDate')}</Label>
+                  <Input
+                    type="date"
+                    value={courseData.certificateSettings?.fixedExpiryDate ?? ""}
+                    onChange={(e) =>
+                      setCourseData({
+                        ...courseData,
+                        certificateSettings: { ...courseData.certificateSettings, fixedExpiryDate: e.target.value },
+                      })
+                    }
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -884,6 +1117,34 @@ export default function CourseCreation() {
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function CertificateToggleField({
+  label,
+  enabled,
+  onToggle,
+  value,
+  onValueChange,
+  placeholder,
+}: {
+  label: string;
+  enabled: boolean;
+  onToggle: (enabled: boolean) => void;
+  value: string;
+  onValueChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-2 rounded-md border p-3">
+      <div className="flex items-center justify-between">
+        <Label>{label}</Label>
+        <Switch checked={enabled} onCheckedChange={onToggle} />
+      </div>
+      {enabled && (
+        <Input value={value} onChange={(e) => onValueChange(e.target.value)} placeholder={placeholder} />
+      )}
     </div>
   );
 }

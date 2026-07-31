@@ -1,14 +1,36 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, BookOpen, CheckCircle, ChevronDown, FileText, Play, Trophy } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpen,
+  CheckCircle,
+  ChevronDown,
+  Download,
+  FileText,
+  Play,
+  Send,
+  Trophy,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchAssignedCourses, fetchCourse, updateCourseProgress } from "@/lib/courseApi";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  fetchAssignedCourses,
+  fetchCourse,
+  fetchQuizzes,
+  submitCourseQuiz,
+  updateCourseProgress,
+} from "@/lib/courseApi";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getCurrentUserId } from "@/lib/assessmentSubmission";
+import { getCurrentUserDisplayName } from "@/lib/processSubmission";
+import { downloadCourseCertificate } from "@/lib/courseCertificate";
+import type { AssessmentCertificateSettings } from "@/lib/assessmentDraft";
 
 export default function CoursePlayer() {
   const { t } = useLanguage();
@@ -16,12 +38,18 @@ export default function CoursePlayer() {
   const [, params] = useRoute("/learning/course/:id");
   const courseId = params?.id ?? "";
   const userId = getCurrentUserId();
+  const userName = getCurrentUserDisplayName();
 
   const [course, setCourse] = useState<any>(null);
+  const [quiz, setQuiz] = useState<any>(null);
   const [progressRow, setProgressRow] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState<any>(null);
+  const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [submittingQuiz, setSubmittingQuiz] = useState(false);
+  const [quizResult, setQuizResult] = useState<any>(null);
 
   const lessons = useMemo(
     () =>
@@ -29,10 +57,12 @@ export default function CoursePlayer() {
     [course],
   );
 
+  const quizQuestions = useMemo(() => (quiz?.questions ?? []), [quiz]);
+
   useEffect(() => {
     if (!courseId || !userId) return;
-    Promise.all([fetchCourse(courseId), fetchAssignedCourses(userId)])
-      .then(([courseData, assigned]) => {
+    Promise.all([fetchCourse(courseId), fetchAssignedCourses(userId), fetchQuizzes()])
+      .then(([courseData, assigned, allQuizzes]) => {
         if (!courseData || courseData.status !== "published") {
           toast.error(t("courseNotAvailable"));
           navigate("/learning");
@@ -47,6 +77,12 @@ export default function CoursePlayer() {
         setCourse(courseData);
         setProgressRow(row);
 
+        const quizId = courseData.quizId ?? courseData.content?.quizId ?? null;
+        if (quizId) {
+          const found = (allQuizzes ?? []).find((q) => q.id === quizId);
+          setQuiz(found ?? null);
+        }
+
         const doneKeys = new Set<string>();
         if (courseData.content?.completedLessons && Array.isArray(courseData.content.completedLessons)) {
           for (const key of courseData.content.completedLessons) doneKeys.add(String(key));
@@ -54,6 +90,10 @@ export default function CoursePlayer() {
           for (const key of courseData.content.lessonCompletion) doneKeys.add(String(key));
         }
         setCompletedLessons(doneKeys);
+        const firstLesson = (courseData.content?.lessons ?? [])
+          .slice()
+          .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))[0];
+        setSelectedLesson(firstLesson ?? null);
       })
       .catch(() => {
         toast.error(t("failedToLoadCourse"));
@@ -68,6 +108,7 @@ export default function CoursePlayer() {
   }, [lessons, completedLessons, progressRow]);
 
   const isCompleted = progressRow?.status === "completed";
+  const quizPassed = Boolean(progressRow?.quizScore?.passed);
 
   async function persist(nextCompleted: Set<string>) {
     if (!progressRow?.id) return;
@@ -114,6 +155,36 @@ export default function CoursePlayer() {
     void persist(next);
   }
 
+  async function handleSubmitQuiz() {
+    if (!progressRow?.id || quizQuestions.length === 0) return;
+    setSubmittingQuiz(true);
+    try {
+      const result = await submitCourseQuiz(progressRow.id, answers);
+      setQuizResult(result);
+      setProgressRow((prev: any) => ({
+        ...prev,
+        status: result.passed ? "completed" : prev.status,
+        completedAt: result.passed ? new Date().toISOString() : prev.completedAt,
+        progress: result.passed ? 100 : prev.progress,
+        quizScore: { percentage: result.percentage, passed: result.passed },
+      }));
+    } catch (error: any) {
+      toast.error(error.message || t("failedToSubmitQuiz"));
+    } finally {
+      setSubmittingQuiz(false);
+    }
+  }
+
+  function handleDownloadCertificate() {
+    downloadCourseCertificate({
+      userName,
+      courseTitle: course.title,
+      score: progressRow?.quizScore?.percentage ?? progressRow?.progress ?? 100,
+      completedAt: new Date(progressRow?.completedAt ?? Date.now()),
+      settings: (course?.content?.certificateSettings as AssessmentCertificateSettings) ?? undefined,
+    });
+  }
+
   if (loading) {
     return (
       <div className="p-6 text-muted-foreground">{t("loadingCourse")}</div>
@@ -121,6 +192,8 @@ export default function CoursePlayer() {
   }
 
   if (!course) return null;
+
+  const hasQuiz = quizQuestions.length > 0;
 
   return (
     <div className="p-6 space-y-6 bg-white min-h-full">
@@ -132,6 +205,12 @@ export default function CoursePlayer() {
           </Button>
           <div className="flex items-center gap-2">
             {isCompleted && <Badge className="gap-1"><Trophy className="h-3 w-3" />{t("completed")}</Badge>}
+            {isCompleted && (
+              <Button variant="outline" size="sm" className="gap-2" onClick={handleDownloadCertificate}>
+                <Download className="h-4 w-4" />
+                {t("downloadCertificate")}
+              </Button>
+            )}
             <Badge variant={isCompleted ? "default" : "secondary"}>
               {t("progressLabel")} {percent}%
             </Badge>
@@ -173,31 +252,31 @@ export default function CoursePlayer() {
         </Card>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }}>
-        <Card className="border-sky-100">
-          <CardHeader>
-            <CardTitle className="text-lg">{t("courseLessons")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {lessons.length === 0 ? (
-              <p className="text-muted-foreground text-sm">{t("noLessonsInCourse")}</p>
-            ) : (
+      {lessons.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }}>
+          <Card className="border-sky-100">
+            <CardHeader>
+              <CardTitle className="text-lg">{t("courseLessons")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 {lessons.map((lesson: any, index: number) => {
                   const key = String(lesson.id ?? lesson.order ?? lesson.name);
                   const done = completedLessons.has(key);
                   const type = String(lesson.type ?? "").split("/")[0];
                   const isVideo = type === "video" || type === "audio";
+                  const active = selectedLesson?.id === lesson.id;
                   return (
                     <button
                       key={key}
                       type="button"
-                      onClick={() => toggleLesson(key)}
-                      disabled={saving}
+                      onClick={() => setSelectedLesson(lesson)}
                       className={`w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${
-                        done
-                          ? "border-sky-300 bg-sky-50"
-                          : "border-slate-200 bg-white hover:border-sky-200 hover:bg-sky-50/50"
+                        active
+                          ? "border-sky-400 bg-sky-50 ring-1 ring-sky-200"
+                          : done
+                            ? "border-sky-200 bg-sky-50/60"
+                            : "border-slate-200 bg-white hover:border-sky-200"
                       }`}
                     >
                       <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0">
@@ -214,15 +293,172 @@ export default function CoursePlayer() {
                           {index + 1}. {lesson.name}
                         </p>
                       </div>
-                      <ChevronDown className="w-4 h-4 text-slate-300 rotate-[-90deg]" />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleLesson(key);
+                          }}
+                          className="text-xs text-sky-600 hover:underline"
+                        >
+                          {done ? t("markIncomplete") : t("markComplete")}
+                        </button>
+                        <ChevronDown className="w-4 h-4 text-slate-300 rotate-[-90deg]" />
+                      </div>
                     </button>
                   );
                 })}
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
+
+              {selectedLesson && (
+                <div className="rounded-lg border border-sky-100 bg-slate-50 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">{selectedLesson.name}</p>
+                    {selectedLesson.downloadEnabled && selectedLesson.url && (
+                      <a href={selectedLesson.url} target="_blank" rel="noreferrer" className="text-sm text-sky-600 hover:underline">
+                        {t("downloadLesson")}
+                      </a>
+                    )}
+                  </div>
+                  <LessonMedia lesson={selectedLesson} t={t} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {hasQuiz && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 }}>
+          <Card className="border-sky-100">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Play className="h-5 w-5 text-sky-600" />
+                  {quiz.quizTitle || quiz.title}
+                </CardTitle>
+                {quizPassed && <Badge className="gap-1"><Trophy className="h-3 w-3" />{t("quizPassed")}</Badge>}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {quizResult ? (
+                <div className={`rounded-lg border p-5 ${quizResult.passed ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
+                  <p className={`text-lg font-bold ${quizResult.passed ? "text-emerald-700" : "text-red-700"}`}>
+                    {quizResult.passed ? t("quizPassed") : t("quizFailed")} — {quizResult.percentage}%
+                  </p>
+                  {quizResult.passed && (
+                    <Button className="mt-3 gap-2" onClick={handleDownloadCertificate}>
+                      <Download className="h-4 w-4" />
+                      {t("downloadCertificate")}
+                    </Button>
+                  )}
+                </div>
+              ) : quizPassed ? (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
+                  <p className="text-emerald-700 font-medium">{t("quizAlreadyPassed")}</p>
+                  <Button className="mt-3 gap-2" onClick={handleDownloadCertificate}>
+                    <Download className="h-4 w-4" />
+                    {t("downloadCertificate")}
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {quizQuestions.map((q: any, index: number) => (
+                    <QuizQuestion
+                      key={q.id || index}
+                      question={q}
+                      index={index}
+                      value={answers[q.id ?? q.questionText]}
+                      onChange={(value) =>
+                        setAnswers((prev) => ({ ...prev, [q.id ?? q.questionText]: value }))
+                      }
+                    />
+                  ))}
+                  <Button className="gap-2" onClick={handleSubmitQuiz} disabled={submittingQuiz}>
+                    <Send className="h-4 w-4" />
+                    {submittingQuiz ? t("submittingQuiz") : t("submitQuiz")}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+function LessonMedia({ lesson, t }: { lesson: any; t: (key: string) => string }) {
+  if (!lesson.url) {
+    return <p className="text-sm text-muted-foreground">{t("lessonNoContent")}</p>;
+  }
+  const type = String(lesson.type ?? "").split("/")[0];
+  if (type === "video") {
+    return (
+      <video controls className="w-full max-h-96 rounded-lg bg-black" src={lesson.url}>
+        {t("videoUnsupported")}
+      </video>
+    );
+  }
+  if (type === "image") {
+    return <img src={lesson.url} alt={lesson.name} className="w-full max-h-96 object-contain rounded-lg bg-white" />;
+  }
+  if (String(lesson.type) === "application/pdf") {
+    return (
+      <iframe src={lesson.url} title={lesson.name} className="w-full h-96 rounded-lg bg-white" />
+    );
+  }
+  return (
+    <a href={lesson.url} target="_blank" rel="noreferrer" className="text-sky-600 hover:underline">
+      {t("openLessonFile")}
+    </a>
+  );
+}
+
+function QuizQuestion({
+  question,
+  index,
+  value,
+  onChange,
+}: {
+  question: any;
+  index: number;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const options = Array.isArray(question.options) ? question.options : [];
+  return (
+    <div className="space-y-2 rounded-lg border border-slate-200 p-4">
+      <Label className="text-sm font-medium">
+        {index + 1}. {question.questionText}
+      </Label>
+      {question.questionType === "long-answer" ? (
+        <Textarea
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Type your answer"
+        />
+      ) : question.questionType === "short-answer" ? (
+        <Input
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Type your answer"
+        />
+      ) : (
+        <select
+          className="w-full p-2 border rounded-md"
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          <option value="">Select an option</option>
+          {options.map((opt: any, i: number) => (
+            <option key={i} value={opt.label}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }

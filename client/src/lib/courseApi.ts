@@ -167,20 +167,6 @@ export async function createQuiz(payload: {
   return parseJson(response);
 }
 
-export async function updateQuiz(id: string, payload: Record<string, unknown>): Promise<any> {
-  const response = await fetch(`${ORG_API}/courses/quizzes/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  return parseJson(response);
-}
-
-export async function deleteQuiz(id: string): Promise<void> {
-  const response = await fetch(`${ORG_API}/courses/quizzes/${id}`, { method: 'DELETE' });
-  await parseJson(response);
-}
-
 export async function assignCourse(
   id: string,
   body: { assigneeIds?: string[]; storeIds?: string[]; assigneeProfiles?: Record<string, unknown> },
@@ -241,10 +227,69 @@ export async function updateCourseProgress(
   return parseJson(response);
 }
 
-export async function fetchCourseQuiz(quizId: string): Promise<any> {
-  const response = await fetch(`${ORG_API}/courses/quizzes`);
-  const quizzes = await parseJson<any[]>(response);
-  return (Array.isArray(quizzes) ? quizzes : []).find((q) => q.id === quizId) ?? null;
+export async function updateQuiz(id: string, payload: Record<string, unknown>): Promise<any> {
+  const response = await fetch(`${ORG_API}/courses/quizzes/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response);
+}
+
+export async function deleteQuiz(id: string): Promise<void> {
+  const response = await fetch(`${ORG_API}/courses/quizzes/${id}`, { method: 'DELETE' });
+  await parseJson(response);
+}
+
+export async function uploadCourseFile(file: File): Promise<string | null> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await fetch(`${ORG_API}/courses/content/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  const data = await parseJson<{ url: string | null }>(response);
+  return data?.url ?? null;
+}
+
+export async function submitCourseQuiz(
+  progressId: string,
+  answers: Record<string, unknown>,
+): Promise<{ progress: any; percentage: number; passed: boolean }> {
+  const response = await fetch(`${ORG_API}/courses/progress/${encodeURIComponent(progressId)}/quiz-submit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answers }),
+  });
+  return parseJson(response);
+}
+
+export interface CourseCertificateRecord {
+  id: string;
+  courseId: string;
+  course: CourseResponse | null;
+  score: number;
+  issuedAt: string | null;
+  expiresAt: string | null;
+  settings: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export async function fetchUserCertificates(userId: string): Promise<CourseCertificateRecord[]> {
+  const response = await fetch(
+    `${ORG_API}/courses/certificates/user/${encodeURIComponent(userId)}?organizationId=${encodeURIComponent(getOrgId())}`,
+  );
+  const data = await parseJson<any[]>(response);
+  return (Array.isArray(data) ? data : []).map((row) => ({
+    id: row.id,
+    courseId: row.courseId,
+    course: row.course ?? null,
+    score: Number(row.score ?? 0),
+    issuedAt: row.issuedAt ?? null,
+    expiresAt: row.expiresAt ?? null,
+    settings: row.settings ?? null,
+    createdAt: row.createdAt ?? null,
+  }));
 }
 
 export async function fetchStores(): Promise<{ id: string; name: string }[]> {

@@ -29,6 +29,7 @@ export class SupabaseStorageService {
     buffer: Buffer,
     filename: string,
     mimetype: string,
+    bucket: string = this.bucketName,
   ): Promise<string | null> {
     if (!this.supabaseUrl || !this.supabaseKey) {
       this.logger.error('Supabase not configured');
@@ -40,7 +41,7 @@ export class SupabaseStorageService {
       const filePath = `uploads/${filename}`;
 
       const { data, error } = await supabase.storage
-        .from(this.bucketName)
+        .from(bucket)
         .upload(filePath, buffer, {
           contentType: mimetype,
           upsert: false,
@@ -50,25 +51,25 @@ export class SupabaseStorageService {
         const msg = (error.message || '').toLowerCase();
         if (msg.includes('bucket') && msg.includes('not found')) {
           const { error: createError } = await supabase.storage.createBucket(
-            this.bucketName,
+            bucket,
             { public: true },
           );
           if (createError) {
             if ((createError.message || '').toLowerCase().includes('already exists')) {
-              await supabase.storage.updateBucket(this.bucketName, { public: true });
+              await supabase.storage.updateBucket(bucket, { public: true });
             } else {
               this.logger.error('Failed to create bucket', createError.message);
               return null;
             }
           }
-          return this.uploadFile(buffer, filename, mimetype);
+          return this.uploadFile(buffer, filename, mimetype, bucket);
         }
         this.logger.error('Upload failed', error.message);
         return null;
       }
 
       const { data: publicUrl } = supabase.storage
-        .from(this.bucketName)
+        .from(bucket)
         .getPublicUrl(filePath);
 
       return publicUrl?.publicUrl || null;
@@ -78,7 +79,7 @@ export class SupabaseStorageService {
     }
   }
 
-  async deleteFile(fileUrl: string): Promise<boolean> {
+  async deleteFile(fileUrl: string, bucket: string = this.bucketName): Promise<boolean> {
     if (!this.supabaseUrl || !this.supabaseKey) return false;
     if (!fileUrl || fileUrl.startsWith('http://localhost')) return true;
 
@@ -86,12 +87,12 @@ export class SupabaseStorageService {
       const supabase = this.getClient();
 
       const parts = fileUrl.split('/');
-      const bucketIndex = parts.indexOf(this.bucketName);
+      const bucketIndex = parts.indexOf(bucket);
       if (bucketIndex === -1) return false;
       const filePath = parts.slice(bucketIndex + 1).join('/');
 
       const { error } = await supabase.storage
-        .from(this.bucketName)
+        .from(bucket)
         .remove([filePath]);
 
       if (error) {

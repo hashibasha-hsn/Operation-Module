@@ -73,6 +73,7 @@ export default function CategoriesAndCourses() {
   const [quizDescription, setQuizDescription] = useState("");
   const [quizTimeLimit, setQuizTimeLimit] = useState(30);
   const [quizPassingScore, setQuizPassingScore] = useState(70);
+  const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
   const [selectedCourseForQuiz, setSelectedCourseForQuiz] = useState("");
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [loadingQuizzes, setLoadingQuizzes] = useState(false);
@@ -325,6 +326,14 @@ export default function CategoriesAndCourses() {
         description: quizDescription || undefined,
         duration: quizTimeLimit,
         passingScore: quizPassingScore,
+        questions: quizQuestions.map((q, i) => ({
+          id: q.id || `q-${Date.now()}-${i}`,
+          questionText: q.text,
+          questionType: q.type,
+          options: q.type === "single-answer" || q.type === "dropdown"
+            ? q.options.map((opt: any) => ({ label: opt.label, isCorrect: opt.correct }))
+            : undefined,
+        })),
       });
       // Link quiz id onto the selected course content when possible
       try {
@@ -342,6 +351,7 @@ export default function CategoriesAndCourses() {
       setQuizDescription("");
       setQuizTimeLimit(30);
       setQuizPassingScore(70);
+      setQuizQuestions([]);
       setSelectedCourseForQuiz("");
     } catch (error) {
       console.error("Failed to create quiz:", error);
@@ -578,6 +588,146 @@ export default function CategoriesAndCourses() {
                       onChange={(e) => setQuizPassingScore(parseInt(e.target.value))}
                     />
                   </div>
+                </div>
+
+                <div className="border-t pt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>{t('quizQuestions')}</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setQuizQuestions([
+                          ...quizQuestions,
+                          { id: `q-${Date.now()}`, text: "", type: "short-answer", options: [] },
+                        ])
+                      }
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      {t('addQuestion')}
+                    </Button>
+                  </div>
+
+                  {quizQuestions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t('noQuestionsHint')}</p>
+                  ) : (
+                    quizQuestions.map((q, qIndex) => (
+                      <div key={q.id} className="rounded-md border p-3 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder={t('questionTextPlaceholder')}
+                            value={q.text}
+                            onChange={(e) => {
+                              const next = [...quizQuestions];
+                              next[qIndex] = { ...q, text: e.target.value };
+                              setQuizQuestions(next);
+                            }}
+                          />
+                          <select
+                            className="p-2 border rounded-md shrink-0"
+                            value={q.type}
+                            onChange={(e) => {
+                              const next = [...quizQuestions];
+                              next[qIndex] = {
+                                ...q,
+                                type: e.target.value,
+                                options: e.target.value === "short-answer" || e.target.value === "long-answer" ? [] : q.options,
+                              };
+                              setQuizQuestions(next);
+                            }}
+                          >
+                            <option value="short-answer">{t('shortAnswer')}</option>
+                            <option value="long-answer">{t('longAnswer')}</option>
+                            <option value="dropdown">{t('dropdownQuestion')}</option>
+                          </select>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive shrink-0"
+                            onClick={() =>
+                              setQuizQuestions(quizQuestions.filter((_, i) => i !== qIndex))
+                            }
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        {(q.type === "dropdown") && (
+                          <div className="pl-1 space-y-2">
+                            {q.options.map((opt: any, optIndex: number) => (
+                              <div key={optIndex} className="flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name={`correct-${q.id}`}
+                                  checked={Boolean(opt.correct)}
+                                  onChange={() => {
+                                    const next = [...quizQuestions];
+                                    next[qIndex] = {
+                                      ...q,
+                                      options: q.options.map((o: any, oi: number) => ({
+                                        ...o,
+                                        correct: oi === optIndex,
+                                      })),
+                                    };
+                                    setQuizQuestions(next);
+                                  }}
+                                  title={t('markCorrect')}
+                                />
+                                <Input
+                                  placeholder={t('optionPlaceholder')}
+                                  value={opt.label}
+                                  onChange={(e) => {
+                                    const next = [...quizQuestions];
+                                    next[qIndex] = {
+                                      ...q,
+                                      options: q.options.map((o: any, oi: number) =>
+                                        oi === optIndex ? { ...o, label: e.target.value } : o,
+                                      ),
+                                    };
+                                    setQuizQuestions(next);
+                                  }}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive shrink-0"
+                                  onClick={() => {
+                                    const next = [...quizQuestions];
+                                    next[qIndex] = {
+                                      ...q,
+                                      options: q.options.filter((_: any, oi: number) => oi !== optIndex),
+                                    };
+                                    setQuizQuestions(next);
+                                  }}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const next = [...quizQuestions];
+                                next[qIndex] = {
+                                  ...q,
+                                  options: [...q.options, { label: "", correct: q.options.length === 0 }],
+                                };
+                                setQuizQuestions(next);
+                              }}
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              {t('addOption')}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button variant="outline" onClick={() => setShowQuizCreationDialog(false)}>

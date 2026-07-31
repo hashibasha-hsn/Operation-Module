@@ -5,10 +5,12 @@ import { Course } from './course.entity';
 import { CourseCategory } from './course-category.entity';
 import { CourseQuiz } from './course-quiz.entity';
 import { CourseProgress } from './course-progress.entity';
+import { CourseCertificate } from './course-certificate.entity';
 import { AssessmentResult } from '../assessments/assessment-result.entity';
 import { notifyCertificateIssued, notifyLearningAssignment } from '../shared/notification-client';
 import { sendCourseCompletionReminderIfNeeded } from '../shared/course-completion-reminders';
 import { resolveCourseAssigneeUserIds } from '../shared/course-assignment.util';
+import { scoreCourseQuiz } from './course-quiz-scoring.util';
 
 @Injectable()
 export class CoursesService {
@@ -21,6 +23,8 @@ export class CoursesService {
     private courseQuizzesRepository: Repository<CourseQuiz>,
     @InjectRepository(CourseProgress, 'org')
     private courseProgressRepository: Repository<CourseProgress>,
+    @InjectRepository(CourseCertificate, 'org')
+    private courseCertificateRepository: Repository<CourseCertificate>,
     @InjectRepository(AssessmentResult, 'org')
     private assessmentResultsRepository: Repository<AssessmentResult>,
   ) {}
@@ -241,6 +245,110 @@ export class CoursesService {
     }
 
     return updated;
+  }
+
+  async submitCourseQuiz(
+    progressId: string,
+    answers: Record<string, unknown>,
+  ): Promise<{ progress: CourseProgress; percentage: number; passed: boolean }> {
+    const progress = await this.courseProgressRepository.findOne({
+      where: { id: progressId },
+      relations: ['course'],
+    });
+    if (!progress) {
+      throw new NotFoundException(`Course progress ${progressId} not found`);
+    }
+
+    const course = progress.course ?? (await this.findOne(progress.courseId));
+    if (!course) {
+      throw new NotFoundException(`Course ${progress.courseId} not found`);
+    }
+
+    const quizId = course.quizId ?? (course.content as any)?.quizId ?? null;
+    if (!quizId) {
+      throw new NotFoundException('Course has no quiz attached');
+    }
+
+    const quiz = await this.courseQuizzesRepository.findOne({ where: { id: String(quizId) } });
+    if (!quiz) {
+      throw new NotFoundException(`Quiz ${quizId} not found`);
+    }
+
+    const { percentage, score } = scoreCourseQuiz(quiz.questions ?? [], answers);
+    const passingScore = quiz.passingScore ?? 0;
+    const passed = percentage >= passingScore;
+    const completed = passed;
+
+    const patch: Partial<CourseProgress> = {
+      quizScore: { percentage, score, passingScore, passed, answers },
+      progress: Math.max(progress.progress ?? 0, passed ? 100 : progress.progress ?? 0),
+    };
+
+    if (completed) {
+      patch.status = 'completed';
+      patch.completedAt = new Date();
+      if (!progress.startedAt) patch.startedAt = new Date();
+    } else if (progress.status !== 'completed') {
+      patch.status = 'in_progress';
+    }
+
+    await this.courseProgressRepository.update(progressId, patch);
+    const updated = await this.courseProgressRepository.findOne({
+      where: { id: progressId },
+      relations: ['course'],
+    });
+
+    if (passed && progress.status !== 'completed') {
+      const settings = (course.content as any)?.certificateSettings ?? null;
+      const expiresAt = this.computeCertificateExpiry(settings);
+      await this.courseCertificateRepository.save(
+        this.courseCertificateRepository.create({
+          courseId: course.id,
+          userId: progress.userId,
+          progressId: progress.id,
+          organizationId: progress.organizationId,
+          score: percentage,
+          issuedAt: new Date(),
+          expiresAt,
+          settings,
+        }),
+      );
+
+      if (course.generateCertificate) {
+        void notifyCertificateIssued({
+          userId: progress.userId,
+          itemTitle: course.title,
+          itemType: 'course',
+          itemId: course.id,
+          percentage,
+        });
+      }
+    }
+
+    return { progress: updated, percentage, passed };
+  }
+
+  async findUserCertificates(userId: string, organizationId: string): Promise<CourseCertificate[]> {
+    return await this.courseCertificateRepository.find({
+      where: { userId, organizationId },
+      relations: ['course'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  private computeCertificateExpiry(settings: any): Date | null {
+    if (!settings || settings.validityType === 'none') return null;
+    if (settings.validityType === 'fixed' && settings.fixedExpiryDate) {
+      return new Date(settings.fixedExpiryDate);
+    }
+    const duration = settings.validityDuration ?? '1 year';
+    const expiry = new Date();
+    if (duration.includes('month')) {
+      expiry.setMonth(expiry.getMonth() + (parseInt(duration, 10) || 1));
+    } else if (duration.includes('year')) {
+      expiry.setFullYear(expiry.getFullYear() + (parseInt(duration, 10) || 1));
+    }
+    return expiry;
   }
 
   // Learning Report methods

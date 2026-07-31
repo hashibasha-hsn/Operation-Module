@@ -20,6 +20,8 @@ import {
   Loader2,
   ChevronDown,
   AlertCircle,
+  Award,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation, useSearch } from "wouter";
@@ -30,6 +32,9 @@ import { getStoredUser,
 import { getProfileCompletionProgress } from "@/lib/profileCompletion";
 import PasswordChangeForm from "@/components/PasswordChangeForm";
 import { fetchTwoFactorSettings, updateTwoFactorSettings } from "@/lib/twoFactorApi";
+import { fetchUserCertificates, type CourseCertificateRecord } from "@/lib/courseApi";
+import { downloadCourseCertificate } from "@/lib/courseCertificate";
+import { getCurrentUserDisplayName } from "@/lib/processSubmission";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { GATEWAY } from "@/lib/apiConfig";
 
@@ -102,6 +107,8 @@ export default function ProfileSettings() {
   });
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [isSavingTwoFactor, setIsSavingTwoFactor] = useState(false);
+  const [certificates, setCertificates] = useState<CourseCertificateRecord[]>([]);
+  const [loadingCertificates, setLoadingCertificates] = useState(false);
 
   const tabs = ["My Profile", "Change Password"];
 
@@ -111,6 +118,15 @@ export default function ProfileSettings() {
   useEffect(() => {
     void loadProfileSetup();
   }, []);
+
+  useEffect(() => {
+    if (!setupMode && currentUserId) {
+      void fetchUserCertificates(currentUserId)
+        .then(setCertificates)
+        .catch(() => setCertificates([]))
+        .finally(() => setLoadingCertificates(false));
+    }
+  }, [setupMode, currentUserId]);
 
   useEffect(() => {
     if (forcePasswordChange) {
@@ -380,6 +396,16 @@ export default function ProfileSettings() {
     profileData.name.trim() &&
     profileData.entityId.trim() &&
     !isSavingProfile;
+
+  const handleDownloadCertificate = (cert: CourseCertificateRecord) => {
+    downloadCourseCertificate({
+      userName: getCurrentUserDisplayName() || cert.course?.name || "",
+      courseTitle: cert.course?.title ?? "Course",
+      score: cert.score ?? 100,
+      completedAt: cert.issuedAt ? new Date(cert.issuedAt) : new Date(),
+      settings: cert.settings as Record<string, any> | undefined,
+    });
+  };
 
   const completionProgress = getProfileCompletionProgress({
     name: profileData.name,
@@ -736,6 +762,60 @@ export default function ProfileSettings() {
                       </p>
                     )}
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="w-5 h-5 text-primary" />
+                    {t('myCertificates')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loadingCertificates ? (
+                    <div className="flex items-center justify-center py-8 text-muted-foreground gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      {t('loadingCertificates')}
+                    </div>
+                  ) : certificates.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t('noCertificatesYet')}
+                    </p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {certificates.map((cert) => (
+                        <li
+                          key={cert.id}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4"
+                        >
+                          <div className="min-w-0 space-y-1">
+                            <p className="font-medium truncate">
+                              {cert.course?.title ?? t('courseCertificate')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {t('scoreLabel')} {cert.score ?? 100}%
+                              {cert.issuedAt
+                                ? ` · ${t('issuedOn')} ${new Date(cert.issuedAt).toLocaleDateString()}`
+                                : ""}
+                              {cert.expiresAt
+                                ? ` · ${t('expiresOn')} ${new Date(cert.expiresAt).toLocaleDateString()}`
+                                : ""}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => handleDownloadCertificate(cert)}
+                          >
+                            <Download className="h-4 w-4" />
+                            {t('download')}
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </CardContent>
               </Card>
 

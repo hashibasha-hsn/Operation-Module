@@ -1,5 +1,19 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CoursesService } from './courses.service';
+import { SupabaseStorageService } from '../noticeboard/supabase-storage.service';
+import { courseUploadOptions, buildCourseFilename } from './course-upload.config';
 import { Course } from './course.entity';
 import { CourseCategory } from './course-category.entity';
 import { CourseQuiz } from './course-quiz.entity';
@@ -7,7 +21,10 @@ import { CourseProgress } from './course-progress.entity';
 
 @Controller('courses')
 export class CoursesController {
-  constructor(private readonly coursesService: CoursesService) {}
+  constructor(
+    private readonly coursesService: CoursesService,
+    private readonly storageService: SupabaseStorageService,
+  ) {}
 
   // Static routes MUST come before parameterized :id routes
   @Post()
@@ -18,6 +35,21 @@ export class CoursesController {
   @Get()
   findAll(@Query('organizationId') organizationId: string) {
     return this.coursesService.findAll(organizationId);
+  }
+
+  @Post('content/upload')
+  @UseInterceptors(FileInterceptor('file', courseUploadOptions))
+  async uploadContent(@UploadedFile() file?: any) {
+    if (!file) {
+      return { url: null };
+    }
+    const url = await this.storageService.uploadFile(
+      file.buffer,
+      buildCourseFilename(file.originalname),
+      file.mimetype,
+      'course-content',
+    );
+    return { url };
   }
 
   @Post('categories')
@@ -136,6 +168,19 @@ export class CoursesController {
       categoryId,
       search,
     });
+  }
+
+  @Post('progress/:id/quiz-submit')
+  submitCourseQuiz(@Param('id') id: string, @Body() body: { answers?: Record<string, unknown> }) {
+    return this.coursesService.submitCourseQuiz(id, body.answers ?? {});
+  }
+
+  @Get('certificates/user/:userId')
+  findUserCertificates(
+    @Param('userId') userId: string,
+    @Query('organizationId') organizationId: string,
+  ) {
+    return this.coursesService.findUserCertificates(userId, organizationId);
   }
 
   // Parameterized course routes last so they do not capture static paths above

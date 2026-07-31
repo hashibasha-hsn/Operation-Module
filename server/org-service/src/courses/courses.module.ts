@@ -6,7 +6,9 @@ import { Course } from './course.entity';
 import { CourseCategory } from './course-category.entity';
 import { CourseQuiz } from './course-quiz.entity';
 import { CourseProgress } from './course-progress.entity';
+import { CourseCertificate } from './course-certificate.entity';
 import { AssessmentResult } from '../assessments/assessment-result.entity';
+import { SupabaseStorageService } from '../noticeboard/supabase-storage.service';
 
 @Module({
   imports: [
@@ -15,11 +17,12 @@ import { AssessmentResult } from '../assessments/assessment-result.entity';
       CourseCategory,
       CourseQuiz,
       CourseProgress,
+      CourseCertificate,
       AssessmentResult,
     ], 'org'),
   ],
   controllers: [CoursesController],
-  providers: [CoursesService],
+  providers: [CoursesService, SupabaseStorageService],
   exports: [CoursesService],
 })
 export class CoursesModule {}
