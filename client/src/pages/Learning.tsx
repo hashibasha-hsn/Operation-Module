@@ -146,7 +146,11 @@ export default function Learning() {
                         : "outline";
 
                   return (
-                    <Card key={item.id} className="border-sky-100">
+                    <Card
+                      key={item.id}
+                      className="border-sky-100 cursor-pointer hover:border-sky-200 hover:shadow-md hover:shadow-sky-500/5 transition-all"
+                      onClick={() => navigate(`/learning/course/${item.courseId}`)}
+                    >
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -170,7 +174,7 @@ export default function Learning() {
                           <div className="flex items-center gap-2">
                             <BookOpen className="h-4 w-4 text-sky-600" />
                             <span className="text-sm text-sky-600 font-medium">
-                              {item.status === "completed" ? t('completed') : t('inProgress') === statusLabel ? t('continue') : t('start')}
+                              {item.status === "completed" ? t('viewCourse') : t('start')}
                             </span>
                           </div>
                         </div>

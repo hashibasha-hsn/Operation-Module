@@ -39,6 +39,7 @@ import Admin from "./pages/Admin";
 import ProcessFill from "./pages/ProcessFill";
 import AuditFill from "./pages/AuditFill";
 import AssessmentFill from "./pages/AssessmentFill";
+import CoursePlayer from "./pages/CoursePlayer";
 import Tasks from "./pages/Tasks";
 import Login from "./pages/Login";
 import AdminSetup from "./pages/AdminSetup";
@@ -106,6 +107,7 @@ function Router() {
       <Route path={"/users"} component={() => <Layout><Users /></Layout>} />
       <Route path={"/attendance"} component={() => <Layout><Attendance /></Layout>} />
       <Route path={"/learning"} component={() => <Layout><Learning /></Layout>} />
+      <Route path={"/learning/course/:id"} component={() => <Layout><CoursePlayer /></Layout>} />
       <Route path={"/learning/assessment/:id"} component={() => <Layout><AssessmentFill /></Layout>} />
       <Route path={"/categories-and-courses"} component={() => <Layout><CategoriesAndCourses /></Layout>} />
       <Route path={"/course-creation"} component={() => <Layout><CourseCreation /></Layout>} />

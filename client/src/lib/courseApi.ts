@@ -223,6 +223,30 @@ export async function fetchAssignedCourses(userId: string): Promise<AssignedCour
     }));
 }
 
+export async function updateCourseProgress(
+  progressId: string,
+  data: {
+    status?: string;
+    progress?: number;
+    startedAt?: string | null;
+    completedAt?: string | null;
+    quizScore?: unknown;
+  },
+): Promise<any> {
+  const response = await fetch(`${ORG_API}/courses/progress/${encodeURIComponent(progressId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return parseJson(response);
+}
+
+export async function fetchCourseQuiz(quizId: string): Promise<any> {
+  const response = await fetch(`${ORG_API}/courses/quizzes`);
+  const quizzes = await parseJson<any[]>(response);
+  return (Array.isArray(quizzes) ? quizzes : []).find((q) => q.id === quizId) ?? null;
+}
+
 export async function fetchStores(): Promise<{ id: string; name: string }[]> {
   const response = await fetch(`${ORG_API}/entities`);
   if (!response.ok) return [];
