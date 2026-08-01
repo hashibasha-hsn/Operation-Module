@@ -20,6 +20,9 @@ export class CourseQuiz {
   @Column({ default: 0 })
   duration: number; // Duration in minutes
 
+  @Column({ default: false })
+  showCorrectAnswer: boolean; // Reveal correct answers to learners after submission
+
   @Column({ default: true })
   isActive: boolean;
 

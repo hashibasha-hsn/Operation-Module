@@ -483,6 +483,10 @@ INSERT INTO translations (key, en, ar) VALUES
 
 -- CategoriesAndCourses Page
 ('shortAnswer', 'Short Answer', 'إجابة قصيرة'),
+('correctAnswer', 'Correct Answer', 'الإجابة الصحيحة'),
+('correctAnswerPlaceholder', 'Enter the correct answer', 'أدخل الإجابة الصحيحة'),
+('correctAnswerReview', 'Correct Answers Review', 'مراجعة الإجابات الصحيحة'),
+('yourAnswer', 'Your Answer', 'إجابتك'),
 ('singleAnswer', 'Single Answer', 'إجابة واحدة'),
 ('multipleAnswer', 'Multiple Answers', 'إجابات متعددة'),
 ('publishQuiz', 'Publish Quiz', 'نشر الاختبار'),

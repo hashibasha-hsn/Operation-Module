@@ -110,6 +110,7 @@ export default function CoursePlayer() {
   const isCompleted = progressRow?.status === "completed";
   const quizPassed = Boolean(progressRow?.quizScore?.passed);
   const hasQuiz = quizQuestions.length > 0;
+  const revealCorrectAnswers = Boolean(quiz?.showCorrectAnswer) && Boolean(quizResult);
 
   async function persist(nextCompleted: Set<string>) {
     if (!progressRow?.id) return;
@@ -330,15 +331,43 @@ export default function CoursePlayer() {
             </CardHeader>
             <CardContent className="space-y-5">
               {quizResult ? (
-                <div className={`rounded-lg border p-5 ${quizResult.passed ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
-                  <p className={`text-lg font-bold ${quizResult.passed ? "text-emerald-700" : "text-red-700"}`}>
-                    {quizResult.passed ? t("quizPassed") : t("quizFailed")} — {quizResult.percentage}%
-                  </p>
-                  {quizResult.passed && (
-                    <Button className="mt-3 gap-2" onClick={handleDownloadCertificate}>
-                      <Download className="h-4 w-4" />
-                      {t("downloadCertificate")}
-                    </Button>
+                <div>
+                  <div className={`rounded-lg border p-5 ${quizResult.passed ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
+                    <p className={`text-lg font-bold ${quizResult.passed ? "text-emerald-700" : "text-red-700"}`}>
+                      {quizResult.passed ? t("quizPassed") : t("quizFailed")} — {quizResult.percentage}%
+                    </p>
+                    {quizResult.passed && (
+                      <Button className="mt-3 gap-2" onClick={handleDownloadCertificate}>
+                        <Download className="h-4 w-4" />
+                        {t("downloadCertificate")}
+                      </Button>
+                    )}
+                  </div>
+                  {revealCorrectAnswers && (
+                    <div className="mt-4 space-y-3">
+                      <p className="text-sm font-semibold">{t("correctAnswerReview")}</p>
+                      {quizQuestions.map((q: any, index: number) => (
+                        <div key={q.id || index} className="rounded-lg border bg-white p-4 space-y-2">
+                          <p className="text-sm font-medium">
+                            {index + 1}. {q.questionText}
+                          </p>
+                          <QuizQuestion
+                            question={q}
+                            index={index}
+                            value={answers[q.id ?? q.questionText]}
+                            onChange={() => undefined}
+                            showCorrectAnswer
+                            disabled
+                            t={t}
+                          />
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle className={`w-4 h-4 ${answers[q.id ?? q.questionText]?.toString().trim() ? "text-emerald-500" : "text-slate-300"}`} />
+                            <span className="text-muted-foreground">{t("yourAnswer")}:</span>
+                            <span className="font-medium">{String(answers[q.id ?? q.questionText] ?? "-")}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               ) : quizPassed ? (
@@ -360,6 +389,7 @@ export default function CoursePlayer() {
                       onChange={(value) =>
                         setAnswers((prev) => ({ ...prev, [q.id ?? q.questionText]: value }))
                       }
+                      t={t}
                     />
                   ))}
                   <Button className="gap-2" onClick={handleSubmitQuiz} disabled={submittingQuiz}>
@@ -419,43 +449,85 @@ function QuizQuestion({
   index,
   value,
   onChange,
+  showCorrectAnswer,
+  disabled,
+  t,
 }: {
   question: any;
   index: number;
   value: unknown;
   onChange: (value: unknown) => void;
+  showCorrectAnswer?: boolean;
+  disabled?: boolean;
+  t: (key: string) => string;
 }) {
   const options = Array.isArray(question.options) ? question.options : [];
+  const selected = typeof value === "string" ? value : "";
   return (
     <div className="space-y-2 rounded-lg border border-slate-200 p-4">
       <Label className="text-sm font-medium">
         {index + 1}. {question.questionText}
       </Label>
       {question.questionType === "long-answer" ? (
-        <Textarea
-          value={typeof value === "string" ? value : ""}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Type your answer"
-        />
+        <>
+          <Textarea
+            value={selected}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Type your answer"
+            disabled={disabled}
+          />
+          {showCorrectAnswer && question.correctAnswer && (
+            <p className="text-sm text-emerald-600">
+              {t("correctAnswer")}: {question.correctAnswer}
+            </p>
+          )}
+        </>
       ) : question.questionType === "short-answer" ? (
-        <Input
-          value={typeof value === "string" ? value : ""}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Type your answer"
-        />
+        <>
+          <Input
+            value={selected}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Type your answer"
+            disabled={disabled}
+          />
+          {showCorrectAnswer && question.correctAnswer && (
+            <p className="text-sm text-emerald-600">
+              {t("correctAnswer")}: {question.correctAnswer}
+            </p>
+          )}
+        </>
       ) : (
-        <select
-          className="w-full p-2 border rounded-md"
-          value={typeof value === "string" ? value : ""}
-          onChange={(e) => onChange(e.target.value)}
-        >
-          <option value="">Select an option</option>
-          {options.map((opt: any, i: number) => (
-            <option key={i} value={opt.label}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <div className="space-y-2">
+          {options.map((opt: any, i: number) => {
+            const isCorrect = Boolean(opt.isCorrect ?? opt.correct);
+            const isSelected = selected === opt.label;
+            const highlight =
+              showCorrectAnswer && isCorrect
+                ? "border-emerald-500 bg-emerald-50"
+                : showCorrectAnswer && isSelected && !isCorrect
+                  ? "border-red-400 bg-red-50"
+                  : "";
+            return (
+              <label
+                key={i}
+                className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer ${highlight}`}
+              >
+                <input
+                  type="radio"
+                  name={`quiz-${question.id ?? index}`}
+                  className="accent-sky-600"
+                  checked={isSelected}
+                  disabled={disabled}
+                  onChange={() => onChange(opt.label)}
+                />
+                <span>{opt.label}</span>
+                {showCorrectAnswer && isCorrect && (
+                  <CheckCircle className="w-4 h-4 text-emerald-500 ml-auto" />
+                )}
+              </label>
+            );
+          })}
+        </div>
       )}
     </div>
   );

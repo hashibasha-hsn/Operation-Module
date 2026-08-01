@@ -9,6 +9,7 @@ export type CourseQuizQuestion = {
   questionText: string;
   questionType: 'short-answer' | 'long-answer' | 'single-answer' | 'multiple-answers' | 'dropdown';
   options?: QuestionOption[] | { options?: QuestionOption[] };
+  correctAnswer?: string | string[];
 };
 
 function getOptionList(question: CourseQuizQuestion): QuestionOption[] {
@@ -58,7 +59,15 @@ export function scoreCourseQuiz(
     if (question.questionType === 'short-answer' || question.questionType === 'long-answer') {
       const text = normalizeResponse(response)[0] ?? '';
       maxScore += 1;
-      if (text.trim()) earned += 1;
+      if (!text.trim()) continue;
+      const expected = normalizeResponse(question.correctAnswer)[0] ?? '';
+      if (expected) {
+        const exact = expected.trim().toLowerCase() === text.trim().toLowerCase();
+        const included = text.trim().toLowerCase().includes(expected.trim().toLowerCase());
+        if (exact || included) earned += 1;
+      } else {
+        earned += 1;
+      }
       continue;
     }
 

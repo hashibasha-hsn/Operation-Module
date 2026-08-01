@@ -76,6 +76,7 @@ export default function CategoriesAndCourses() {
   const [quizDescription, setQuizDescription] = useState("");
   const [quizTimeLimit, setQuizTimeLimit] = useState(30);
   const [quizPassingScore, setQuizPassingScore] = useState(70);
+  const [quizShowCorrectAnswer, setQuizShowCorrectAnswer] = useState(false);
   const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
   const [selectedCourseForQuiz, setSelectedCourseForQuiz] = useState("");
   const [quizzes, setQuizzes] = useState<any[]>([]);
@@ -318,6 +319,7 @@ export default function CategoriesAndCourses() {
     setQuizDescription("");
     setQuizTimeLimit(30);
     setQuizPassingScore(70);
+    setQuizShowCorrectAnswer(false);
     setQuizQuestions([]);
     setSelectedCourseForQuiz("");
     setShowQuizCreationDialog(true);
@@ -329,11 +331,13 @@ export default function CategoriesAndCourses() {
     setQuizDescription(quiz.description || "");
     setQuizTimeLimit(Number(quiz.duration ?? quiz.time_limit) || 30);
     setQuizPassingScore(Number(quiz.passingScore ?? quiz.passing_score) || 70);
+    setQuizShowCorrectAnswer(Boolean(quiz.showCorrectAnswer ?? quiz.show_correct_answer));
     setQuizQuestions(
       (Array.isArray(quiz.questions) ? quiz.questions : []).map((q: any) => ({
         id: q.id || `q-${Date.now()}-${Math.random()}`,
         text: q.questionText ?? q.text ?? "",
         type: q.questionType ?? q.type ?? "short-answer",
+        correctAnswer: q.correctAnswer ?? q.correct_answer ?? "",
         options: Array.isArray(q.options)
           ? q.options.map((opt: any) => ({
               label: opt.label ?? "",
@@ -364,10 +368,14 @@ export default function CategoriesAndCourses() {
       description: quizDescription || undefined,
       duration: quizTimeLimit,
       passingScore: quizPassingScore,
+      showCorrectAnswer: quizShowCorrectAnswer,
       questions: quizQuestions.map((q, i) => ({
         id: q.id || `q-${Date.now()}-${i}`,
         questionText: q.text,
         questionType: q.type,
+        correctAnswer: q.type === "short-answer" || q.type === "long-answer"
+          ? q.correctAnswer?.trim() || undefined
+          : undefined,
         options: q.type === "single-answer" || q.type === "dropdown"
           ? q.options.map((opt: any) => ({ label: opt.label, isCorrect: opt.correct }))
           : undefined,
@@ -402,6 +410,7 @@ export default function CategoriesAndCourses() {
       setQuizDescription("");
       setQuizTimeLimit(30);
       setQuizPassingScore(70);
+      setQuizShowCorrectAnswer(false);
       setQuizQuestions([]);
       setSelectedCourseForQuiz("");
     } catch (error) {
@@ -653,6 +662,15 @@ export default function CategoriesAndCourses() {
                   </div>
                 </div>
 
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={quizShowCorrectAnswer}
+                    onChange={(e) => setQuizShowCorrectAnswer(e.target.checked)}
+                  />
+                  <span className="text-sm">{t('showCorrectAnswer')}</span>
+                </label>
+
                 <div className="border-t pt-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <Label>{t('quizQuestions')}</Label>
@@ -716,6 +734,21 @@ export default function CategoriesAndCourses() {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
+
+                        {(q.type === "short-answer" || q.type === "long-answer") && (
+                          <div className="pl-1">
+                            <Label className="text-xs text-muted-foreground">{t('correctAnswer')}</Label>
+                            <Input
+                              placeholder={t('correctAnswerPlaceholder')}
+                              value={q.correctAnswer ?? ""}
+                              onChange={(e) => {
+                                const next = [...quizQuestions];
+                                next[qIndex] = { ...q, correctAnswer: e.target.value };
+                                setQuizQuestions(next);
+                              }}
+                            />
+                          </div>
+                        )}
 
                         {(q.type === "dropdown") && (
                           <div className="pl-1 space-y-2">
