@@ -29,6 +29,7 @@ import {
 } from "@/lib/auditSubmission";
 import { fetchActionPointsByTab } from "@/lib/actionPointApi";
 import { fetchAssignedAssessments } from "@/lib/assessmentApi";
+import { fetchAssignedCourses } from "@/lib/courseApi";
 import {
   fetchUserAssessmentResults,
   getInProgressResult,
@@ -153,6 +154,7 @@ export default function Dashboard() {
         actionPoints,
         assessments,
         assessmentResults,
+        courses,
         tickets,
       ] = await Promise.all([
         fetchAssignedProcesses(userId, storeId).catch(() => []),
@@ -162,6 +164,7 @@ export default function Dashboard() {
         fetchActionPointsByTab("assigned").catch(() => []),
         fetchAssignedAssessments(userId, storeId).catch(() => []),
         fetchUserAssessmentResults(userId).catch(() => []),
+        fetchAssignedCourses(userId).catch(() => []),
         fetchTicketsAssignedToMe().catch(() => []),
       ]);
 
@@ -172,6 +175,7 @@ export default function Dashboard() {
       const actionPointList = Array.isArray(actionPoints) ? actionPoints : [];
       const assessmentList = Array.isArray(assessments) ? assessments : [];
       const resultList = Array.isArray(assessmentResults) ? assessmentResults : [];
+      const courseList = Array.isArray(courses) ? courses : [];
       const ticketList = Array.isArray(tickets) ? tickets : [];
 
       const processDraftIds = new Set(
@@ -312,11 +316,39 @@ export default function Dashboard() {
           });
         }
       }
+
+      for (const course of courseList) {
+        const status = String(course.status ?? "").toLowerCase();
+        const isDone = status === "completed";
+        const isActive = status === "in_progress";
+        if (isDone) {
+          learnCompleted += 1;
+        } else if (isActive) {
+          learnInProgress += 1;
+          queue.push({
+            id: `course-${course.courseId}`,
+            title: course.course?.title || "Course",
+            statusKey: "inProgress",
+            typeLabel: "Learning",
+            href: `/learning/course/${course.courseId}`,
+          });
+        } else {
+          learnPending += 1;
+          queue.push({
+            id: `course-${course.courseId}`,
+            title: course.course?.title || "Course",
+            statusKey: "pending",
+            typeLabel: "Learning",
+            href: `/learning/course/${course.courseId}`,
+          });
+        }
+      }
+
       setLearningCounts({
         pending: learnPending,
         inProgress: learnInProgress,
         completed: learnCompleted,
-        assigned: assessmentList.length,
+        assigned: assessmentList.length + courseList.length,
       });
 
       const tkPending = ticketList.filter((tk) => tk.status === "open").length;
