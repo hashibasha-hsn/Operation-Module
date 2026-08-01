@@ -25,6 +25,7 @@ import {
   createQuiz,
   deleteCategory,
   deleteCourse,
+  deleteQuiz,
   fetchCategories,
   fetchCourses,
   fetchQuizzes,
@@ -372,6 +373,18 @@ export default function CategoriesAndCourses() {
   const handlePublishQuiz = (quiz: any) => {
     setSelectedQuizForPublish(quiz);
     setShowPublishDialog(true);
+  };
+
+  const handleDeleteQuiz = async (quizId: string) => {
+    if (!window.confirm(t("confirmDeleteQuiz"))) return;
+    try {
+      await deleteQuiz(quizId);
+      setQuizzes(quizzes.filter((quiz) => quiz.id !== quizId));
+      toast.success(t("quizDeletedSuccessfully"));
+    } catch (error) {
+      console.error("Failed to delete quiz:", error);
+      toast.error(t("failedToDeleteQuiz"));
+    }
   };
 
   const handleSaveQuizAssignment = async () => {
@@ -982,7 +995,7 @@ export default function CategoriesAndCourses() {
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <Edit2 className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteQuiz(quiz.id)}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>

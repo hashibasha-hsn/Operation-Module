@@ -515,6 +515,9 @@ INSERT INTO translations (key, en, ar) VALUES
 ('failedToAssignQuiz', 'Failed to assign quiz', 'فشل تعيين الاختبار'),
 ('quizPublishedSuccessfully', 'Quiz published successfully', 'تم نشر الاختبار بنجاح'),
 ('failedToPublishQuiz', 'Failed to publish quiz', 'فشل نشر الاختبار'),
+('confirmDeleteQuiz', 'Delete this quiz?', 'هل تريد حذف هذا الاختبار؟'),
+('quizDeletedSuccessfully', 'Quiz deleted successfully', 'تم حذف الاختبار بنجاح'),
+('failedToDeleteQuiz', 'Failed to delete quiz', 'فشل حذف الاختبار'),
 ('failedToLoadCategories', 'Failed to load categories', 'فشل تحميل الفئات'),
 
 -- Home Page
