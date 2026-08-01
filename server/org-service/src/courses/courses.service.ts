@@ -259,6 +259,7 @@ export class CoursesService {
   async submitCourseQuiz(
     progressId: string,
     answers: Record<string, unknown>,
+    lessonsComplete = false,
   ): Promise<{ progress: CourseProgress; percentage: number; passed: boolean }> {
     const progress = await this.courseProgressRepository.findOne({
       where: { id: progressId },
@@ -286,11 +287,11 @@ export class CoursesService {
     const { percentage, score } = scoreCourseQuiz(quiz.questions ?? [], answers);
     const passingScore = quiz.passingScore ?? 0;
     const passed = percentage >= passingScore;
-    const completed = passed;
+    const completed = passed && lessonsComplete;
 
     const patch: Partial<CourseProgress> = {
       quizScore: { percentage, score, passingScore, passed, answers },
-      progress: Math.max(progress.progress ?? 0, passed ? 100 : progress.progress ?? 0),
+      progress: Math.max(progress.progress ?? 0, completed ? 100 : progress.progress ?? 0),
     };
 
     if (completed) {
@@ -307,7 +308,7 @@ export class CoursesService {
       relations: ['course'],
     });
 
-    if (passed && progress.status !== 'completed') {
+    if (completed && progress.status !== 'completed') {
       const settings = (course.content as any)?.certificateSettings ?? null;
       const expiresAt = this.computeCertificateExpiry(settings);
       await this.courseCertificateRepository.save(

@@ -109,13 +109,20 @@ export default function CoursePlayer() {
 
   const isCompleted = progressRow?.status === "completed";
   const quizPassed = Boolean(progressRow?.quizScore?.passed);
+  const hasQuiz = quizQuestions.length > 0;
 
   async function persist(nextCompleted: Set<string>) {
     if (!progressRow?.id) return;
     setSaving(true);
     try {
-      const progress = lessons.length ? Math.round((nextCompleted.size / lessons.length) * 100) : 100;
-      const status = lessons.length > 0 && nextCompleted.size >= lessons.length ? "completed" : progressRow.status === "completed" ? "completed" : "in_progress";
+      const allLessonsDone = lessons.length === 0 || nextCompleted.size >= lessons.length;
+      const isFullyComplete = allLessonsDone && (!hasQuiz || quizPassed);
+      const progress = lessons.length
+        ? Math.round((nextCompleted.size / lessons.length) * 100)
+        : isFullyComplete
+          ? 100
+          : 0;
+      const status = isFullyComplete ? "completed" : "in_progress";
       const payload: any = { progress, status };
       if (status === "in_progress" && !progressRow.startedAt) payload.startedAt = new Date().toISOString();
       if (status === "completed") payload.completedAt = new Date().toISOString();
@@ -141,16 +148,10 @@ export default function CoursePlayer() {
     }
   }
 
-  function toggleLesson(lessonId: string) {
+  function autoCompleteLesson(lessonKey: string) {
     const next = new Set(completedLessons);
-    if (next.has(lessonId)) next.delete(lessonId);
-    else next.add(lessonId);
-    setCompletedLessons(next);
-    void persist(next);
-  }
-
-  function markAllComplete() {
-    const next = new Set(lessons.map((l: any) => String(l.id ?? l.order ?? l.name)));
+    if (next.has(lessonKey)) return;
+    next.add(lessonKey);
     setCompletedLessons(next);
     void persist(next);
   }
@@ -159,13 +160,15 @@ export default function CoursePlayer() {
     if (!progressRow?.id || quizQuestions.length === 0) return;
     setSubmittingQuiz(true);
     try {
-      const result = await submitCourseQuiz(progressRow.id, answers);
+      const result = await submitCourseQuiz(progressRow.id, answers, lessons.length === 0 || completedLessons.size >= lessons.length);
       setQuizResult(result);
+      const allLessonsDone = lessons.length === 0 || completedLessons.size >= lessons.length;
+      const isFullyComplete = allLessonsDone && result.passed;
       setProgressRow((prev: any) => ({
         ...prev,
-        status: result.passed ? "completed" : prev.status,
-        completedAt: result.passed ? new Date().toISOString() : prev.completedAt,
-        progress: result.passed ? 100 : prev.progress,
+        status: isFullyComplete ? "completed" : "in_progress",
+        completedAt: isFullyComplete ? new Date().toISOString() : prev.completedAt,
+        progress: isFullyComplete ? 100 : Math.min(prev.progress ?? 0, lessons.length ? Math.round((completedLessons.size / lessons.length) * 100) : prev.progress ?? 0),
         quizScore: { percentage: result.percentage, passed: result.passed },
       }));
     } catch (error: any) {
@@ -192,8 +195,6 @@ export default function CoursePlayer() {
   }
 
   if (!course) return null;
-
-  const hasQuiz = quizQuestions.length > 0;
 
   return (
     <div className="p-6 space-y-6 bg-white min-h-full">
@@ -241,12 +242,6 @@ export default function CoursePlayer() {
               <p className="text-sm text-muted-foreground">
                 {t("lessonsCompleted")} {completedLessons.size}/{lessons.length}
               </p>
-              {lessons.length > 0 && !isCompleted && (
-                <Button variant="outline" size="sm" className="gap-2" onClick={markAllComplete} disabled={saving}>
-                  <CheckCircle className="h-4 w-4" />
-                  {t("markAllComplete")}
-                </Button>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -293,19 +288,7 @@ export default function CoursePlayer() {
                           {index + 1}. {lesson.name}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleLesson(key);
-                          }}
-                          className="text-xs text-sky-600 hover:underline"
-                        >
-                          {done ? t("markIncomplete") : t("markComplete")}
-                        </button>
-                        <ChevronDown className="w-4 h-4 text-slate-300 rotate-[-90deg]" />
-                      </div>
+                      <ChevronDown className="w-4 h-4 text-slate-300 rotate-[-90deg]" />
                     </button>
                   );
                 })}
@@ -321,7 +304,11 @@ export default function CoursePlayer() {
                       </a>
                     )}
                   </div>
-                  <LessonMedia lesson={selectedLesson} t={t} />
+                  <LessonMedia
+                    lesson={selectedLesson}
+                    t={t}
+                    onViewed={() => autoCompleteLesson(String(selectedLesson.id ?? selectedLesson.order ?? selectedLesson.name))}
+                  />
                 </div>
               )}
             </CardContent>
@@ -389,28 +376,39 @@ export default function CoursePlayer() {
   );
 }
 
-function LessonMedia({ lesson, t }: { lesson: any; t: (key: string) => string }) {
+function LessonMedia({ lesson, t, onViewed }: { lesson: any; t: (key: string) => string; onViewed?: () => void }) {
   if (!lesson.url) {
     return <p className="text-sm text-muted-foreground">{t("lessonNoContent")}</p>;
   }
   const type = String(lesson.type ?? "").split("/")[0];
   if (type === "video") {
     return (
-      <video controls className="w-full max-h-96 rounded-lg bg-black" src={lesson.url}>
+      <video
+        controls
+        className="w-full max-h-96 rounded-lg bg-black"
+        src={lesson.url}
+        onEnded={() => onViewed?.()}
+      >
         {t("videoUnsupported")}
       </video>
     );
   }
   if (type === "image") {
-    return <img src={lesson.url} alt={lesson.name} className="w-full max-h-96 object-contain rounded-lg bg-white" />;
+    return <img src={lesson.url} alt={lesson.name} className="w-full max-h-96 object-contain rounded-lg bg-white" onLoad={() => onViewed?.()} />;
   }
   if (String(lesson.type) === "application/pdf") {
     return (
-      <iframe src={lesson.url} title={lesson.name} className="w-full h-96 rounded-lg bg-white" />
+      <iframe src={lesson.url} title={lesson.name} className="w-full h-96 rounded-lg bg-white" onLoad={() => onViewed?.()} />
     );
   }
   return (
-    <a href={lesson.url} target="_blank" rel="noreferrer" className="text-sky-600 hover:underline">
+    <a
+      href={lesson.url}
+      target="_blank"
+      rel="noreferrer"
+      className="text-sky-600 hover:underline"
+      onClick={() => onViewed?.()}
+    >
       {t("openLessonFile")}
     </a>
   );

@@ -171,8 +171,11 @@ export class CoursesController {
   }
 
   @Post('progress/:id/quiz-submit')
-  submitCourseQuiz(@Param('id') id: string, @Body() body: { answers?: Record<string, unknown> }) {
-    return this.coursesService.submitCourseQuiz(id, body.answers ?? {});
+  submitCourseQuiz(
+    @Param('id') id: string,
+    @Body() body: { answers?: Record<string, unknown>; lessonsComplete?: boolean },
+  ) {
+    return this.coursesService.submitCourseQuiz(id, body.answers ?? {}, body.lessonsComplete === true);
   }
 
   @Get('certificates/user/:userId')

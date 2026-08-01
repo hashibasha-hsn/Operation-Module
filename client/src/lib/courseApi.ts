@@ -258,11 +258,12 @@ export async function uploadCourseFile(file: File): Promise<string | null> {
 export async function submitCourseQuiz(
   progressId: string,
   answers: Record<string, unknown>,
+  lessonsComplete = false,
 ): Promise<{ progress: any; percentage: number; passed: boolean }> {
   const response = await fetch(`${ORG_API}/courses/progress/${encodeURIComponent(progressId)}/quiz-submit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ answers }),
+    body: JSON.stringify({ answers, lessonsComplete }),
   });
   return parseJson(response);
 }
