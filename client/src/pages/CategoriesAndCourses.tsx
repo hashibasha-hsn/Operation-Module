@@ -84,6 +84,7 @@ export default function CategoriesAndCourses() {
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [selectedQuizForAssign, setSelectedQuizForAssign] = useState<any>(null);
   const [selectedQuizForPublish, setSelectedQuizForPublish] = useState<any>(null);
+  const [editingQuizId, setEditingQuizId] = useState<string | null>(null);
 
   const currentUserId = String(getStoredUser().userId ?? getStoredUser().id ?? "");
 
@@ -312,6 +313,36 @@ export default function CategoriesAndCourses() {
   };
 
   const handleCreateQuiz = () => {
+    setEditingQuizId(null);
+    setQuizTitle("");
+    setQuizDescription("");
+    setQuizTimeLimit(30);
+    setQuizPassingScore(70);
+    setQuizQuestions([]);
+    setSelectedCourseForQuiz("");
+    setShowQuizCreationDialog(true);
+  };
+
+  const handleEditQuiz = (quiz: any) => {
+    setEditingQuizId(quiz.id);
+    setQuizTitle(quiz.quizTitle || quiz.title || "");
+    setQuizDescription(quiz.description || "");
+    setQuizTimeLimit(Number(quiz.duration ?? quiz.time_limit) || 30);
+    setQuizPassingScore(Number(quiz.passingScore ?? quiz.passing_score) || 70);
+    setQuizQuestions(
+      (Array.isArray(quiz.questions) ? quiz.questions : []).map((q: any) => ({
+        id: q.id || `q-${Date.now()}-${Math.random()}`,
+        text: q.questionText ?? q.text ?? "",
+        type: q.questionType ?? q.type ?? "short-answer",
+        options: Array.isArray(q.options)
+          ? q.options.map((opt: any) => ({
+              label: opt.label ?? "",
+              correct: Boolean(opt.isCorrect ?? opt.correct),
+            }))
+          : [],
+      })),
+    );
+    setSelectedCourseForQuiz("");
     setShowQuizCreationDialog(true);
   };
 
@@ -321,43 +352,52 @@ export default function CategoriesAndCourses() {
       return;
     }
 
-    if (!selectedCourseForQuiz) {
+    const isEditing = Boolean(editingQuizId);
+
+    if (!isEditing && !selectedCourseForQuiz) {
       toast.error(t("pleaseSelectACategory"));
       return;
     }
 
+    const payload = {
+      quizTitle: quizTitle.trim(),
+      description: quizDescription || undefined,
+      duration: quizTimeLimit,
+      passingScore: quizPassingScore,
+      questions: quizQuestions.map((q, i) => ({
+        id: q.id || `q-${Date.now()}-${i}`,
+        questionText: q.text,
+        questionType: q.type,
+        options: q.type === "single-answer" || q.type === "dropdown"
+          ? q.options.map((opt: any) => ({ label: opt.label, isCorrect: opt.correct }))
+          : undefined,
+      })),
+    };
+
     try {
-      await createQuiz({
-        quizTitle: quizTitle.trim(),
-        description: quizDescription || undefined,
-        duration: quizTimeLimit,
-        passingScore: quizPassingScore,
-        questions: quizQuestions.map((q, i) => ({
-          id: q.id || `q-${Date.now()}-${i}`,
-          questionText: q.text,
-          questionType: q.type,
-          options: q.type === "single-answer" || q.type === "dropdown"
-            ? q.options.map((opt: any) => ({ label: opt.label, isCorrect: opt.correct }))
-            : undefined,
-        })),
-      });
-      // Link quiz id onto the selected course content when possible
-      try {
-        const linkedCourse = categories
-          .flatMap(cat => cat.courses)
-          .find(course => course.id === selectedCourseForQuiz);
-        if (linkedCourse) {
-          await updateCourse(selectedCourseForQuiz, {
-            content: { quizLinkedAt: new Date().toISOString() },
-          });
+      if (isEditing) {
+        await updateQuiz(editingQuizId, payload);
+      } else {
+        await createQuiz(payload);
+        // Link quiz id onto the selected course content when possible
+        try {
+          const linkedCourse = categories
+            .flatMap(cat => cat.courses)
+            .find(course => course.id === selectedCourseForQuiz);
+          if (linkedCourse) {
+            await updateCourse(selectedCourseForQuiz, {
+              content: { quizLinkedAt: new Date().toISOString() },
+            });
+          }
+        } catch {
+          // non-blocking
         }
-      } catch {
-        // non-blocking
       }
       const data = await fetchQuizzes();
       setQuizzes(Array.isArray(data) ? data : []);
-      toast.success(t("quizCreatedSuccessfully"));
+      toast.success(isEditing ? t("quizUpdatedSuccessfully") : t("quizCreatedSuccessfully"));
       setShowQuizCreationDialog(false);
+      setEditingQuizId(null);
       setQuizTitle("");
       setQuizDescription("");
       setQuizTimeLimit(30);
@@ -365,8 +405,8 @@ export default function CategoriesAndCourses() {
       setQuizQuestions([]);
       setSelectedCourseForQuiz("");
     } catch (error) {
-      console.error("Failed to create quiz:", error);
-      toast.error(t("failedToCreateQuiz"));
+      console.error("Failed to save quiz:", error);
+      toast.error(isEditing ? t("failedToUpdateQuiz") : t("failedToCreateQuiz"));
     }
   };
 
@@ -555,7 +595,7 @@ export default function CategoriesAndCourses() {
           <Dialog open={showQuizCreationDialog} onOpenChange={setShowQuizCreationDialog}>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{t('createNewAssessment')}</DialogTitle>
+                <DialogTitle>{editingQuizId ? t('editAssessment') : t('createNewAssessment')}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
@@ -757,7 +797,7 @@ export default function CategoriesAndCourses() {
                     {t('cancel')}
                   </Button>
                   <Button onClick={handleSaveQuiz}>
-                    {t('create')} {t('assessments').slice(0, -1)}
+                    {editingQuizId ? t('saveChanges') : `${t('create')} ${t('assessments').slice(0, -1)}`}
                   </Button>
                 </div>
               </div>
@@ -993,11 +1033,11 @@ export default function CategoriesAndCourses() {
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-purple-800">{quiz.title}</h3>
+                      <h3 className="font-semibold text-purple-800">{quiz.quizTitle || quiz.title}</h3>
                       <p className="text-sm text-purple-600 mt-1">{quiz.description || t('noDescription')}</p>
                     </div>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditQuiz(quiz)}>
                         <Edit2 className="w-4 h-4" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteQuiz(quiz.id)}>
@@ -1006,8 +1046,8 @@ export default function CategoriesAndCourses() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-sm text-muted-foreground mt-3">
-                    <span>{t('time')}: {quiz.time_limit} min</span>
-                    <span>{t('passing')}: {quiz.passing_score}%</span>
+                    <span>{t('time')}: {Number(quiz.duration ?? quiz.time_limit) || 0} min</span>
+                    <span>{t('passing')}: {Number(quiz.passingScore ?? quiz.passing_score) || 0}%</span>
                   </div>
                   <div className="flex gap-2 mt-3">
                     <Button variant="outline" size="sm" className="flex-1" onClick={() => handleAssignQuiz(quiz)}>

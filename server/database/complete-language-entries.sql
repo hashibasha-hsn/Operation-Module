@@ -669,6 +669,8 @@ Configure working-hour rules, publish to stores or users, then review the attend
 ('confirmDeleteQuiz', 'Delete this quiz?', 'هل تريد حذف هذا الاختبار؟'),
 ('quizDeletedSuccessfully', 'Quiz deleted successfully', 'تم حذف الاختبار بنجاح'),
 ('failedToDeleteQuiz', 'Failed to delete quiz', 'فشل حذف الاختبار'),
+('quizUpdatedSuccessfully', 'Quiz updated successfully', 'تم تحديث الاختبار بنجاح'),
+('failedToUpdateQuiz', 'Failed to update quiz', 'فشل تحديث الاختبار'),
 ('failedToSaveAssessment', 'Failed to save assessment', 'Failed to save assessment'),
 ('failedToSaveAssessmentDraft', 'Failed to save assessment draft', 'فشل حفظ مسودة التقييم'),
 ('failedToSaveAssignment', 'Failed to save assignment', 'فشل حفظ التعيين'),
