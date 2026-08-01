@@ -43,6 +43,7 @@ import {
   type CategoryResponse,
 } from "@/lib/courseApi";
 import { useLanguage } from "@/contexts/LanguageContext";
+import CourseCertificateDesigner from "./CourseCertificateDesigner";
 
 interface Lesson {
   id: string;
@@ -66,9 +67,18 @@ interface CourseData {
   lessons: Lesson[];
   certificateSettings?: {
     primaryColor?: string;
+    secondaryColor?: string;
+    backgroundColor?: string;
+    logoUrl?: string;
+    showLogo?: boolean;
+    borderStyle?: 'classic' | 'modern' | 'minimal';
     certificateHeader?: { enabled?: boolean; text?: string };
+    recipientLabel?: { enabled?: boolean; text?: string };
+    bodyText?: { enabled?: boolean; text?: string };
     assessmentName?: { enabled?: boolean; text?: string };
     trainerName?: { enabled?: boolean; text?: string };
+    signature?: { enabled?: boolean; name?: string; title?: string };
+    score?: { enabled?: boolean };
     issuedDate?: { enabled?: boolean };
     validityType?: 'duration' | 'fixed' | 'none';
     validityDuration?: string;
@@ -888,156 +898,11 @@ export default function CourseCreation() {
                 <p className="text-sm text-muted-foreground mb-4">{t('certificateConfigurationHint')}</p>
               </div>
 
-              <div className="space-y-2">
-                <Label>{t('primaryColor')}</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="color"
-                    className="w-12 h-10 p-1"
-                    value={courseData.certificateSettings?.primaryColor ?? "#0284c7"}
-                    onChange={(e) =>
-                      setCourseData({
-                        ...courseData,
-                        certificateSettings: { ...courseData.certificateSettings, primaryColor: e.target.value },
-                      })
-                    }
-                  />
-                  <Input
-                    value={courseData.certificateSettings?.primaryColor ?? "#0284c7"}
-                    onChange={(e) =>
-                      setCourseData({
-                        ...courseData,
-                        certificateSettings: { ...courseData.certificateSettings, primaryColor: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <CertificateToggleField
-                label={t('certificateHeader')}
-                enabled={courseData.certificateSettings?.certificateHeader?.enabled ?? true}
-                onToggle={(enabled) =>
-                  setCourseData({
-                    ...courseData,
-                    certificateSettings: {
-                      ...courseData.certificateSettings,
-                      certificateHeader: { enabled, text: courseData.certificateSettings?.certificateHeader?.text ?? "" },
-                    },
-                  })
-                }
-                value={courseData.certificateSettings?.certificateHeader?.text ?? ""}
-                onValueChange={(text) =>
-                  setCourseData({
-                    ...courseData,
-                    certificateSettings: {
-                      ...courseData.certificateSettings,
-                      certificateHeader: { enabled: courseData.certificateSettings?.certificateHeader?.enabled ?? true, text },
-                    },
-                  })
-                }
-                placeholder="Certificate of Achievement"
+              <CourseCertificateDesigner
+                settings={courseData.certificateSettings ?? {}}
+                onChange={(next) => setCourseData({ ...courseData, certificateSettings: next })}
+                courseTitle={courseData.name}
               />
-
-              <CertificateToggleField
-                label={t('trainerName')}
-                enabled={courseData.certificateSettings?.trainerName?.enabled ?? false}
-                onToggle={(enabled) =>
-                  setCourseData({
-                    ...courseData,
-                    certificateSettings: {
-                      ...courseData.certificateSettings,
-                      trainerName: { enabled, text: courseData.certificateSettings?.trainerName?.text ?? "" },
-                    },
-                  })
-                }
-                value={courseData.certificateSettings?.trainerName?.text ?? ""}
-                onValueChange={(text) =>
-                  setCourseData({
-                    ...courseData,
-                    certificateSettings: {
-                      ...courseData.certificateSettings,
-                      trainerName: { enabled: courseData.certificateSettings?.trainerName?.enabled ?? false, text },
-                    },
-                  })
-                }
-                placeholder="John Smith"
-              />
-
-              <div className="flex items-center justify-between">
-                <Label>{t('issuedDate')}</Label>
-                <Switch
-                  checked={courseData.certificateSettings?.issuedDate?.enabled ?? true}
-                  onCheckedChange={(enabled) =>
-                    setCourseData({
-                      ...courseData,
-                      certificateSettings: {
-                        ...courseData.certificateSettings,
-                        issuedDate: { enabled },
-                      },
-                    })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t('validity')}</Label>
-                <select
-                  className="w-full p-2 border rounded-md"
-                  value={courseData.certificateSettings?.validityType ?? "duration"}
-                  onChange={(e) =>
-                    setCourseData({
-                      ...courseData,
-                      certificateSettings: {
-                        ...courseData.certificateSettings,
-                        validityType: e.target.value as any,
-                      },
-                    })
-                  }
-                >
-                  <option value="duration">{t('validityDurationLabel')}</option>
-                  <option value="fixed">{t('validityFixedLabel')}</option>
-                  <option value="none">{t('validityNoneLabel')}</option>
-                </select>
-              </div>
-
-              {courseData.certificateSettings?.validityType === "duration" && (
-                <div className="space-y-2">
-                  <Label>{t('duration')}</Label>
-                  <select
-                    className="w-full p-2 border rounded-md"
-                    value={courseData.certificateSettings?.validityDuration ?? "1 year"}
-                    onChange={(e) =>
-                      setCourseData({
-                        ...courseData,
-                        certificateSettings: { ...courseData.certificateSettings, validityDuration: e.target.value },
-                      })
-                    }
-                  >
-                    <option value="1 month">1 month</option>
-                    <option value="6 months">6 months</option>
-                    <option value="1 year">1 year</option>
-                    <option value="3 years">3 years</option>
-                    <option value="5 years">5 years</option>
-                  </select>
-                </div>
-              )}
-
-              {courseData.certificateSettings?.validityType === "fixed" && (
-                <div className="space-y-2">
-                  <Label>{t('fixedExpiryDate')}</Label>
-                  <Input
-                    type="date"
-                    value={courseData.certificateSettings?.fixedExpiryDate ?? ""}
-                    onChange={(e) =>
-                      setCourseData({
-                        ...courseData,
-                        certificateSettings: { ...courseData.certificateSettings, fixedExpiryDate: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-              )}
             </div>
           )}
         </CardContent>
@@ -1117,34 +982,6 @@ export default function CourseCreation() {
           </Button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function CertificateToggleField({
-  label,
-  enabled,
-  onToggle,
-  value,
-  onValueChange,
-  placeholder,
-}: {
-  label: string;
-  enabled: boolean;
-  onToggle: (enabled: boolean) => void;
-  value: string;
-  onValueChange: (value: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <div className="space-y-2 rounded-md border p-3">
-      <div className="flex items-center justify-between">
-        <Label>{label}</Label>
-        <Switch checked={enabled} onCheckedChange={onToggle} />
-      </div>
-      {enabled && (
-        <Input value={value} onChange={(e) => onValueChange(e.target.value)} placeholder={placeholder} />
-      )}
     </div>
   );
 }

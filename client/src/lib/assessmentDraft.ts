@@ -21,9 +21,18 @@ export type AssessmentSectionDraft = {
 
 export type AssessmentCertificateSettings = {
   primaryColor?: string;
+  secondaryColor?: string;
+  backgroundColor?: string;
+  logoUrl?: string;
+  showLogo?: boolean;
+  borderStyle?: 'classic' | 'modern' | 'minimal';
   certificateHeader?: { enabled: boolean; text: string };
+  recipientLabel?: { enabled: boolean; text: string };
+  bodyText?: { enabled: boolean; text: string };
   assessmentName?: { enabled: boolean; text: string };
   trainerName?: { enabled: boolean; text: string };
+  signature?: { enabled: boolean; name: string; title: string };
+  score?: { enabled: boolean };
   issuedDate?: { enabled: boolean };
   customFields?: Array<{ label: string; value: string }>;
   validityType?: 'duration' | 'fixed' | 'none';
@@ -79,9 +88,18 @@ export const emptyAssessmentDraft = (): AssessmentDraftState => ({
   generateCertificate: false,
   certificateSettings: {
     primaryColor: '#0284c7',
+    secondaryColor: '#0f766e',
+    backgroundColor: '#ffffff',
+    logoUrl: '',
+    showLogo: false,
+    borderStyle: 'classic',
     certificateHeader: { enabled: true, text: 'Certificate of Achievement' },
+    recipientLabel: { enabled: true, text: 'This is to certify that' },
+    bodyText: { enabled: true, text: 'has successfully completed' },
     assessmentName: { enabled: true, text: '' },
     trainerName: { enabled: false, text: '' },
+    signature: { enabled: false, name: '', title: 'Course Instructor' },
+    score: { enabled: true },
     issuedDate: { enabled: true },
     customFields: [],
     validityType: 'duration',
