@@ -8,7 +8,8 @@ import { ScopeAccess } from './scope-access.entity';
 
 @Injectable()
 export class PermissionsService {
-  private readonly userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3002';
+  private readonly userServiceUrl =
+    process.env.USER_SERVICE_URL || `http://localhost:${process.env.PORT || 3002}`;
 
   constructor(
     @InjectRepository(PermissionCache, 'permission')

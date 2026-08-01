@@ -68,7 +68,8 @@ export class AuthService {
     if (!user) {
       try {
         const axios = require('axios');
-        const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3002';
+        const userServiceUrl =
+          process.env.USER_SERVICE_URL || `http://localhost:${process.env.PORT || 3002}`;
         const response = await axios.get(
           `${userServiceUrl}/users?search=${encodeURIComponent(normalizedEmail)}&limit=50`,
           { timeout: 5000 },
@@ -328,7 +329,8 @@ export class AuthService {
   private async syncLastLoginToUserService(userId: string, lastLogin: Date) {
     try {
       const axios = require('axios');
-      const userServiceUrl = process.env.USER_SERVICE_URL || 'http://localhost:3002';
+      const userServiceUrl =
+        process.env.USER_SERVICE_URL || `http://localhost:${process.env.PORT || 3002}`;
       await axios.put(`${userServiceUrl}/users/${userId}/last-login`, {
         lastLogin: lastLogin.toISOString(),
       });
@@ -576,7 +578,9 @@ export class AuthService {
     // Also delete from user-service database
     try {
       const axios = require('axios');
-      await axios.delete(`http://localhost:3002/users/${userId}`);
+      const userServiceUrl =
+        process.env.USER_SERVICE_URL || `http://localhost:${process.env.PORT || 3002}`;
+      await axios.delete(`${userServiceUrl}/users/${userId}`);
     } catch (error) {
       console.error('Error deleting user from user-service:', error.message);
     }
