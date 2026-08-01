@@ -33,6 +33,7 @@ import {
   updateQuiz,
 } from "@/lib/courseApi";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getStoredUser } from "@/lib/authStorage";
 
 interface Category {
   id: string;
@@ -48,6 +49,7 @@ interface Course {
   name: string;
   arabicName: string;
   lastUpdated: string;
+  createdBy?: string;
 }
 
 export default function CategoriesAndCourses() {
@@ -82,6 +84,8 @@ export default function CategoriesAndCourses() {
   const [selectedQuizForAssign, setSelectedQuizForAssign] = useState<any>(null);
   const [selectedQuizForPublish, setSelectedQuizForPublish] = useState<any>(null);
 
+  const currentUserId = String(getStoredUser().userId ?? getStoredUser().id ?? "");
+
   const mapCategory = (cat: any, courses: any[] = []): Category => ({
     id: cat.id,
     name: cat.categoryName || cat.name || "Untitled",
@@ -95,6 +99,7 @@ export default function CategoriesAndCourses() {
         name: course.title || course.name || "Untitled",
         arabicName: course.description || course.arabicName || "",
         lastUpdated: course.updatedAt ? new Date(course.updatedAt).toLocaleString() : "",
+        createdBy: course.createdBy,
       })),
   });
 
@@ -919,14 +924,16 @@ export default function CategoriesAndCourses() {
                               >
                                 <Edit2 className="w-4 h-4" />
                               </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => handleDeleteCourse(category.id, course.id)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              {(!course.createdBy || course.createdBy === currentUserId) && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => handleDeleteCourse(category.id, course.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>

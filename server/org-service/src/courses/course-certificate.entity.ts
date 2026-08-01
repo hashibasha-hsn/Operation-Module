@@ -9,7 +9,7 @@ export class CourseCertificate {
   @Column()
   courseId: string;
 
-  @ManyToOne(() => Course)
+  @ManyToOne(() => Course, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'course_id' })
   course: Course;
 

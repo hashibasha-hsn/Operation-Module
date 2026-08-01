@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Course } from './course.entity';
@@ -142,7 +142,16 @@ export class CoursesService {
     return { sent, scanned: rows.length };
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, actorId?: string): Promise<void> {
+    const existing = await this.findOne(id);
+    if (!existing) {
+      throw new NotFoundException(`Course ${id} not found`);
+    }
+
+    if (actorId && existing.createdBy && existing.createdBy !== actorId) {
+      throw new ForbiddenException('Only the user who created this course can delete it');
+    }
+
     await this.coursesRepository.delete(id);
   }
 

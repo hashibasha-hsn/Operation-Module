@@ -25,6 +25,26 @@ export class SupabaseStorageService {
     });
   }
 
+  private async ensureBucket(supabase: any, bucket: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase.storage.getBucket(bucket);
+      if (!error && data?.name === bucket) return true;
+
+      const { error: createError } = await supabase.storage.createBucket(bucket, {
+        public: true,
+      });
+      if (createError && !String(createError.message || '').toLowerCase().includes('already exists')) {
+        this.logger.error('Failed to create bucket', createError.message);
+        return false;
+      }
+      await supabase.storage.updateBucket(bucket, { public: true });
+      return true;
+    } catch (err) {
+      this.logger.error('ensureBucket error', err.message);
+      return false;
+    }
+  }
+
   async uploadFile(
     buffer: Buffer,
     filename: string,
@@ -40,6 +60,12 @@ export class SupabaseStorageService {
       const supabase = this.getClient();
       const filePath = `uploads/${filename}`;
 
+      const ready = await this.ensureBucket(supabase, bucket);
+      if (!ready) {
+        this.logger.error('Bucket not ready', bucket);
+        return null;
+      }
+
       const { data, error } = await supabase.storage
         .from(bucket)
         .upload(filePath, buffer, {
@@ -49,20 +75,14 @@ export class SupabaseStorageService {
 
       if (error) {
         const msg = (error.message || '').toLowerCase();
-        if (msg.includes('bucket') && msg.includes('not found')) {
-          const { error: createError } = await supabase.storage.createBucket(
-            bucket,
-            { public: true },
-          );
-          if (createError) {
-            if ((createError.message || '').toLowerCase().includes('already exists')) {
-              await supabase.storage.updateBucket(bucket, { public: true });
-            } else {
-              this.logger.error('Failed to create bucket', createError.message);
-              return null;
-            }
+        if (msg.includes('already exists')) {
+          const { data: overwrite } = await supabase.storage
+            .from(bucket)
+            .upload(filePath, buffer, { contentType: mimetype, upsert: true });
+          if (overwrite?.path) {
+            const { data: publicUrl } = supabase.storage.from(bucket).getPublicUrl(filePath);
+            return publicUrl?.publicUrl || null;
           }
-          return this.uploadFile(buffer, filename, mimetype, bucket);
         }
         this.logger.error('Upload failed', error.message);
         return null;

@@ -58,6 +58,7 @@ export interface CourseResponse {
   organizationId: string;
   createdAt: string;
   updatedAt: string;
+  createdBy?: string | null;
 }
 
 export interface CategoryResponse {
@@ -101,7 +102,9 @@ export async function fetchCourse(id: string): Promise<CourseResponse> {
 }
 
 export async function deleteCourse(id: string): Promise<void> {
-  const response = await fetch(`${ORG_API}/courses/${id}`, { method: 'DELETE' });
+  const userId = getUserId();
+  const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+  const response = await fetch(`${ORG_API}/courses/${id}${query}`, { method: 'DELETE' });
   await parseJson(response);
 }
 

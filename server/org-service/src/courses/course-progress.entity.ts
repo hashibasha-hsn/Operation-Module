@@ -33,7 +33,7 @@ export class CourseProgress {
   @Column({ type: 'timestamp', nullable: true })
   lastReminderAt: Date;
 
-  @ManyToOne(() => Course)
+  @ManyToOne(() => Course, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'course_id' })
   course: Course;
 

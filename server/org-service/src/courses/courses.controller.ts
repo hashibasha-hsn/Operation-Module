@@ -195,8 +195,8 @@ export class CoursesController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.coursesService.remove(id);
+  remove(@Param('id') id: string, @Query('userId') userId?: string) {
+    return this.coursesService.remove(id, userId);
   }
 
   @Put(':id/assignment')
