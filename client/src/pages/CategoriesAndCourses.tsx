@@ -343,9 +343,14 @@ export default function CategoriesAndCourses() {
       });
       // Link quiz id onto the selected course content when possible
       try {
-        await updateCourse(selectedCourseForQuiz, {
-          content: { quizLinkedAt: new Date().toISOString() },
-        });
+        const linkedCourse = categories
+          .flatMap(cat => cat.courses)
+          .find(course => course.id === selectedCourseForQuiz);
+        if (linkedCourse) {
+          await updateCourse(selectedCourseForQuiz, {
+            content: { quizLinkedAt: new Date().toISOString() },
+          });
+        }
       } catch {
         // non-blocking
       }
@@ -580,9 +585,9 @@ export default function CategoriesAndCourses() {
                     onChange={(e) => setSelectedCourseForQuiz(e.target.value)}
                   >
                     <option value="">{t('selectCategory')}</option>
-                    {categories.flatMap(cat => cat.courses).map(course => (
-                      <option key={course.id} value={course.id}>
-                        {course.name}
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
                       </option>
                     ))}
                   </select>
