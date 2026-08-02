@@ -4,7 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Mail, Save, Loader2, Send } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Mail, Save, Loader2, Send, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
@@ -17,6 +24,7 @@ import {
 const LEGACY_STORAGE_KEY = "hashibasha_email_config";
 
 const DEFAULT_CONFIG: EmailConfig = {
+  deliveryProvider: "smtp",
   smtpHost: "",
   smtpPort: "587",
   smtpUser: "",
@@ -24,6 +32,11 @@ const DEFAULT_CONFIG: EmailConfig = {
   fromEmail: "",
   fromName: "",
   useTls: true,
+  azureTenantId: "",
+  azureClientId: "",
+  azureClientSecret: "",
+  graphSendAsUser: "",
+  frontendUrl: "",
 };
 
 export default function EmailConfig() {
@@ -117,9 +130,112 @@ export default function EmailConfig() {
 
       <Card>
         <CardHeader>
-          <CardTitle>SMTP Settings</CardTitle>
+          <CardTitle>Delivery Provider</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="grid gap-2 max-w-sm">
+            <Label htmlFor="deliveryProvider">Email delivery provider</Label>
+            <Select
+              value={config.deliveryProvider}
+              onValueChange={(v) =>
+                setConfig({ ...config, deliveryProvider: v as "smtp" | "graph" })
+              }
+            >
+              <SelectTrigger id="deliveryProvider" className="w-full">
+                <SelectValue placeholder="Select provider" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="smtp">SMTP</SelectItem>
+                <SelectItem value="graph">Microsoft Graph</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              {config.deliveryProvider === "graph"
+                ? "Uses Microsoft Graph API to send email as the configured mailbox."
+                : "Uses traditional SMTP credentials."}
+            </p>
+          </div>
+
+          <div className="grid gap-2 max-w-sm">
+            <Label htmlFor="frontendUrl">Frontend URL</Label>
+            <Input
+              id="frontendUrl"
+              placeholder="https://operation-module.vercel.app"
+              value={config.frontendUrl}
+              onChange={(e) => setConfig({ ...config, frontendUrl: e.target.value })}
+            />
+            <p className="text-sm text-muted-foreground">
+              Base URL used for password reset and email verification links.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {config.deliveryProvider === "graph" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+              Microsoft Graph Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="azureTenantId">Azure Tenant ID</Label>
+                <Input
+                  id="azureTenantId"
+                  placeholder="00000000-0000-0000-0000-000000000000"
+                  value={config.azureTenantId}
+                  onChange={(e) => setConfig({ ...config, azureTenantId: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="azureClientId">Azure Client ID</Label>
+                <Input
+                  id="azureClientId"
+                  placeholder="00000000-0000-0000-0000-000000000000"
+                  value={config.azureClientId}
+                  onChange={(e) => setConfig({ ...config, azureClientId: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="azureClientSecret">Azure Client Secret</Label>
+                <Input
+                  id="azureClientSecret"
+                  type="password"
+                  placeholder={
+                    config.hasAzureSecret
+                      ? "Saved (encrypted) — enter only to change"
+                      : "••••••••"
+                  }
+                  value={config.azureClientSecret}
+                  onChange={(e) => setConfig({ ...config, azureClientSecret: e.target.value })}
+                />
+                {config.hasAzureSecret && (
+                  <p className="text-xs text-muted-foreground">
+                    Stored encrypted in the database.
+                  </p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="graphSendAsUser">Send-as mailbox</Label>
+                <Input
+                  id="graphSendAsUser"
+                  placeholder="automation@hashibasha.com"
+                  value={config.graphSendAsUser}
+                  onChange={(e) => setConfig({ ...config, graphSendAsUser: e.target.value })}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>SMTP Settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="smtpHost">SMTP Host</Label>
@@ -178,7 +294,7 @@ export default function EmailConfig() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
               <Label>Use TLS</Label>
               <p className="text-sm text-muted-foreground mt-1">
@@ -190,7 +306,12 @@ export default function EmailConfig() {
               onCheckedChange={(checked) => setConfig({ ...config, useTls: checked })}
             />
           </div>
+        </CardContent>
+      </Card>
+      )}
 
+      <Card>
+        <CardContent className="space-y-4 pt-6">
           <div className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-end">
             <div className="grid gap-2 flex-1">
               <Label htmlFor="testEmail">Send test email</Label>

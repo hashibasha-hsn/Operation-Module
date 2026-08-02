@@ -4,6 +4,7 @@ import { NOTIFICATION_API } from './apiConfig';
 const NOTIFICATION_BASE = NOTIFICATION_API;
 
 export type EmailConfig = {
+  deliveryProvider: 'smtp' | 'graph';
   smtpHost: string;
   smtpPort: string;
   smtpUser: string;
@@ -12,6 +13,12 @@ export type EmailConfig = {
   fromName: string;
   useTls: boolean;
   hasPassword?: boolean;
+  azureTenantId: string;
+  azureClientId: string;
+  azureClientSecret: string;
+  hasAzureSecret?: boolean;
+  graphSendAsUser: string;
+  frontendUrl: string;
   updatedAt?: string;
 };
 

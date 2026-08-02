@@ -17,9 +17,11 @@ app.use(cors({
 // - user-service (:3002) hosts auth + permission + notification
 // - org-service (:3012) hosts location + language + org
 // - audit-log-service (:3015) hosts audit logs
+// - email-service (:3016) hosts outgoing email delivery (Graph/SMTP)
 const USER = process.env.USER_SERVICE_URL || 'http://localhost:3002';
 const ORG = process.env.ORG_SERVICE_URL || 'http://localhost:3012';
 const AUDIT = process.env.AUDIT_LOG_SERVICE_URL || 'http://localhost:3015';
+const EMAIL = process.env.EMAIL_SERVICE_URL || 'http://localhost:3016';
 
 const SERVICES = {
   AUTH: process.env.AUTH_SERVICE_URL || USER,
@@ -27,9 +29,10 @@ const SERVICES = {
   ORG,
   LOCATION: process.env.LOCATION_SERVICE_URL || ORG,
   LANGUAGE: process.env.LANGUAGE_SERVICE_URL || ORG,
-  NOTIFICATION: process.env.NOTIFICATION_SERVICE_URL || USER,
+  NOTIFICATION: process.env.NOTIFICATION_SERVICE_URL || EMAIL,
   PERMISSION: process.env.PERMISSION_SERVICE_URL || USER,
   AUDIT,
+  EMAIL,
 };
 
 function proxy(target, pathRewrite) {
@@ -51,6 +54,7 @@ function proxy(target, pathRewrite) {
 app.use('/api/auth', proxy(SERVICES.AUTH, { '^/api/auth': '/auth' }));
 app.use('/api/user', proxy(SERVICES.USER, { '^/api/user': '' }));
 app.use('/api/notification', proxy(SERVICES.NOTIFICATION, { '^/api/notification': '' }));
+app.use('/api/email', proxy(SERVICES.EMAIL, { '^/api/email': '' }));
 app.use('/api/permission', proxy(SERVICES.PERMISSION, { '^/api/permission': '' }));
 app.use('/api/org', proxy(SERVICES.ORG, { '^/api/org': '' }));
 app.use('/api/audits', proxy(SERVICES.ORG, { '^/api/audits': '/audits' }));
