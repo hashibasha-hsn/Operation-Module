@@ -550,27 +550,14 @@ export class AuthService {
 
     assertPasswordValid(password);
 
-    const activationToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 72);
-
-    // Create the admin user as PENDING — it is activated only when the
-    // activation link in the welcome email is clicked.
+    // Create the admin user as VERIFIED — the super admin is active immediately
+    // and does not need to activate via email.
     const adminUser = await this.usersService.create({
       email,
       password, // Pass password, not passwordHash - create method will hash it
-      verificationStatus: 'PENDING',
+      verificationStatus: 'VERIFIED',
       isAdmin: true,
     });
-
-    await this.usersService.setVerificationToken(email, activationToken, expiresAt);
-
-    // Send the welcome email with credentials + activation link.
-    try {
-      await this.sendAccountActivationEmail(email, password, activationToken);
-    } catch (error: any) {
-      console.error('Failed to send activation email:', error?.message);
-    }
 
     // Emit Kafka event for admin creation
     if (this.kafkaClient) {
@@ -583,7 +570,7 @@ export class AuthService {
     }
 
     return {
-      message: 'Admin setup completed successfully. Activation link sent to email.',
+      message: 'Admin setup completed successfully',
       user: {
         id: adminUser.id,
         email: adminUser.email,
