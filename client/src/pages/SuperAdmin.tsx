@@ -24,6 +24,8 @@ import {
   Loader2,
   Check,
   Mail,
+  Upload,
+  Link2,
 } from "lucide-react";
 
 const LANGUAGE_API = import.meta.env.VITE_LANGUAGE_API || "/api/language";
@@ -647,13 +649,57 @@ export default function SuperAdmin() {
                     onChange={(e) => handleEmailThemeChange("brandName", e.target.value)}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Logo URL (optional, shown in email header)</Label>
-                  <Input
-                    value={emailTheme.logoUrl || ""}
-                    placeholder="https://example.com/logo.png"
-                    onChange={(e) => handleEmailThemeChange("logoUrl", e.target.value)}
-                  />
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label className="text-sm">Logo (upload from your PC or paste a URL)</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-input px-3 h-9 text-sm font-medium hover:bg-accent">
+                      <Upload className="w-4 h-4" /> Upload logo
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = "";
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = () =>
+                            handleEmailThemeChange("logoUrl", String(reader.result || ""));
+                          reader.onerror = () => toast.error("Failed to read the selected image");
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                    </label>
+                    {emailTheme.logoUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() => handleEmailThemeChange("logoUrl", "")}
+                      >
+                        <Trash2 className="w-4 h-4" /> Remove
+                      </Button>
+                    )}
+                    <div className="flex items-center gap-2 flex-1 min-w-[220px]">
+                      <Link2 className="w-4 h-4 text-muted-foreground" />
+                      <Input
+                        value={emailTheme.logoUrl || ""}
+                        placeholder="Or paste an image URL (https://…)"
+                        onChange={(e) => handleEmailThemeChange("logoUrl", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  {emailTheme.logoUrl && (
+                    <div className="h-14 w-28 rounded border bg-muted/30 flex items-center justify-center overflow-hidden">
+                      <img
+                        src={emailTheme.logoUrl}
+                        alt="logo preview"
+                        className="max-h-full max-w-full object-contain"
+                        onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-sm">Accent color (OTP code, links)</Label>
