@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Request, UseGuards, Headers, UnauthorizedException, Delete, Param } from '@nestjs/common';
+import { Controller, Post, Body, Get, Request, UseGuards, Headers, UnauthorizedException, Delete, Param, Query, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
@@ -132,6 +132,25 @@ export class AuthController {
   @Post('setup-admin')
   async setupAdmin(@Body() body: { email: string; password: string; organizationName: string }) {
     return this.authService.setupAdmin(body.email, body.password, body.organizationName);
+  }
+
+  @Post('activate-account')
+  async activateAccount(@Body() body: { token?: string }) {
+    return this.authService.activateAccount(body.token ?? '');
+  }
+
+  @Get('activate-account')
+  async activateAccountLink(@Query('token') token: string, @Res() res) {
+    const result = await this.authService.activateAccount(token ?? '');
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const loginUrl = `${frontendUrl.replace(/\/$/, '')}/login?activated=1`;
+    const html = `<!doctype html><html><body style="font-family:sans-serif;background:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
+      <div style="text-align:center;padding:40px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;">
+        <h2 style="color:#059669;margin:0 0 12px;">✓ Account activated</h2>
+        <p style="color:#475569;margin:0 0 24px;">${result.message}</p>
+        <a href="${loginUrl}" style="background:#0284c7;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;">Go to login</a>
+      </div></body></html>`;
+    res.type('html').send(html);
   }
 
   @Get('check-setup')

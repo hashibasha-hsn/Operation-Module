@@ -44,6 +44,23 @@ export class EmailController {
     });
   }
 
+  @Post('activation')
+  sendAccountActivation(@Body() body: { to?: string; name?: string; password?: string; token?: string }) {
+    const to = body?.to?.trim();
+    if (!to) {
+      return { success: false, error: 'Recipient email is required' };
+    }
+    if (!body?.token?.trim()) {
+      return { success: false, error: 'Activation token is required' };
+    }
+    return this.emailService.sendAccountActivation({
+      to,
+      name: body.name,
+      password: body.password || 'ChangeMe123!',
+      token: body.token,
+    });
+  }
+
   @UseGuards(AdminGuard)
   @Post('welcome')
   sendWelcome(@Body() body: { to?: string; name?: string; password?: string; loginUrl?: string }) {

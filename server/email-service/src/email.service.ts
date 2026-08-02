@@ -5,6 +5,7 @@ import { SmtpEmailProvider } from './providers/smtp.provider';
 import { SendMailInput, SendMailResult } from './providers/email-provider.interface';
 import {
   welcomeEmail,
+  accountActivationEmail,
   passwordResetEmail,
   otpEmail,
   verifyEmail,
@@ -23,6 +24,32 @@ export class EmailService {
     const provider =
       config.provider === 'graph' ? this.graphProvider : this.smtpProvider;
     return provider.send(config, input);
+  }
+
+  async sendAccountActivation(input: {
+    to: string;
+    name?: string;
+    password: string;
+    token: string;
+  }): Promise<SendMailResult> {
+    const config = await this.emailConfigService.getResolvedConfig();
+    const base = config.frontendUrl.replace(/\/$/, '');
+    const activationUrl = `${base}/api/auth/activate-account?token=${encodeURIComponent(input.token)}`;
+    const loginUrl = `${base}/login`;
+    const displayName = input.name?.trim() || input.to;
+    const template = accountActivationEmail({
+      name: displayName,
+      email: input.to,
+      password: input.password,
+      activationUrl,
+      loginUrl,
+    });
+    return this.send({
+      to: input.to,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
   }
 
   async sendWelcome(input: {

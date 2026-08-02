@@ -104,6 +104,13 @@ export class AuthService {
       return null;
     }
 
+    // Pending accounts (created but not activated) cannot sign in yet.
+    if (user.verificationStatus === 'PENDING') {
+      throw new UnauthorizedException(
+        'Your account is not activated yet. Please click the activation link sent to your email.',
+      );
+    }
+
     // For dummy users, check if password matches directly
     if (user.verificationStatus === 'DUMMY') {
       const bcrypt = require('bcrypt');
@@ -543,13 +550,27 @@ export class AuthService {
 
     assertPasswordValid(password);
 
-    // Create the admin user with Company Admin role
+    const activationToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 72);
+
+    // Create the admin user as PENDING — it is activated only when the
+    // activation link in the welcome email is clicked.
     const adminUser = await this.usersService.create({
       email,
       password, // Pass password, not passwordHash - create method will hash it
-      verificationStatus: 'VERIFIED',
+      verificationStatus: 'PENDING',
       isAdmin: true,
     });
+
+    await this.usersService.setVerificationToken(email, activationToken, expiresAt);
+
+    // Send the welcome email with credentials + activation link.
+    try {
+      await this.sendAccountActivationEmail(email, password, activationToken);
+    } catch (error: any) {
+      console.error('Failed to send activation email:', error?.message);
+    }
 
     // Emit Kafka event for admin creation
     if (this.kafkaClient) {
@@ -562,12 +583,58 @@ export class AuthService {
     }
 
     return {
-      message: 'Admin setup completed successfully',
+      message: 'Admin setup completed successfully. Activation link sent to email.',
       user: {
         id: adminUser.id,
         email: adminUser.email,
       },
       organizationName,
+    };
+  }
+
+  private async sendAccountActivationEmail(email: string, password: string, token: string) {
+    const notificationServiceUrl =
+      process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004';
+    const response = await fetch(`${notificationServiceUrl}/email/activation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: email,
+        password,
+        token,
+      }),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.success === false) {
+      throw new BadRequestException(
+        data?.error || data?.message || 'Failed to send activation email',
+      );
+    }
+  }
+
+  async activateAccount(token: string) {
+    const user = await this.usersService.verifyEmail(token);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired activation link');
+    }
+
+    // Emit Kafka event for successful account activation
+    if (this.kafkaClient) {
+      this.kafkaClient.emit('account.activated', {
+        userId: user.id,
+        email: user.email,
+        timestamp: new Date().toISOString(),
+      }).toPromise().catch(() => undefined);
+    }
+
+    return {
+      message: 'Account activated successfully. You can now sign in.',
+      user: {
+        id: user.id,
+        email: user.email,
+        verificationStatus: 'VERIFIED',
+      },
     };
   }
 
