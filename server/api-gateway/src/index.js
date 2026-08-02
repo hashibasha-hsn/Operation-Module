@@ -29,7 +29,7 @@ const SERVICES = {
   ORG,
   LOCATION: process.env.LOCATION_SERVICE_URL || ORG,
   LANGUAGE: process.env.LANGUAGE_SERVICE_URL || ORG,
-  NOTIFICATION: process.env.NOTIFICATION_SERVICE_URL || EMAIL,
+  NOTIFICATION: process.env.NOTIFICATION_SERVICE_URL || USER,
   PERMISSION: process.env.PERMISSION_SERVICE_URL || USER,
   AUDIT,
   EMAIL,
@@ -53,6 +53,7 @@ function proxy(target, pathRewrite) {
 
 app.use('/api/auth', proxy(SERVICES.AUTH, { '^/api/auth': '/auth' }));
 app.use('/api/user', proxy(SERVICES.USER, { '^/api/user': '' }));
+app.use('/api/notification/email', proxy(SERVICES.EMAIL, { '^/api/notification': '' }));
 app.use('/api/notification', proxy(SERVICES.NOTIFICATION, { '^/api/notification': '' }));
 app.use('/api/email', proxy(SERVICES.EMAIL, { '^/api/email': '' }));
 app.use('/api/permission', proxy(SERVICES.PERMISSION, { '^/api/permission': '' }));
