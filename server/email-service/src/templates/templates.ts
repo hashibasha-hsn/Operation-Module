@@ -1,40 +1,54 @@
+import { ResolvedEmailTheme } from '../email-config/email-config.service';
+
 export interface EmailTemplate {
   subject: string;
   html: string;
   text: string;
 }
 
-function shell(title: string, bodyHtml: string, footerText?: string): string {
+function shell(theme: ResolvedEmailTheme, title: string, bodyHtml: string, footerText?: string): string {
+  const headerGradient = `linear-gradient(135deg, ${theme.headerGradientStart} 0%, ${theme.headerGradientEnd} 100%)`;
+  const brandHtml = theme.logoUrl
+    ? `<img src="${theme.logoUrl}" alt="${theme.brandName}" style="max-height: 44px; max-width: 180px; display: block;" />`
+    : `<h1 style="color: #ffffff; font-size: 22px; margin: 0;">${title}</h1>`;
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937; max-width: 560px; margin: 0 auto;">
-      <div style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); border-radius: 10px 10px 0 0; padding: 24px 28px;">
-        <h1 style="color: #ffffff; font-size: 22px; margin: 0;">${title}</h1>
+      <div style="background: ${headerGradient}; border-radius: 10px 10px 0 0; padding: 24px 28px;">
+        ${brandHtml}
       </div>
       <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 10px 10px; padding: 24px 28px;">
         ${bodyHtml}
       </div>
       <p style="font-size: 12px; color: #94a3b8; margin-top: 24px; text-align: center;">
-        ${footerText || 'You are receiving this email from the Hashibasha platform.'}
+        ${footerText || theme.footerText}
       </p>
     </div>
   `;
 }
 
-export function accountActivationEmail(input: {
-  name: string;
-  email: string;
-  password: string;
-  activationUrl: string;
-  loginUrl: string;
-}): EmailTemplate {
-  const subject = 'Activate your Hashibasha admin account';
+function buttonHtml(theme: ResolvedEmailTheme, href: string, label: string, extraStyle = ''): string {
+  return `<a href="${href}" style="display: inline-block; background: ${theme.buttonColor}; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-size: 16px; font-weight: 600; ${extraStyle}">${label}</a>`;
+}
+
+export function accountActivationEmail(
+  theme: ResolvedEmailTheme,
+  input: {
+    name: string;
+    email: string;
+    password: string;
+    activationUrl: string;
+    loginUrl: string;
+  },
+): EmailTemplate {
+  const subject = `Activate your ${theme.brandName} admin account`;
   const html = shell(
-    'Welcome to Hashibasha',
+    theme,
+    `Welcome to ${theme.brandName}`,
     `
     <p>Hello ${input.name},</p>
-    <p>Your Hashibasha administrator account has been created. To start using it, please activate your account by clicking the button below:</p>
+    <p>Your ${theme.brandName} administrator account has been created. To start using it, please activate your account by clicking the button below:</p>
     <p style="text-align: center; margin: 28px 0;">
-      <a href="${input.activationUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-size: 16px; font-weight: 600;">Activate my account</a>
+      ${buttonHtml(theme, input.activationUrl, 'Activate my account')}
     </p>
     <p style="font-size: 13px; color: #64748b; text-align: center;">This link expires in 72 hours.</p>
     <div style="margin: 24px 0; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc;">
@@ -50,7 +64,7 @@ export function accountActivationEmail(input: {
         </tr>
       </table>
     </div>
-    <p><a href="${input.loginUrl}" style="color: #0284c7;">Go to login page</a></p>
+    <p><a href="${input.loginUrl}" style="color: ${theme.primaryColor};">Go to login page</a></p>
     <p style="font-size: 13px; color: #64748b;">For security, please change your password after your first login.</p>
     `,
     'If you did not create this account, you can safely ignore this email.',
@@ -58,7 +72,7 @@ export function accountActivationEmail(input: {
   const text = [
     `Hello ${input.name},`,
     '',
-    'Your Hashibasha administrator account has been created.',
+    `Your ${theme.brandName} administrator account has been created.`,
     'Activate your account by opening:',
     input.activationUrl,
     '',
@@ -77,15 +91,19 @@ export function accountActivationEmail(input: {
   return { subject, html, text };
 }
 
-export function welcomeEmail(input: {
-  name: string;
-  email: string;
-  password: string;
-  loginUrl: string;
-}): EmailTemplate {
-  const subject = 'Your Hashibasha account details';
+export function welcomeEmail(
+  theme: ResolvedEmailTheme,
+  input: {
+    name: string;
+    email: string;
+    password: string;
+    loginUrl: string;
+  },
+): EmailTemplate {
+  const subject = `Your ${theme.brandName} account details`;
   const html = shell(
-    'Welcome to Hashibasha',
+    theme,
+    `Welcome to ${theme.brandName}`,
     `
     <p>Hello ${input.name},</p>
     <p>Your account has been created. Use the details below to sign in:</p>
@@ -99,14 +117,14 @@ export function welcomeEmail(input: {
         <td style="padding: 8px 0;">${input.password}</td>
       </tr>
     </table>
-    <p><a href="${input.loginUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 6px;">Open login page</a></p>
+    <p>${buttonHtml(theme, input.loginUrl, 'Open login page', 'padding: 10px 18px; font-size: 14px;')}</p>
     <p style="font-size: 13px; color: #64748b;">For security, change your password after your first login.</p>
     `,
   );
   const text = [
     `Hello ${input.name},`,
     '',
-    'Your Hashibasha account has been created.',
+    `Your ${theme.brandName} account has been created.`,
     `Login username: ${input.email}`,
     `Password: ${input.password}`,
     `Login URL: ${input.loginUrl}`,
@@ -116,17 +134,21 @@ export function welcomeEmail(input: {
   return { subject, html, text };
 }
 
-export function passwordResetEmail(input: {
-  name: string;
-  resetUrl: string;
-}): EmailTemplate {
-  const subject = 'Reset your Hashibasha password';
+export function passwordResetEmail(
+  theme: ResolvedEmailTheme,
+  input: {
+    name: string;
+    resetUrl: string;
+  },
+): EmailTemplate {
+  const subject = `Reset your ${theme.brandName} password`;
   const html = shell(
+    theme,
     'Password reset',
     `
     <p>Hello ${input.name},</p>
     <p>We received a request to reset your password. Click the button below to choose a new one:</p>
-    <p><a href="${input.resetUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 6px;">Reset password</a></p>
+    <p>${buttonHtml(theme, input.resetUrl, 'Reset password', 'padding: 10px 18px; font-size: 14px;')}</p>
     <p style="font-size: 13px; color: #64748b;">This link expires in 1 hour. If you did not request this, you can ignore this email.</p>
     `,
   );
@@ -141,24 +163,28 @@ export function passwordResetEmail(input: {
   return { subject, html, text };
 }
 
-export function otpEmail(input: {
-  otp: string;
-  expiresInMinutes: number;
-}): EmailTemplate {
-  const subject = 'Your Hashibasha login verification code';
+export function otpEmail(
+  theme: ResolvedEmailTheme,
+  input: {
+    otp: string;
+    expiresInMinutes: number;
+  },
+): EmailTemplate {
+  const subject = `Your ${theme.brandName} login verification code`;
   const html = shell(
+    theme,
     'Login verification',
     `
     <p>Use the one-time password below to finish signing in:</p>
     <div style="margin: 24px 0; padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center; background: #f8fafc;">
-      <div style="font-size: 30px; letter-spacing: 8px; font-weight: 700;">${input.otp}</div>
+      <div style="font-size: 30px; letter-spacing: 8px; font-weight: 700; color: ${theme.primaryColor};">${input.otp}</div>
     </div>
     <p>This code expires in ${input.expiresInMinutes} minute(s).</p>
     `,
     'If you did not try to sign in, you can ignore this email.',
   );
   const text = [
-    'Your Hashibasha login verification code:',
+    `Your ${theme.brandName} login verification code:`,
     input.otp,
     '',
     `This code expires in ${input.expiresInMinutes} minute(s).`,
@@ -167,15 +193,19 @@ export function otpEmail(input: {
   return { subject, html, text };
 }
 
-export function verifyEmail(input: {
-  verifyUrl: string;
-}): EmailTemplate {
-  const subject = 'Verify your Hashibasha email';
+export function verifyEmail(
+  theme: ResolvedEmailTheme,
+  input: {
+    verifyUrl: string;
+  },
+): EmailTemplate {
+  const subject = `Verify your ${theme.brandName} email`;
   const html = shell(
+    theme,
     'Email verification',
     `
     <p>Please click the button below to verify your email address:</p>
-    <p><a href="${input.verifyUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 6px;">Verify email</a></p>
+    <p>${buttonHtml(theme, input.verifyUrl, 'Verify email', 'padding: 10px 18px; font-size: 14px;')}</p>
     <p style="font-size: 13px; color: #64748b;">This link expires in 24 hours.</p>
     `,
   );

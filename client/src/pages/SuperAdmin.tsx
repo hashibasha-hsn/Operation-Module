@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getStoredUser, getOrganizationId } from "@/lib/authStorage";
+import { getStoredUser, getOrganizationId, getAuthItem } from "@/lib/authStorage";
 import {
   Languages,
   ShieldCheck,
@@ -23,9 +23,11 @@ import {
   User,
   Loader2,
   Check,
+  Mail,
 } from "lucide-react";
 
 const LANGUAGE_API = import.meta.env.VITE_LANGUAGE_API || "/api/language";
+const EMAIL_API = import.meta.env.VITE_NOTIFICATION_API || "/api/notification";
 
 type LanguageEntry = {
   id: number;
@@ -80,6 +82,11 @@ export default function SuperAdmin() {
   // ------- Theme tab -------
   const [theme, setTheme] = useState<Record<string, string>>({});
   const [themeLoading, setThemeLoading] = useState(false);
+
+  // ------- Email theme tab -------
+  const [emailTheme, setEmailTheme] = useState<Record<string, string>>({});
+  const [emailThemeLoading, setEmailThemeLoading] = useState(false);
+  const [emailThemeSaving, setEmailThemeSaving] = useState(false);
 
   // ------- Admins tab -------
   const [admins, setAdmins] = useState<AdminUser[]>([]);
@@ -151,6 +158,60 @@ export default function SuperAdmin() {
   useEffect(() => {
     loadAdmins();
   }, [loadAdmins]);
+
+  const loadEmailTheme = useCallback(async () => {
+    setEmailThemeLoading(true);
+    try {
+      const res = await fetch(`${EMAIL_API}/email/config`);
+      if (!res.ok) throw new Error("Failed to load email theme");
+      const data = await res.json();
+      setEmailTheme({
+        brandName: data?.brandName || "",
+        logoUrl: data?.logoUrl || "",
+        primaryColor: data?.primaryColor || "",
+        headerGradientStart: data?.headerGradientStart || "",
+        headerGradientEnd: data?.headerGradientEnd || "",
+        buttonColor: data?.buttonColor || "",
+        footerText: data?.footerText || "",
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to load email theme");
+    } finally {
+      setEmailThemeLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadEmailTheme();
+  }, [loadEmailTheme]);
+
+  const handleEmailThemeChange = (key: string, value: string) => {
+    setEmailTheme((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveEmailTheme = async () => {
+    setEmailThemeSaving(true);
+    try {
+      const token = getAuthItem("accessToken");
+      const res = await fetch(`${EMAIL_API}/email/config`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(emailTheme),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.message || data?.error || "Failed to save email theme");
+      }
+      toast.success("Email theme saved — applies to all outgoing emails");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to save email theme");
+    } finally {
+      setEmailThemeSaving(false);
+    }
+  };
 
   const filteredEntries = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -376,6 +437,9 @@ export default function SuperAdmin() {
           <TabsTrigger value="ui" className="gap-2">
             <Palette className="w-4 h-4" /> Global UI
           </TabsTrigger>
+          <TabsTrigger value="email" className="gap-2">
+            <Mail className="w-4 h-4" /> Email Theme
+          </TabsTrigger>
           <TabsTrigger value="admins" className="gap-2">
             <Users className="w-4 h-4" /> Admins
           </TabsTrigger>
@@ -549,6 +613,157 @@ export default function SuperAdmin() {
                 </div>
                 <div className="gradient-header relative rounded-lg px-4 py-3 overflow-hidden">
                   <span className="text-white font-medium">Header bar</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ---------------- EMAIL THEME TAB ---------------- */}
+        <TabsContent value="email" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5" /> Email Theme
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button onClick={handleSaveEmailTheme} disabled={emailThemeSaving}>
+                  {emailThemeSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save email theme
+                </Button>
+                <Button variant="outline" onClick={loadEmailTheme} disabled={emailThemeLoading}>
+                  <RefreshCcw className="w-4 h-4" /> Reload
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Brand name</Label>
+                  <Input
+                    value={emailTheme.brandName || ""}
+                    placeholder="Hashibasha"
+                    onChange={(e) => handleEmailThemeChange("brandName", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Logo URL (optional, shown in email header)</Label>
+                  <Input
+                    value={emailTheme.logoUrl || ""}
+                    placeholder="https://example.com/logo.png"
+                    onChange={(e) => handleEmailThemeChange("logoUrl", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Accent color (OTP code, links)</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      className="h-9 w-10 rounded border cursor-pointer"
+                      value={/^#[0-9a-fA-F]{6}$/.test(emailTheme.primaryColor || "") ? emailTheme.primaryColor! : "#0284c7"}
+                      onChange={(e) => handleEmailThemeChange("primaryColor", e.target.value)}
+                    />
+                    <Input
+                      value={emailTheme.primaryColor || ""}
+                      placeholder="#0284c7"
+                      onChange={(e) => handleEmailThemeChange("primaryColor", e.target.value)}
+                      className="font-mono"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Button color</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      className="h-9 w-10 rounded border cursor-pointer"
+                      value={/^#[0-9a-fA-F]{6}$/.test(emailTheme.buttonColor || "") ? emailTheme.buttonColor! : "#0284c7"}
+                      onChange={(e) => handleEmailThemeChange("buttonColor", e.target.value)}
+                    />
+                    <Input
+                      value={emailTheme.buttonColor || ""}
+                      placeholder="#0284c7"
+                      onChange={(e) => handleEmailThemeChange("buttonColor", e.target.value)}
+                      className="font-mono"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Header gradient start</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      className="h-9 w-10 rounded border cursor-pointer"
+                      value={/^#[0-9a-fA-F]{6}$/.test(emailTheme.headerGradientStart || "") ? emailTheme.headerGradientStart! : "#0f172a"}
+                      onChange={(e) => handleEmailThemeChange("headerGradientStart", e.target.value)}
+                    />
+                    <Input
+                      value={emailTheme.headerGradientStart || ""}
+                      placeholder="#0f172a"
+                      onChange={(e) => handleEmailThemeChange("headerGradientStart", e.target.value)}
+                      className="font-mono"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Header gradient end</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      className="h-9 w-10 rounded border cursor-pointer"
+                      value={/^#[0-9a-fA-F]{6}$/.test(emailTheme.headerGradientEnd || "") ? emailTheme.headerGradientEnd! : "#1e3a5f"}
+                      onChange={(e) => handleEmailThemeChange("headerGradientEnd", e.target.value)}
+                    />
+                    <Input
+                      value={emailTheme.headerGradientEnd || ""}
+                      placeholder="#1e3a5f"
+                      onChange={(e) => handleEmailThemeChange("headerGradientEnd", e.target.value)}
+                      className="font-mono"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label className="text-sm">Footer text</Label>
+                  <Input
+                    value={emailTheme.footerText || ""}
+                    placeholder="You are receiving this email from the Hashibasha platform."
+                    onChange={(e) => handleEmailThemeChange("footerText", e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="font-medium text-sm">Preview</div>
+                <div
+                  className="rounded-lg p-4 text-white font-semibold"
+                  style={{
+                    background: `linear-gradient(135deg, ${emailTheme.headerGradientStart || "#0f172a"} 0%, ${emailTheme.headerGradientEnd || "#1e3a5f"} 100%)`,
+                  }}
+                >
+                  {emailTheme.logoUrl ? (
+                    <img
+                      src={emailTheme.logoUrl}
+                      alt={emailTheme.brandName || "logo"}
+                      className="h-8 object-contain"
+                      onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+                    />
+                  ) : (
+                    <span>{emailTheme.brandName || "Hashibasha"}</span>
+                  )}
+                </div>
+                <div className="rounded-lg border bg-card p-4 space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    This is a preview of the shared email layout used by login OTP, password reset,
+                    welcome, and verification emails.
+                  </p>
+                  <span
+                    className="inline-block px-4 py-2 rounded-lg text-white text-sm font-semibold"
+                    style={{ background: emailTheme.buttonColor || "#0284c7" }}
+                  >
+                    Action button
+                  </span>
+                  <p className="text-xs text-muted-foreground">{emailTheme.footerText || "Footer text"}</p>
                 </div>
               </div>
             </CardContent>

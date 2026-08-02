@@ -18,6 +18,33 @@ export type EmailConfigInput = {
   azureClientSecret?: string;
   graphSendAsUser?: string;
   frontendUrl?: string;
+  brandName?: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  headerGradientStart?: string;
+  headerGradientEnd?: string;
+  buttonColor?: string;
+  footerText?: string;
+};
+
+export type ResolvedEmailTheme = {
+  brandName: string;
+  logoUrl: string;
+  primaryColor: string;
+  headerGradientStart: string;
+  headerGradientEnd: string;
+  buttonColor: string;
+  footerText: string;
+};
+
+export const DEFAULT_EMAIL_THEME: ResolvedEmailTheme = {
+  brandName: 'Hashibasha',
+  logoUrl: '',
+  primaryColor: '#0284c7',
+  headerGradientStart: '#0f172a',
+  headerGradientEnd: '#1e3a5f',
+  buttonColor: '#0284c7',
+  footerText: 'You are receiving this email from the Hashibasha platform.',
 };
 
 export type ResolvedEmailConfig = {
@@ -36,6 +63,7 @@ export type ResolvedEmailConfig = {
     sendAsUser: string;
   };
   frontendUrl: string;
+  theme: ResolvedEmailTheme;
 };
 
 @Injectable()
@@ -81,6 +109,13 @@ export class EmailConfigService {
       hasAzureSecret: Boolean(config.azureClientSecret),
       graphSendAsUser: config.graphSendAsUser || '',
       frontendUrl: config.frontendUrl || '',
+      brandName: config.brandName || '',
+      logoUrl: config.logoUrl || '',
+      primaryColor: config.primaryColor || '',
+      headerGradientStart: config.headerGradientStart || '',
+      headerGradientEnd: config.headerGradientEnd || '',
+      buttonColor: config.buttonColor || '',
+      footerText: config.footerText || '',
       updatedAt: config.updatedAt,
     };
   }
@@ -112,6 +147,15 @@ export class EmailConfigService {
     if (input.azureClientId !== undefined) config.azureClientId = input.azureClientId.trim() || null;
     if (input.graphSendAsUser !== undefined) config.graphSendAsUser = input.graphSendAsUser.trim() || null;
     if (input.frontendUrl !== undefined) config.frontendUrl = input.frontendUrl.trim() || null;
+
+    // Email theme (centralized)
+    if (input.brandName !== undefined) config.brandName = input.brandName.trim() || null;
+    if (input.logoUrl !== undefined) config.logoUrl = input.logoUrl.trim() || null;
+    if (input.primaryColor !== undefined) config.primaryColor = input.primaryColor.trim() || null;
+    if (input.headerGradientStart !== undefined) config.headerGradientStart = input.headerGradientStart.trim() || null;
+    if (input.headerGradientEnd !== undefined) config.headerGradientEnd = input.headerGradientEnd.trim() || null;
+    if (input.buttonColor !== undefined) config.buttonColor = input.buttonColor.trim() || null;
+    if (input.footerText !== undefined) config.footerText = input.footerText.trim() || null;
 
     // Encrypt on save; empty string means "keep existing".
     if (input.azureClientSecret !== undefined && input.azureClientSecret.trim()) {
@@ -162,6 +206,21 @@ export class EmailConfigService {
       sendAsUser: config.graphSendAsUser || process.env.GRAPH_SEND_AS_USER || '',
     };
 
-    return { provider, smtp, graph, frontendUrl };
+    return { provider, smtp, graph, frontendUrl, theme: this.getResolvedTheme(config) };
+  }
+
+  getResolvedTheme(config?: EmailConfigSettings): ResolvedEmailTheme {
+    const source = config || null;
+    return {
+      brandName: source?.brandName?.trim() || DEFAULT_EMAIL_THEME.brandName,
+      logoUrl: source?.logoUrl?.trim() || DEFAULT_EMAIL_THEME.logoUrl,
+      primaryColor: source?.primaryColor?.trim() || DEFAULT_EMAIL_THEME.primaryColor,
+      headerGradientStart:
+        source?.headerGradientStart?.trim() || DEFAULT_EMAIL_THEME.headerGradientStart,
+      headerGradientEnd:
+        source?.headerGradientEnd?.trim() || DEFAULT_EMAIL_THEME.headerGradientEnd,
+      buttonColor: source?.buttonColor?.trim() || DEFAULT_EMAIL_THEME.buttonColor,
+      footerText: source?.footerText?.trim() || DEFAULT_EMAIL_THEME.footerText,
+    };
   }
 }

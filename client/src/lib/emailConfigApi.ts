@@ -19,6 +19,13 @@ export type EmailConfig = {
   hasAzureSecret?: boolean;
   graphSendAsUser: string;
   frontendUrl: string;
+  brandName?: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  headerGradientStart?: string;
+  headerGradientEnd?: string;
+  buttonColor?: string;
+  footerText?: string;
   updatedAt?: string;
 };
 

@@ -56,6 +56,28 @@ export class EmailConfigSettings {
   @Column({ nullable: true })
   frontendUrl: string | null;
 
+  // Email theme (centralized, editable by super admin)
+  @Column({ nullable: true })
+  brandName: string | null;
+
+  @Column({ nullable: true })
+  logoUrl: string | null;
+
+  @Column({ nullable: true })
+  primaryColor: string | null;
+
+  @Column({ nullable: true })
+  headerGradientStart: string | null;
+
+  @Column({ nullable: true })
+  headerGradientEnd: string | null;
+
+  @Column({ nullable: true })
+  buttonColor: string | null;
+
+  @Column({ nullable: true })
+  footerText: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

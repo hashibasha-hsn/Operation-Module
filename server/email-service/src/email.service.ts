@@ -37,7 +37,7 @@ export class EmailService {
     const activationUrl = `${base}/api/auth/activate-account?token=${encodeURIComponent(input.token)}`;
     const loginUrl = `${base}/login`;
     const displayName = input.name?.trim() || input.to;
-    const template = accountActivationEmail({
+    const template = accountActivationEmail(config.theme, {
       name: displayName,
       email: input.to,
       password: input.password,
@@ -62,7 +62,7 @@ export class EmailService {
     const loginUrl =
       input.loginUrl || `${config.frontendUrl.replace(/\/$/, '')}/login`;
     const displayName = input.name?.trim() || input.to;
-    const template = welcomeEmail({
+    const template = welcomeEmail(config.theme, {
       name: displayName,
       email: input.to,
       password: input.password,
@@ -87,7 +87,10 @@ export class EmailService {
     const resetPath = input.resetPath || '/reset-password';
     const resetUrl = `${base}${resetPath}?token=${encodeURIComponent(input.token)}`;
     const displayName = input.name?.trim() || input.to;
-    const template = passwordResetEmail({ name: displayName, resetUrl });
+    const template = passwordResetEmail(config.theme, {
+      name: displayName,
+      resetUrl,
+    });
     return this.send({
       to: input.to,
       subject: template.subject,
@@ -101,7 +104,8 @@ export class EmailService {
     otp: string;
     expiresInMinutes?: number;
   }): Promise<SendMailResult> {
-    const template = otpEmail({
+    const config = await this.emailConfigService.getResolvedConfig();
+    const template = otpEmail(config.theme, {
       otp: input.otp,
       expiresInMinutes: input.expiresInMinutes || 10,
     });
@@ -122,7 +126,7 @@ export class EmailService {
     const base = config.frontendUrl.replace(/\/$/, '');
     const verifyPath = input.verifyPath || '/verify-email';
     const verifyUrl = `${base}${verifyPath}?token=${encodeURIComponent(input.token)}`;
-    const template = verifyEmail({ verifyUrl });
+    const template = verifyEmail(config.theme, { verifyUrl });
     return this.send({
       to: input.to,
       subject: template.subject,
