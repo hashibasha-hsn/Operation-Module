@@ -46,9 +46,9 @@ import {
   getAuthItem,
   getStoredUser,
   isProfileSetupComplete,
-  isSuperAdmin,
   logoutAuthSession,
 } from "@/lib/authStorage";
+import { usePermissions } from "@/contexts/PermissionContext";
 
 const SIDEBAR_ITEMS = [
   { labelKey: "home", href: "/dashboard", icon: Home },
@@ -73,6 +73,7 @@ export default function Layout({ children }: LayoutProps) {
   const [reportsOpen, setReportsOpen] = useState(true);
   const [showLanguageDialog, setShowLanguageDialog] = useState(false);
   const { language, setLanguage, t, dir } = useLanguage();
+  const { isSuperAdmin } = usePermissions();
   const [location, navigate] = useLocation();
   const user = getStoredUser();
   const currentUserName = String(

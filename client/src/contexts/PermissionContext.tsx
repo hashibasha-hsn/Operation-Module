@@ -7,6 +7,9 @@ interface PermissionContextType {
   loading: boolean;
   refreshPermissions: () => Promise<void>;
   userRole: string | null;
+  role: string | null;
+  isSuperAdmin: () => boolean;
+  isAdmin: () => boolean;
 }
 
 const PermissionContext = createContext<PermissionContextType | undefined>(undefined);
@@ -104,6 +107,7 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(() => getStoredUser().role || null);
   const [hasCreatorAccess, setHasCreatorAccess] = useState(false);
 
   const fetchUserPermissions = async () => {
@@ -147,6 +151,9 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
         if (adminProfileRole && adminProfileRole !== user.role) {
           updateStoredUser({ role: adminProfileRole });
         }
+        if (adminProfileRole) {
+          setRole(adminProfileRole);
+        }
         const featuresResponse = await fetch(`${USER_API}/features`);
         if (featuresResponse.ok) {
           const features = await featuresResponse.json();
@@ -186,6 +193,9 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
       const profileRole = String(userProfile?.role || '').trim();
       if (profileRole && profileRole !== user.role) {
         updateStoredUser({ role: profileRole });
+      }
+      if (profileRole) {
+        setRole(profileRole);
       }
       const effectiveRole = profileRole || user.role || '';
 
@@ -281,13 +291,16 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
     return permissions.includes(featureName);
   };
 
+  const isSuperAdmin = () => role === "super_admin";
+  const isAdmin = () => role === "admin" || role === "super_admin";
+
   useEffect(() => {
     void fetchUserPermissions();
   }, []);
 
   return (
     <PermissionContext.Provider
-      value={{ hasPermission, hasCreatorAccess, loading, refreshPermissions, userRole }}
+      value={{ hasPermission, hasCreatorAccess, loading, refreshPermissions, userRole, role, isSuperAdmin, isAdmin }}
     >
       {children}
     </PermissionContext.Provider>
