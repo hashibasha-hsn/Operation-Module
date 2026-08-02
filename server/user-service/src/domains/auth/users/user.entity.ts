@@ -47,6 +47,13 @@ export class User {
 
   @Column({ type: 'timestamp', nullable: true })
   twoFactorOtpRequestedAt: Date;
+
+  @Column({ nullable: true })
+  passwordResetToken: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  passwordResetExpiresAt: Date;
+
   @Column({ length: 255, nullable: true })
   createdBy: string;
 

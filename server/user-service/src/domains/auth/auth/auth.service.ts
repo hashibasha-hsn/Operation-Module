@@ -14,6 +14,7 @@ import { PasswordPolicyService } from './password-policy.service';
 export class AuthService {
   private static readonly OTP_TTL_MS = 10 * 60 * 1000;
   private static readonly OTP_RESEND_COOLDOWN_MS = 30 * 1000;
+  private static readonly PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 
   constructor(
     private readonly usersService: UsersService,
@@ -371,6 +372,22 @@ export class AuthService {
     }
   }
 
+  private async sendPasswordResetEmail(email: string, token: string) {
+    const notificationServiceUrl =
+      process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004';
+    const response = await fetch(`${notificationServiceUrl}/email/password-reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: email, token }),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.success === false) {
+      throw new BadRequestException(
+        data?.error || data?.message || 'Failed to send password reset email',
+      );
+    }
+  }
+
   async checkEmail(email: string) {
     const user = await this.usersService.findByEmail(email);
     
@@ -466,6 +483,70 @@ export class AuthService {
     await this.sessionsService.revokeRefreshTokensForUser(user.id);
 
     return { message: 'Password changed successfully' };
+  }
+
+  async forgotPassword(email: string) {
+    const normalizedEmail = email?.trim().toLowerCase() ?? '';
+    if (!normalizedEmail) {
+      throw new BadRequestException('Email is required');
+    }
+
+    const user = await this.usersService.findByEmail(normalizedEmail);
+
+    // Always return success to avoid leaking whether an account exists.
+    if (!user || user.verificationStatus === 'PENDING') {
+      return {
+        success: true,
+        message: 'If an account exists for that email, a reset link has been sent.',
+      };
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Date.now() + AuthService.PASSWORD_RESET_TTL_MS);
+
+    await this.usersService.setPasswordResetToken(user.id, tokenHash, expiresAt);
+
+    try {
+      await this.sendPasswordResetEmail(user.email, token);
+    } catch (error: any) {
+      console.error('Failed to send password reset email:', error?.message);
+    }
+
+    return {
+      success: true,
+      message: 'If an account exists for that email, a reset link has been sent.',
+    };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const trimmedToken = token?.trim() ?? '';
+    const next = newPassword?.trim() ?? '';
+
+    if (!trimmedToken || !next) {
+      throw new BadRequestException('Reset token and new password are required');
+    }
+
+    assertPasswordValid(next);
+
+    const tokenHash = crypto.createHash('sha256').update(trimmedToken).digest('hex');
+    const user = await this.usersService.findByPasswordResetToken(tokenHash);
+
+    if (!user?.passwordResetToken || !user.passwordResetExpiresAt) {
+      throw new UnauthorizedException('Invalid or expired reset link');
+    }
+
+    if (user.passwordResetExpiresAt.getTime() < Date.now()) {
+      await this.usersService.clearPasswordResetToken(user.id);
+      throw new UnauthorizedException('This reset link has expired. Please request a new one.');
+    }
+
+    await this.usersService.setPassword(user.id, next);
+    await this.usersService.clearPasswordResetToken(user.id);
+    await this.sessionsService.deleteSessionsForUser(user.id);
+    await this.sessionsService.revokeRefreshTokensForUser(user.id);
+
+    return { message: 'Your password has been reset. You can now sign in.' };
   }
 
   async verifyEmail(token: string, password: string) {

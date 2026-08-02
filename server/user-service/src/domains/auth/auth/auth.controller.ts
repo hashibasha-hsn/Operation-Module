@@ -65,6 +65,16 @@ export class AuthController {
     return this.authService.resendLoginOtp(body.pendingToken ?? '');
   }
 
+  @Post('forgot-password')
+  async forgotPassword(@Body() body: { email: string }) {
+    return this.authService.forgotPassword(body.email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() body: { token: string; password: string }) {
+    return this.authService.resetPassword(body.token, body.password);
+  }
+
   @Post('refresh')
   async refresh(@Body() body: { refreshToken: string }) {
     return this.authService.refreshToken(body.refreshToken);

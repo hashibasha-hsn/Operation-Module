@@ -90,6 +90,8 @@ import PlatformSettings from "./pages/PlatformSettings";
 import SuperAdmin from "./pages/SuperAdmin";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import AuditSetup from "./pages/AuditSetup";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import { initUiTheme } from "./lib/uiTheme";
 
 function Router() {
@@ -97,6 +99,8 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Login} />
       <Route path={"/login"} component={Login} />
+      <Route path={"/forgot-password"} component={ForgotPassword} />
+      <Route path={"/reset-password"} component={ResetPassword} />
       <Route path={"/admin-setup"} component={AdminSetup} />
       <Route path={"/dashboard"} component={() => <Layout><Dashboard /></Layout>} />
       <Route path={"/creator-mode"} component={() => <Layout><CreatorMode /></Layout>} />

@@ -126,4 +126,20 @@ export class EmailController {
       verifyPath: body.verifyPath,
     });
   }
+
+  @Post('password-reset')
+  sendPasswordReset(@Body() body: { to?: string; token?: string; resetPath?: string }) {
+    const to = body?.to?.trim();
+    if (!to) {
+      return { success: false, error: 'Recipient email is required' };
+    }
+    if (!body?.token) {
+      return { success: false, error: 'Reset token is required' };
+    }
+    return this.emailService.sendPasswordReset({
+      to,
+      token: body.token,
+      resetPath: body.resetPath,
+    });
+  }
 }

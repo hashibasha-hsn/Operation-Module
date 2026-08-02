@@ -125,6 +125,30 @@ export class UsersService {
     });
   }
 
+  async findByPasswordResetToken(token: string): Promise<User | null> {
+    return await this.userRepository.findOne({
+      where: { passwordResetToken: token },
+    });
+  }
+
+  async setPasswordResetToken(
+    userId: string,
+    tokenHash: string,
+    expiresAt: Date,
+  ): Promise<void> {
+    await this.userRepository.update(userId, {
+      passwordResetToken: tokenHash,
+      passwordResetExpiresAt: expiresAt,
+    });
+  }
+
+  async clearPasswordResetToken(userId: string): Promise<void> {
+    await this.userRepository.update(userId, {
+      passwordResetToken: null,
+      passwordResetExpiresAt: null,
+    });
+  }
+
   async remove(id: string): Promise<void> {
     await this.userRepository.delete(id);
   }
