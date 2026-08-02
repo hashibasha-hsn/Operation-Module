@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { usePermissions } from "@/contexts/PermissionContext";
 import { PLATFORM_NAME, PLATFORM_SHORT_NAME } from "@/lib/branding";
 import PlatformMark from "@/components/PlatformMark";
 
@@ -44,6 +45,7 @@ export default function Login() {
   const [otpEmail, setOtpEmail] = useState("");
   const [isOtpStep, setIsOtpStep] = useState(false);
   const [, navigate] = useLocation();
+  const { refreshPermissions } = usePermissions();
 
   useEffect(() => {
     checkSetupStatus();
@@ -145,6 +147,12 @@ export default function Login() {
 
     void recordLoginAttendance().catch((err) => {
       console.warn("Failed to record login attendance:", err);
+    });
+
+    // Re-evaluate role + permissions now that a session exists (the provider
+    // only fetches on mount, which happens on the login page pre-auth).
+    void refreshPermissions().catch((err) => {
+      console.error("Failed to refresh permissions after login:", err);
     });
 
     if (mustChangePassword && !profileComplete) {

@@ -1119,6 +1119,7 @@ Configure working-hour rules, publish to stores or users, then review the attend
 ('pieChart', 'Pie Chart', 'مخطط دائري'),
 ('platformName', 'Platform Name', 'اسم المنصة'),
 ('platformSettings', 'Platform Settings', 'إعدادات المنصة'),
+('superAdmin', 'Super Admin', 'المسؤول الرئيسي'),
 ('pleaseAnswer', 'Please answer', 'يرجى الإجابة'),
 ('pleaseEnterDetailsSignIn', 'Please enter your details to sign in', 'يرجى إدخال بياناتك لتسجيل الدخول'),
 ('pleaseLoginToChangePassword', 'You must be logged in to change your password', 'يجب تسجيل الدخول لتغيير كلمة المرور'),

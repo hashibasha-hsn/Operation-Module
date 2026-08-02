@@ -26,6 +26,7 @@ import { SharedModule } from './shared/shared.module';
 import { AuditContextMiddleware } from './shared/audit-context.middleware';
 import { CrudAuditSubscriber } from './shared/crud-audit.subscriber';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { UiSettingsModule } from './ui-settings/ui-settings.module';
 import { ensurePostgresSchema } from './ensure-schema';
 
 const ORG_ENTITY_FOLDERS = [
@@ -45,6 +46,7 @@ const ORG_ENTITY_FOLDERS = [
   'bi-dashboard',
   'noticeboard',
   'attendance',
+  'ui-settings',
 ];
 
 async function buildConnection(
@@ -169,6 +171,7 @@ async function buildConnection(
     NoticeboardModule,
     AttendanceModule,
     TranslationsModule,
+    UiSettingsModule,
     SharedModule,
     AuditLogsModule,
   ],

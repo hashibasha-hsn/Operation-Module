@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getAuthItem, getStoredUser, getOrganizationId } from '@/lib/authStorage';
+import { getAuthItem, getStoredUser, getOrganizationId, updateStoredUser } from '@/lib/authStorage';
 
 interface PermissionContextType {
   hasPermission: (featureName: string) => boolean;
@@ -120,6 +120,33 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
 
       // Platform admins get all feature names
       if (ADMIN_EMAILS.has(email)) {
+        // Merge the platform role (user/admin/super_admin) from the live profile
+        // so gating like isSuperAdmin() reflects the real DB role.
+        let adminProfile: any = null;
+        const adminUserId = user.userId || user.id;
+        if (adminUserId) {
+          try {
+            const byIdRes = await fetch(`${USER_API}/users/${adminUserId}`);
+            if (byIdRes.ok) adminProfile = await byIdRes.json();
+          } catch { /* ignore */ }
+        }
+        if (!adminProfile && email) {
+          try {
+            const searchRes = await fetch(
+              `${USER_API}/users?search=${encodeURIComponent(email)}&limit=50`,
+            );
+            if (searchRes.ok) {
+              const data = await searchRes.json();
+              adminProfile = (data.users || []).find(
+                (u: any) => String(u.email || '').toLowerCase() === email,
+              );
+            }
+          } catch { /* ignore */ }
+        }
+        const adminProfileRole = String(adminProfile?.role || '').trim();
+        if (adminProfileRole && adminProfileRole !== user.role) {
+          updateStoredUser({ role: adminProfileRole });
+        }
         const featuresResponse = await fetch(`${USER_API}/features`);
         if (featuresResponse.ok) {
           const features = await featuresResponse.json();
@@ -153,6 +180,29 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
             (u: any) => String(u.email || '').toLowerCase() === email,
           );
         }
+      }
+
+      // Merge role (user/admin/super_admin) into the stored session.
+      const profileRole = String(userProfile?.role || '').trim();
+      if (profileRole && profileRole !== user.role) {
+        updateStoredUser({ role: profileRole });
+      }
+      const effectiveRole = profileRole || user.role || '';
+
+      // Super admins and admins get access to all features.
+      if (effectiveRole === 'super_admin' || effectiveRole === 'admin') {
+        const featuresResponse = await fetch(`${USER_API}/features`);
+        if (featuresResponse.ok) {
+          const features = await featuresResponse.json();
+          const list = Array.isArray(features) ? features : features?.features || [];
+          setPermissions(list.map((f: any) => f.name).filter(Boolean));
+        } else {
+          setPermissions(TAQTICS_ROLE_PERMISSIONS.company_admin);
+        }
+        setUserRole('company_admin');
+        setHasCreatorAccess(true);
+        setLoading(false);
+        return;
       }
 
       const designationName = String(

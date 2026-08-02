@@ -75,6 +75,10 @@ export class UserProfile {
   @Column({ name: 'profilesetupcompletedat', type: 'timestamp', nullable: true })
   profileSetupCompletedAt: Date;
 
+  /** Access level: 'user' | 'admin' | 'super_admin'. Defaults to 'user'. */
+  @Column({ name: 'role', default: 'user' })
+  role: string;
+
   @CreateDateColumn({ name: 'createdat' })
   createdAt: Date;
 

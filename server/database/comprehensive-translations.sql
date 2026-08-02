@@ -61,6 +61,7 @@ INSERT INTO translations (key, en, ar) VALUES
 ('organizations', 'Organizations', 'المنظمات'),
 ('tags', 'Tags', 'العلامات'),
 ('platformSettings', 'Platform Settings', 'إعدادات المنصة'),
+('superAdmin', 'Super Admin', 'المسؤول الرئيسي'),
 ('securitySettings', 'Security Settings', 'إعدادات الأمان'),
 ('profileSettings', 'Profile Settings', 'إعدادات الملف الشخصي'),
 

@@ -37,6 +37,8 @@ export type AuthUser = {
   profileSetupComplete?: boolean;
   profileSetupCompletedAt?: string | null;
   profileCompletion?: ProfileCompletionStatus;
+  /** 'user' | 'admin' | 'super_admin' — merged from the user profile. */
+  role?: string;
   [key: string]: unknown;
 };
 
@@ -144,6 +146,15 @@ export function getOrganizationId(fallback = "default-org"): string {
 export function getCurrentUserId(): string {
   const user = getStoredUser();
   return String(user.userId ?? user.id ?? "");
+}
+
+export function isSuperAdmin(): boolean {
+  return getStoredUser().role === "super_admin";
+}
+
+export function isAdmin(): boolean {
+  const role = getStoredUser().role;
+  return role === "admin" || role === "super_admin";
 }
 
 export function getRememberMePreference(): boolean {

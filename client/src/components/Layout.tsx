@@ -22,6 +22,7 @@ import {
   PieChart,
   GraduationCap,
   LayoutGrid,
+  ShieldCheck,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ import {
   getAuthItem,
   getStoredUser,
   isProfileSetupComplete,
+  isSuperAdmin,
   logoutAuthSession,
 } from "@/lib/authStorage";
 
@@ -347,6 +349,12 @@ export default function Layout({ children }: LayoutProps) {
                   <Settings className="w-4 h-4" />
                   {t("platformSettings")}
                 </DropdownMenuItem>
+                {isSuperAdmin() && (
+                  <DropdownMenuItem className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/super-admin")}>
+                    <ShieldCheck className="w-4 h-4" />
+                    {t("superAdmin")}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer text-red-600">
                   <LogOut className="w-4 h-4" />
                   {t("logout")}

@@ -51,9 +51,13 @@ export class UsersService {
       status,
       completeProfileSetup,
       validateProfileSetup,
+      role,
       ...rest
     } = dto || {};
     const payload: Record<string, any> = { ...rest };
+    // Roles are only managed via the dedicated role endpoint so a client echo
+    // of the full profile can never silently reset access level.
+    delete payload.role;
     const strictSetup = Boolean(completeProfileSetup || validateProfileSetup);
 
     if (typeof payload.name === 'string') payload.name = payload.name.trim();
@@ -205,11 +209,21 @@ export class UsersService {
     );
 
     const tracking = completionTrackingFields(prepared as Partial<UserProfile>);
-    const payload = {
+    const payload: Record<string, any> = {
       ...prepared,
       ...tracking,
       tags: prepared.tags ?? {},
     };
+
+    // First user ever (no super_admin exists anywhere) becomes the super admin.
+    if (!payload.role || payload.role === 'user') {
+      const superAdminCount = await this.userProfileRepository.count({
+        where: { role: 'super_admin' },
+      });
+      if (superAdminCount === 0) {
+        payload.role = 'super_admin';
+      }
+    }
 
     if (typeof payload.tags === 'string') {
       try {
@@ -366,6 +380,67 @@ export class UsersService {
   ) {
     await this.userProfileRepository.update({ userId: id }, data);
     return this.findOne(id);
+  }
+
+  private async getActorProfile(actorId: string): Promise<UserProfile | null> {
+    if (!actorId) return null;
+    return this.userProfileRepository.findOne({ where: { userId: actorId } });
+  }
+
+  async isSuperAdmin(actorId: string): Promise<boolean> {
+    const actor = await this.getActorProfile(actorId);
+    return Boolean(actor && actor.role === 'super_admin');
+  }
+
+  async findByRole(role: string) {
+    const profiles = await this.userProfileRepository.find({
+      where: { role, isRemoved: false },
+      order: { name: 'ASC' },
+    });
+    return profiles.map((p) => this.withCompletionMeta(p));
+  }
+
+  async setRole(
+    targetUserId: string,
+    role: string,
+    actorId?: string,
+  ): Promise<UserProfile | null> {
+    const allowed = ['user', 'admin', 'super_admin'];
+    if (!allowed.includes(role)) {
+      throw new BadRequestException(`Invalid role "${role}". Use ${allowed.join(', ')}`);
+    }
+
+    const target = await this.userProfileRepository.findOne({
+      where: { userId: targetUserId },
+    });
+    if (!target) {
+      throw new BadRequestException('User profile not found');
+    }
+
+    // Only a super admin may change roles.
+    if (!(await this.isSuperAdmin(actorId))) {
+      throw new BadRequestException('Only a super admin can change user roles');
+    }
+
+    // A super admin cannot be demoted by anyone.
+    if (target.role === 'super_admin') {
+      throw new BadRequestException('Super admin role cannot be changed');
+    }
+
+    await this.userProfileRepository.update({ userId: targetUserId }, { role });
+    await this.writeAuditLog({
+      target: 'User',
+      operation: 'Role Update',
+      performedBy: actorId || auditContext.getActorId(),
+      details: {
+        email: target.email,
+        name: target.name,
+        previousRole: target.role,
+        role,
+      },
+      targetId: targetUserId,
+    });
+    return this.findOne(targetUserId);
   }
 
   async getStats() {

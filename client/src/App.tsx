@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
+import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { PermissionProvider } from "./contexts/PermissionContext";
@@ -86,8 +87,10 @@ import ProfileSettings from "./pages/ProfileSettings";
 import Noticeboard from "./pages/Noticeboard";
 import NoticeBoardList from "./pages/NoticeBoardList";
 import PlatformSettings from "./pages/PlatformSettings";
+import SuperAdmin from "./pages/SuperAdmin";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import AuditSetup from "./pages/AuditSetup";
+import { initUiTheme } from "./lib/uiTheme";
 
 function Router() {
   return (
@@ -169,6 +172,7 @@ function Router() {
       <Route path={"/profile-settings"} component={() => <Layout><ProfileSettings /></Layout>} />
       <Route path={"/noticeboard"} component={() => <Layout><NoticeBoardList /></Layout>} />
       <Route path={"/platform-settings"} component={() => <Layout><PlatformSettings /></Layout>} />
+      <Route path={"/super-admin"} component={() => <Layout><SuperAdmin /></Layout>} />
       <Route path={"/executive-dashboard"} component={() => <Layout><ExecutiveDashboard /></Layout>} />
       <Route path={"/bi-dashboard"} component={() => <Layout><CustomDashboards /></Layout>} />
       <Route path={"/404"} component={() => <Layout><NotFound /></Layout>} />
@@ -184,6 +188,10 @@ function Router() {
 // - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
+  useEffect(() => {
+    initUiTheme().catch(() => {});
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider

@@ -76,6 +76,21 @@
   --sidebar-accent-foreground: oklch(0.35 0.08 230);
   --sidebar-border: oklch(0.9 0.02 230);
   --sidebar-ring: oklch(0.62 0.17 235);
+  /* Global UI theme (editable via Super Admin -> Global UI) */
+  --gradient-primary-start: #0284c7;
+  --gradient-primary-mid: #0ea5e9;
+  --gradient-primary-end: #06b6d4;
+  --gradient-primary-hover-start: #0369a1;
+  --gradient-primary-hover-mid: #0284c7;
+  --gradient-primary-hover-end: #0891b2;
+  --gradient-header-start: #0f172a;
+  --gradient-header-mid: #0c4a6e;
+  --gradient-header-mid2: #075985;
+  --gradient-header-end: #0369a1;
+  --gradient-header-accent: #38bdf8;
+  --gradient-badge-start: #0284c7;
+  --gradient-badge-end: #0ea5e9;
+  --login-panel-end: #0f172a;
 }
 
 .dark {
@@ -190,16 +205,16 @@
   }
 
   .gradient-primary {
-    background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 45%, #06b6d4 100%);
+    background: linear-gradient(135deg, var(--gradient-primary-start) 0%, var(--gradient-primary-mid) 45%, var(--gradient-primary-end) 100%);
     color: #fff;
   }
 
   .gradient-primary:hover {
-    background: linear-gradient(135deg, #0369a1 0%, #0284c7 45%, #0891b2 100%);
+    background: linear-gradient(135deg, var(--gradient-primary-hover-start) 0%, var(--gradient-primary-hover-mid) 45%, var(--gradient-primary-hover-end) 100%);
   }
 
   .gradient-header {
-    background: linear-gradient(90deg, #0f172a 0%, #0c4a6e 32%, #075985 62%, #0369a1 100%);
+    background: linear-gradient(90deg, var(--gradient-header-start) 0%, var(--gradient-header-mid) 32%, var(--gradient-header-mid2) 62%, var(--gradient-header-end) 100%);
     border-bottom: 1px solid rgba(14, 116, 199, 0.45);
     box-shadow: 0 2px 16px rgba(12, 74, 110, 0.28);
     color: #ffffff;
@@ -212,12 +227,12 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: linear-gradient(90deg, #38bdf8, #0ea5e9, #06b6d4, #38bdf8);
+    background: linear-gradient(90deg, var(--gradient-header-accent), var(--gradient-primary-mid), var(--gradient-primary-end), var(--gradient-header-accent));
     background-size: 200% 100%;
   }
 
   .gradient-badge {
-    background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+    background: linear-gradient(135deg, var(--gradient-badge-start) 0%, var(--gradient-badge-end) 100%);
     color: #fff;
     border: none;
   }
@@ -299,7 +314,7 @@
     font-size: 0.875rem;
     font-weight: 500;
     color: #fff;
-    background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 45%, #06b6d4 100%);
+    background: linear-gradient(135deg, var(--gradient-primary-start) 0%, var(--gradient-primary-mid) 45%, var(--gradient-primary-end) 100%);
     box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
   }
 
@@ -312,7 +327,7 @@
   }
 
   .login-brand-panel {
-    background: linear-gradient(145deg, #0f172a 0%, #0c4a6e 42%, #075985 68%, #0f172a 100%);
+    background: linear-gradient(145deg, var(--gradient-header-start) 0%, var(--gradient-header-mid) 42%, var(--gradient-header-mid2) 68%, var(--login-panel-end) 100%);
   }
 
   .login-form-panel {

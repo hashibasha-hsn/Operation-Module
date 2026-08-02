@@ -1,9 +1,29 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Headers } from '@nestjs/common';
 import { UsersService } from './users.service';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get('admins')
+  async findAdmins() {
+    return this.usersService.findByRole('admin');
+  }
+
+  @Get('role/:role')
+  async findByRole(@Param('role') role: string) {
+    return this.usersService.findByRole(role);
+  }
+
+  @Put(':id/role')
+  async setRole(
+    @Param('id') id: string,
+    @Body() body: { role: string; actorUserId?: string },
+    @Headers('x-user-id') headerActorId?: string,
+  ) {
+    const actorId = body.actorUserId || headerActorId;
+    return this.usersService.setRole(id, body.role, actorId);
+  }
 
   @Get()
   async findAll(
