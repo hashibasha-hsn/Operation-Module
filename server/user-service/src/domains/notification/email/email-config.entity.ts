@@ -35,6 +35,26 @@ export class EmailConfigSettings {
   @Column({ default: true })
   useTls: boolean;
 
+  // Delivery provider: 'smtp' | 'graph'
+  @Column({ nullable: true })
+  deliveryProvider: string | null;
+
+  // Microsoft Graph
+  @Column({ nullable: true })
+  azureTenantId: string | null;
+
+  @Column({ nullable: true })
+  azureClientId: string | null;
+
+  @Column({ nullable: true })
+  azureClientSecret: string | null;
+
+  @Column({ nullable: true })
+  graphSendAsUser: string | null;
+
+  @Column({ nullable: true })
+  frontendUrl: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 
