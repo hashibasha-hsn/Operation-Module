@@ -81,12 +81,15 @@ export default function Layout({ children }: LayoutProps) {
   ).trim();
   const currentUserInitial = currentUserName.charAt(0).toUpperCase() || "U";
 
-  // Keep incomplete profiles on profile setup until name, store, and manager are saved
+  // Keep incomplete profiles on profile setup until name, store, and manager are saved.
+  // Super admins are exempt — they manage the platform and don't need a store onboarding.
   useEffect(() => {
     const authenticated = getAuthItem("isAuthenticated") === "true" || Boolean(getAuthItem("accessToken"));
     if (!authenticated) return;
     if (location.startsWith("/profile-settings") || location.startsWith("/login")) return;
-    if (!isProfileSetupComplete(getStoredUser())) {
+    const storedUser = getStoredUser();
+    if (storedUser.role === "super_admin") return;
+    if (!isProfileSetupComplete(storedUser)) {
       navigate("/profile-settings?setup=1");
     }
   }, [location, navigate]);

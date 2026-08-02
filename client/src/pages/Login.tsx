@@ -94,9 +94,9 @@ export default function Login() {
     );
 
     let profileComplete = false;
+    let profile: any = null;
     try {
       const userId = userRecord.userId;
-      let profile: any = null;
       if (userId) {
         const profileRes = await fetch(`${GATEWAY}/api/user/users/${userId}`);
         if (profileRes.ok) {
@@ -155,7 +155,11 @@ export default function Login() {
       console.error("Failed to refresh permissions after login:", err);
     });
 
-    if (mustChangePassword && !profileComplete) {
+    const superAdminRole =
+      String(profile?.role || getStoredUser().role || "").trim() === "super_admin";
+    if (superAdminRole) {
+      navigate("/super-admin");
+    } else if (mustChangePassword && !profileComplete) {
       navigate("/profile-settings?setup=1&tab=password&force=1");
     } else if (mustChangePassword) {
       navigate("/profile-settings?tab=password&force=1");

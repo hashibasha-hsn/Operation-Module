@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
+import { UsersModule as ProfileUsersModule } from '../../../users/users.module';
 import { SessionsModule } from '../sessions/sessions.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
@@ -15,6 +16,7 @@ import { PasswordPolicyService } from './password-policy.service';
 @Module({
   imports: [
     UsersModule,
+    ProfileUsersModule,
     SessionsModule,
     TypeOrmModule.forFeature([PasswordPolicySettings], 'auth'),
     PassportModule.register({ defaultStrategy: 'jwt' }),

@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { SessionsService } from '../sessions/sessions.service';
 import { User } from '../users/user.entity';
+import { UsersService as ProfileUsersService } from '../../../users/users.service';
 import { assertPasswordValid } from './password.util';
 import { PasswordPolicyService } from './password-policy.service';
 
@@ -20,6 +21,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly passwordPolicyService: PasswordPolicyService,
     @Optional() @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientProxy,
+    private readonly profileUsersService: ProfileUsersService,
   ) {}
 
   private generateOtp(): string {
@@ -558,6 +560,23 @@ export class AuthService {
       verificationStatus: 'VERIFIED',
       isAdmin: true,
     });
+
+    // Create the matching user profile (role auto-promotes to super_admin since
+    // it is the first profile) so the frontend can resolve role + profile after login.
+    const displayName =
+      String(organizationName || '').trim() ||
+      String(email.split('@')[0] || email).trim();
+    try {
+      await this.profileUsersService.create({
+        userId: adminUser.id,
+        email,
+        name: displayName,
+        isActive: true,
+        validEmail: true,
+      });
+    } catch (error: any) {
+      console.error('Failed to create super admin profile:', error?.message);
+    }
 
     // Emit Kafka event for admin creation
     if (this.kafkaClient) {
