@@ -55,7 +55,7 @@ app.use('/api/auth', proxy(SERVICES.AUTH, { '^/api/auth': '/auth' }));
 app.use('/api/user', proxy(SERVICES.USER, { '^/api/user': '' }));
 app.use('/api/notification/email', proxy(SERVICES.EMAIL, { '^/api/notification': '' }));
 app.use('/api/notification', proxy(SERVICES.NOTIFICATION, { '^/api/notification': '' }));
-app.use('/api/email', proxy(SERVICES.EMAIL, { '^/api/email': '' }));
+app.use('/api/email', proxy(SERVICES.EMAIL, { '^/api': '' }));
 app.use('/api/permission', proxy(SERVICES.PERMISSION, { '^/api/permission': '' }));
 app.use('/api/org', proxy(SERVICES.ORG, { '^/api/org': '' }));
 app.use('/api/audits', proxy(SERVICES.ORG, { '^/api/audits': '/audits' }));
