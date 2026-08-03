@@ -63,10 +63,14 @@ export default function AuditFill() {
         const storeList = assignedStores.length ? assignedStores : entityData;
         setStores(storeList);
 
-        const existingDraft = userSubmissions.find(
-          (item: any) =>
-            item.workflowId === auditId && (item.status === "draft" || item.status === "correction"),
-        );
+        const existingDraft =
+          userSubmissions.find(
+            (item: any) =>
+              item.workflowId === auditId && item.status === "correction",
+          ) ||
+          userSubmissions.find(
+            (item: any) => item.workflowId === auditId && item.status === "draft",
+          );
 
         if (existingDraft) {
           setStoreId(existingDraft.storeId ?? "");
@@ -305,21 +309,28 @@ export default function AuditFill() {
               </div>
 
               {submission?.status === 'correction' && (
-                <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 space-y-2">
-                  <Badge className="bg-amber-500 hover:bg-amber-500 text-white">
-                    Correction
-                  </Badge>
+                <div className="rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="bg-amber-500 hover:bg-amber-500 text-white">
+                      Correction
+                    </Badge>
+                    <span className="text-xs font-medium text-amber-700">
+                      {submission.answers?.correction?.reviewerName
+                        ? `Reviewed by ${submission.answers.correction.reviewerName}`
+                        : 'Reviewer requested'}
+                    </span>
+                    {submission.answers?.correction?.reviewedAt && (
+                      <span className="text-xs text-amber-600">
+                        {new Date(submission.answers.correction.reviewedAt).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-amber-900 whitespace-pre-wrap">
-                    {submission.answers?.correction?.notes || submission.answers?.correctionNotes || ''}
+                    <span className="font-semibold">Correction:</span>{' '}
+                    {submission.answers?.correction?.notes ||
+                      submission.answers?.correctionNotes ||
+                      'No comment provided'}
                   </p>
-                  {submission.answers?.correction?.reviewerName && (
-                    <p className="text-xs text-amber-700">
-                      Reviewed by: {submission.answers.correction.reviewerName}
-                      {submission.answers.correction.reviewedAt
-                        ? ` · ${new Date(submission.answers.correction.reviewedAt).toLocaleString()}`
-                        : ''}
-                    </p>
-                  )}
                 </div>
               )}
 
