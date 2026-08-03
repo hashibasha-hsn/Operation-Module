@@ -34,7 +34,6 @@ import AuditSettings from "./pages/AuditSettings";
 import AuditCreateForm from "./pages/AuditCreateForm";
 import CreateForm from "./pages/CreateForm";
 import SecuritySettings from "./pages/SecuritySettings";
-import EmailConfig from "./pages/EmailConfig";
 import Notifications from "./pages/Notifications";
 import Admin from "./pages/Admin";
 import ProcessFill from "./pages/ProcessFill";
@@ -136,7 +135,6 @@ function Router() {
       <Route path={"/audit-create-form"} component={() => <Layout><AuditCreateForm /></Layout>} />
       <Route path={"/create-form"} component={() => <Layout><CreateForm /></Layout>} />
       <Route path={"/security"} component={() => <Layout><SecuritySettings /></Layout>} />
-      <Route path={"/email-config"} component={() => <Layout><EmailConfig /></Layout>} />
       <Route path={"/notifications"} component={() => <Layout><Notifications /></Layout>} />
       <Route path={"/admin"} component={() => <Layout><Admin /></Layout>} />
       <Route path={"/feature-permissions"} component={() => <Layout><FeaturePermissions /></Layout>} />

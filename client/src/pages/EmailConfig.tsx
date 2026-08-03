@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Mail, Save, Loader2, Send, ShieldCheck } from "lucide-react";
+import { Save, Loader2, Send, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
@@ -117,17 +117,7 @@ export default function EmailConfig() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Mail className="w-8 h-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">{t("emailConfig")}</h1>
-          <p className="text-muted-foreground mt-1">
-            Configure outgoing email settings used for welcome emails and system notifications.
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Delivery Provider</CardTitle>

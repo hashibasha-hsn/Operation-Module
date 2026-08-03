@@ -9,7 +9,6 @@ import {
   Building2,
   Lock,
   Zap,
-  Mail,
   BookOpen,
   BarChart3,
   Bell,
@@ -111,12 +110,6 @@ const SETTINGS: ToolDef[] = [
     titleKey: "securitySettings",
     icon: Lock,
     href: "/security",
-    permissions: ["user_edit", "designation_edit"],
-  },
-  {
-    titleKey: "emailConfig",
-    icon: Mail,
-    href: "/email-config",
     permissions: ["user_edit", "designation_edit"],
   },
   {

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getStoredUser, getOrganizationId, getAuthItem } from "@/lib/authStorage";
+import EmailConfig from "./EmailConfig";
 import {
   Languages,
   ShieldCheck,
@@ -26,6 +27,7 @@ import {
   Mail,
   Upload,
   Link2,
+  Settings,
 } from "lucide-react";
 
 const LANGUAGE_API = import.meta.env.VITE_LANGUAGE_API || "/api/language";
@@ -442,6 +444,9 @@ export default function SuperAdmin() {
           <TabsTrigger value="email" className="gap-2">
             <Mail className="w-4 h-4" /> Email Theme
           </TabsTrigger>
+          <TabsTrigger value="email-config" className="gap-2">
+            <Settings className="w-4 h-4" /> Email Config
+          </TabsTrigger>
           <TabsTrigger value="admins" className="gap-2">
             <Users className="w-4 h-4" /> Admins
           </TabsTrigger>
@@ -814,6 +819,11 @@ export default function SuperAdmin() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ---------------- EMAIL CONFIG TAB ---------------- */}
+        <TabsContent value="email-config" className="space-y-4">
+          <EmailConfig />
         </TabsContent>
 
         {/* ---------------- ADMINS TAB ---------------- */}
