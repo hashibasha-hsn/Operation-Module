@@ -8,12 +8,10 @@ import {
   COMMON_LANGUAGES,
   MONTH_NAMES,
   WEEK_DAYS,
-  createReminder,
   type ProcessProperties,
-  type ReminderEntry,
 } from "@/lib/processProperties";
 import ReviewLevelsEditor from "@/components/process/ReviewLevelsEditor";
-import { AlertCircle, Check, Trash2 } from "lucide-react";
+import { AlertCircle, Check } from "lucide-react";
 
 type ProcessPropertiesPanelProps = {
   properties: ProcessProperties;
@@ -104,8 +102,6 @@ export default function ProcessPropertiesPanel({
       : [...properties.weeklyDays, day];
     patch({ weeklyDays: next });
   };
-
-  const updateReminders = (reminders: ReminderEntry[]) => patch({ reminders });
 
   if (selectedSection === 'process') {
     return (
@@ -399,82 +395,6 @@ export default function ProcessPropertiesPanel({
             ]}
           />
         </SettingCard>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium text-sm">Reminders</h4>
-            <Button type="button" variant="outline" size="sm" onClick={() => updateReminders([...properties.reminders, createReminder()])}>
-              + Add Reminder
-            </Button>
-          </div>
-          {properties.reminders.length === 0 && (
-            <p className="text-sm text-muted-foreground">No reminders configured. Add one to alert users before/after start or end time.</p>
-          )}
-          {properties.reminders.map((reminder, index) => (
-            <div key={reminder.id} className="rounded-lg border bg-white p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Reminder {index + 1}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => updateReminders(properties.reminders.filter((r) => r.id !== reminder.id))}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs">Hours</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={reminder.hours}
-                    onChange={(e) => {
-                      const next = properties.reminders.map((r) =>
-                        r.id === reminder.id ? { ...r, hours: Number(e.target.value) || 0 } : r,
-                      );
-                      updateReminders(next);
-                    }}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Minutes</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={59}
-                    value={reminder.minutes}
-                    onChange={(e) => {
-                      const next = properties.reminders.map((r) =>
-                        r.id === reminder.id ? { ...r, minutes: Number(e.target.value) || 0 } : r,
-                      );
-                      updateReminders(next);
-                    }}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">When</Label>
-                  <select
-                    className="w-full border rounded px-2 py-2 text-sm"
-                    value={reminder.anchor}
-                    onChange={(e) => {
-                      const next = properties.reminders.map((r) =>
-                        r.id === reminder.id ? { ...r, anchor: e.target.value as ReminderEntry['anchor'] } : r,
-                      );
-                      updateReminders(next);
-                    }}
-                  >
-                    <option value="before-start">Before start time</option>
-                    <option value="after-start">After start time</option>
-                    <option value="before-end">Before end time</option>
-                    <option value="after-end">After end time</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     );
   }

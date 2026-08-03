@@ -705,11 +705,6 @@ export default function CreateForm() {
                         </label>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" className="flex-1">+ Add Reminder</Button>
-                      <Button variant="outline" className="flex-1">+ Add Recurring Reminder</Button>
-                    </div>
-                    <a href="#" className="text-sm text-blue-600 hover:underline">Reminder Setup & Usage</a>
                   </div>
                 </div>
               )}
