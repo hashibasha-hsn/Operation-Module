@@ -549,12 +549,6 @@ export default function ProcessPropertiesPanel({
             )}
           </div>
         </SettingCard>
-        <ToggleRow
-          title="Provide link in Action Point Summary"
-          description="Adds a direct submission report link to action point summaries."
-          checked={properties.reportLinkInActionPointSummary}
-          onCheckedChange={(checked) => patch({ reportLinkInActionPointSummary: checked })}
-        />
       </div>
     );
   }
@@ -651,17 +645,6 @@ export default function ProcessPropertiesPanel({
           checked={properties.createActionPointsFromReports}
           onCheckedChange={(checked) => patch({ createActionPointsFromReports: checked })}
         />
-        <SettingCard title="Make Reports Confidential">
-          <select
-            className="w-full border rounded px-3 py-2 text-sm"
-            value={properties.reportConfidentiality}
-            onChange={(e) => patch({ reportConfidentiality: e.target.value as ProcessProperties['reportConfidentiality'] })}
-          >
-            <option value="none">Not confidential</option>
-            <option value="admin-only">Only Admin</option>
-            <option value="submitter-and-admin">Submitter & Admin</option>
-          </select>
-        </SettingCard>
         <SettingCard title="Set Process Priority">
           <select
             className="w-full border rounded px-3 py-2 text-sm"
@@ -675,27 +658,6 @@ export default function ProcessPropertiesPanel({
             <option value="5">Priority 5 (lowest)</option>
           </select>
         </SettingCard>
-      </div>
-    );
-  }
-
-  if (selectedSection === 'publicForm') {
-    return (
-      <div className="space-y-4 max-w-3xl">
-        <h3 className="font-semibold text-lg">Public Form via URL or QR Code</h3>
-        <ToggleRow
-          title="Enable public form"
-          description="Collect submissions from external users via a shareable URL or QR code after publish."
-          checked={properties.publicFormEnabled}
-          onCheckedChange={(checked) => patch({ publicFormEnabled: checked })}
-        />
-        {properties.publicFormEnabled && (
-          <SettingCard title="After publish">
-            <p className="text-sm text-muted-foreground">
-              URL and QR code will be generated when the process is published. They appear in the process list under URL/QR.
-            </p>
-          </SettingCard>
-        )}
       </div>
     );
   }
@@ -747,6 +709,5 @@ export const PROPERTY_SECTIONS = [
   { id: 'submissionReport', label: 'Submission Report', key: 'submissionReportSection' },
   { id: 'review', label: 'Review', key: 'reviewSection' },
   { id: 'advanceSettings', label: 'Advance Settings', key: 'advanceSettingsSection' },
-  { id: 'publicForm', label: 'Public Form', key: 'publicFormSection' },
   { id: 'language', label: 'Language Settings', key: 'languageSettingsSection' },
 ];
