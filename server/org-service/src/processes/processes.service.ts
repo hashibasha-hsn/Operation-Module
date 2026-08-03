@@ -7,6 +7,7 @@ import { ProcessQuestion } from './process-question.entity';
 import { SaveProcessDraftDto } from './save-process-draft.dto';
 import { AuditLogClient } from '../shared/audit-log.client';
 import { notifyProcessAssigned } from '../shared/notification-client';
+import { emailProcessAssigned } from '../shared/email.client';
 
 @Injectable()
 export class ProcessesService {
@@ -136,6 +137,7 @@ export class ProcessesService {
     }).then(async (saved) => {
       const savedAssigneeIds = saved.assigneeIds ?? [];
       const added = savedAssigneeIds.filter((uid) => !previousAssigneeIds.includes(uid));
+      const emailAlerts = Boolean(saved.reminderConfig?.emailAlerts);
       for (const uid of added) {
         notifyProcessAssigned({
           userId: uid,
@@ -143,6 +145,14 @@ export class ProcessesService {
           processTitle: saved.title,
           assignedBy: dto.createdBy || saved.createdBy,
         });
+        if (emailAlerts) {
+          await emailProcessAssigned({
+            userId: uid,
+            processId: saved.id,
+            processTitle: saved.title,
+            assignedBy: dto.createdBy || saved.createdBy,
+          });
+        }
       }
       await this.logProcessAction(
         saved,
@@ -188,6 +198,9 @@ export class ProcessesService {
       const assigneeIds = [...new Set([...(process.assigneeIds ?? []), userId])];
       await this.processesRepository.update(processId, { assigneeIds });
       notifyProcessAssigned({ userId, processId, processTitle: process.title, assignedBy: process.updatedBy || process.createdBy });
+      if (Boolean(process.reminderConfig?.emailAlerts)) {
+        await emailProcessAssigned({ userId, processId, processTitle: process.title, assignedBy: process.updatedBy || process.createdBy });
+      }
     }
   }
 
@@ -242,8 +255,12 @@ export class ProcessesService {
     const updated = await this.findOne(id);
     const newAssigneeIds = updated.assigneeIds ?? [];
     const added = newAssigneeIds.filter((uid) => !oldAssigneeIds.includes(uid));
+    const emailAlerts = Boolean(updated.reminderConfig?.emailAlerts);
     for (const uid of added) {
       notifyProcessAssigned({ userId: uid, processId: id, processTitle: updated.title, assignedBy: updated.updatedBy || updated.createdBy });
+      if (emailAlerts) {
+        await emailProcessAssigned({ userId: uid, processId: id, processTitle: updated.title, assignedBy: updated.updatedBy || updated.createdBy });
+      }
     }
     await this.logProcessAction(updated, 'Update', updated.updatedBy || updated.createdBy);
     return updated;

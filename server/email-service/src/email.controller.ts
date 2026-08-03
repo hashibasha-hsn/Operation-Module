@@ -4,7 +4,9 @@ import {
   Get,
   Post,
   Put,
+  Req,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { EmailConfigService, EmailConfigInput } from './email-config/email-config.service';
 import { EmailService } from './email.service';
@@ -124,6 +126,40 @@ export class EmailController {
       to,
       token: body.token,
       verifyPath: body.verifyPath,
+    });
+  }
+
+  @Post('process-assigned')
+  async sendProcessAssigned(
+    @Req() req: any,
+    @Body() body: {
+      to?: string;
+      name?: string;
+      processTitle?: string;
+      processId?: string;
+      assignedBy?: string;
+    },
+  ) {
+    const token = process.env.INTERNAL_SERVICE_TOKEN;
+    if (token && req?.headers?.['x-service-token'] !== token) {
+      throw new ForbiddenException('Invalid service token');
+    }
+    const to = body?.to?.trim();
+    if (!to) {
+      return { success: false, error: 'Recipient email is required' };
+    }
+    if (!body?.processTitle?.trim()) {
+      return { success: false, error: 'Process title is required' };
+    }
+    if (!body?.processId?.trim()) {
+      return { success: false, error: 'Process id is required' };
+    }
+    return this.emailService.sendProcessAssigned({
+      to,
+      name: body.name,
+      processTitle: body.processTitle,
+      processId: body.processId,
+      assignedBy: body.assignedBy,
     });
   }
 

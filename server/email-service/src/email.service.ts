@@ -9,6 +9,7 @@ import {
   passwordResetEmail,
   otpEmail,
   verifyEmail,
+  processAssignedEmail,
 } from './templates/templates';
 
 @Injectable()
@@ -127,6 +128,31 @@ export class EmailService {
     const verifyPath = input.verifyPath || '/verify-email';
     const verifyUrl = `${base}${verifyPath}?token=${encodeURIComponent(input.token)}`;
     const template = verifyEmail(config.theme, { verifyUrl });
+    return this.send({
+      to: input.to,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
+  }
+
+  async sendProcessAssigned(input: {
+    to: string;
+    name?: string;
+    processTitle: string;
+    processId: string;
+    assignedBy?: string;
+  }): Promise<SendMailResult> {
+    const config = await this.emailConfigService.getResolvedConfig();
+    const base = config.frontendUrl.replace(/\/$/, '');
+    const taskUrl = `${base}/tasks/process/${encodeURIComponent(input.processId)}`;
+    const displayName = input.name?.trim() || input.to;
+    const template = processAssignedEmail(config.theme, {
+      name: displayName,
+      processTitle: input.processTitle,
+      taskUrl,
+      assignedBy: input.assignedBy,
+    });
     return this.send({
       to: input.to,
       subject: template.subject,

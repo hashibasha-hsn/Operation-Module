@@ -217,3 +217,42 @@ export function verifyEmail(
   ].join('\n');
   return { subject, html, text };
 }
+
+export function processAssignedEmail(
+  theme: ResolvedEmailTheme,
+  input: {
+    name: string;
+    processTitle: string;
+    taskUrl: string;
+    assignedBy?: string;
+  },
+): EmailTemplate {
+  const subject = `New process assigned: ${input.processTitle}`;
+  const html = shell(
+    theme,
+    'New process assigned',
+    `
+    <p>Hello ${input.name},</p>
+    <p>A new process has been assigned to you:</p>
+    <div style="margin: 20px 0; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc;">
+      <p style="margin: 0 0 6px; font-weight: 600; color: #0f172a; font-size: 16px;">${input.processTitle}</p>
+      ${input.assignedBy ? `<p style="margin: 0; font-size: 13px; color: #64748b;">Assigned by ${input.assignedBy}</p>` : ''}
+    </div>
+    <p style="text-align: center; margin: 28px 0;">
+      ${buttonHtml(theme, input.taskUrl, 'Open process')}
+    </p>
+    <p style="font-size: 13px; color: #64748b;">Complete the form within the configured period.</p>
+    `,
+  );
+  const text = [
+    `Hello ${input.name},`,
+    '',
+    `A new process has been assigned to you: ${input.processTitle}`,
+    input.assignedBy ? `Assigned by: ${input.assignedBy}` : '',
+    '',
+    `Open process: ${input.taskUrl}`,
+    '',
+    'Complete the form within the configured period.',
+  ].filter(Boolean).join('\n');
+  return { subject, html, text };
+}
