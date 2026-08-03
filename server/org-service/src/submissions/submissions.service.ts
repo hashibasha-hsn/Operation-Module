@@ -6,6 +6,7 @@ import { ProcessesService } from '../processes/processes.service';
 import { AuditsService } from '../audits/audits.service';
 import { AuditLogClient } from '../shared/audit-log.client';
 import { notifyReviewRequested, notifyReviewResolved } from '../shared/notification-client';
+import { emailSubmissionReport } from '../shared/report.client';
 import {
   getReviewConfigFromAudit,
   getReviewConfigFromProcess,
@@ -120,16 +121,72 @@ export class SubmissionsService {
         answers: answersPayload,
       });
       await this.notifyReviewRequested(submission, reviewer, 1);
+      await this.maybeSendSubmissionReport(submission, 'on-submission');
       return result;
     }
 
-    return this.update(submission.id, {
+    const result = await this.update(submission.id, {
       status: 'completed',
       submittedAt,
       currentReviewLevel: 0,
       currentReviewerId: null,
       answers: answersPayload,
     });
+    await this.maybeSendSubmissionReport(submission, 'on-submission');
+    return result;
+  }
+
+  private async maybeSendSubmissionReport(
+    submission: Submission,
+    timing: 'on-submission' | 'after-review',
+  ) {
+    try {
+      const workflow = await this.loadWorkflowForSubmission(submission);
+      const props = (workflow?.properties ?? {}) as Record<string, unknown>;
+      const reportTiming = props.reportTiming;
+      if (!reportTiming || reportTiming !== timing) return;
+
+      const reportRecipients = (props.reportRecipients ?? {}) as Record<string, unknown>;
+      const config = {
+        submitter: Boolean(reportRecipients.submitter),
+        storeManager: Boolean(reportRecipients.storeManager),
+        custom: Boolean(reportRecipients.custom),
+        hierarchical: Boolean(reportRecipients.hierarchical),
+        storeHierarchical: Boolean(reportRecipients.storeHierarchical),
+        customUserIds: Array.isArray(reportRecipients.customUserIds)
+          ? (reportRecipients.customUserIds as string[])
+          : [],
+        customDesignationIds: Array.isArray(reportRecipients.customDesignationIds)
+          ? (reportRecipients.customDesignationIds as string[])
+          : [],
+      };
+
+      const anyEnabled =
+        config.submitter ||
+        config.storeManager ||
+        (config.custom &&
+          (config.customUserIds.length > 0 ||
+            config.customDesignationIds.length > 0 ||
+            config.hierarchical ||
+            config.storeHierarchical));
+      if (!anyEnabled) return;
+
+      await emailSubmissionReport({
+        submission,
+        process: workflow,
+        config,
+        workflowType: submission.workflowType,
+      });
+    } catch (error) {
+      console.error('Failed to send submission report:', error);
+    }
+  }
+
+  private async loadWorkflowForSubmission(submission: Submission): Promise<any> {
+    if (submission.workflowType === 'audit') {
+      return this.auditsService.findOneWithSections(submission.workflowId);
+    }
+    return this.processesService.findOne(submission.workflowId);
   }
 
   private async notifyReviewRequested(
@@ -221,6 +278,7 @@ export class SubmissionsService {
         reviewHistory,
       });
       await this.notifySubmitter(submission, 'completed', level);
+      await this.maybeSendSubmissionReport(submission, 'after-review');
       return result;
     }
 

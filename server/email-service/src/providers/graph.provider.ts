@@ -81,6 +81,16 @@ export class GraphEmailProvider implements EmailProvider {
     if (input.replyTo) {
       message.replyTo = [{ emailAddress: { address: input.replyTo } }];
     }
+    if (input.attachments?.length) {
+      message.attachments = input.attachments.map((attachment) => ({
+        '@odata.type': '#microsoft.graph.fileAttachment',
+        name: attachment.filename,
+        contentType: attachment.contentType || 'application/octet-stream',
+        contentBytes: Buffer.isBuffer(attachment.content)
+          ? attachment.content.toString('base64')
+          : Buffer.from(attachment.content, 'base64').toString('base64'),
+      }));
+    }
 
     const res = await fetch(sendUrl, {
       method: 'POST',

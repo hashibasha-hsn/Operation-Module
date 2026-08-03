@@ -31,6 +31,12 @@ export class SmtpEmailProvider implements EmailProvider {
         subject: input.subject,
         html: input.html,
         text: input.text,
+        attachments: input.attachments?.map((attachment) => ({
+          filename: attachment.filename,
+          content: attachment.content,
+          contentType: attachment.contentType,
+          encoding: attachment.encoding,
+        })),
       });
       return { success: true, messageId: info.messageId };
     } catch (error: any) {

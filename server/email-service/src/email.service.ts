@@ -10,7 +10,9 @@ import {
   otpEmail,
   verifyEmail,
   processAssignedEmail,
+  submissionReportEmail,
 } from './templates/templates';
+import { generateReportPdf, SubmissionReport } from './report/report-pdf';
 
 @Injectable()
 export class EmailService {
@@ -158,6 +160,40 @@ export class EmailService {
       subject: template.subject,
       html: template.html,
       text: template.text,
+    });
+  }
+
+  async sendSubmissionReport(input: {
+    to: string[];
+    names?: string[];
+    processTitle: string;
+    submissionId: string;
+    report: SubmissionReport;
+  }): Promise<SendMailResult> {
+    const config = await this.emailConfigService.getResolvedConfig();
+    const base = config.frontendUrl.replace(/\/$/, '');
+    const reportUrl = `${base}/approvals?submission=${encodeURIComponent(input.submissionId)}`;
+    const pdfBuffer = await generateReportPdf(input.report);
+    const recipients = input.to;
+    const displayName = input.names?.[0]?.trim() || recipients[0] || 'there';
+    const template = submissionReportEmail(config.theme, {
+      name: displayName,
+      processTitle: input.processTitle,
+      submissionId: input.submissionId,
+      reportUrl,
+    });
+    return this.send({
+      to: recipients,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+      attachments: [
+        {
+          filename: `${input.processTitle.replace(/[^a-zA-Z0-9-_ ]/g, '').trim().replace(/\s+/g, '-') || 'submission-report'}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf',
+        },
+      ],
     });
   }
 }

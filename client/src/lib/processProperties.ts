@@ -54,6 +54,8 @@ export type ProcessProperties = {
     custom: boolean;
     hierarchical: boolean;
     storeHierarchical: boolean;
+    customUserIds: string[];
+    customDesignationIds: string[];
   };
   reportLinkInActionPointSummary: boolean;
 
@@ -144,6 +146,8 @@ export const defaultProcessProperties = (): ProcessProperties => ({
     custom: false,
     hierarchical: false,
     storeHierarchical: false,
+    customUserIds: [],
+    customDesignationIds: [],
   },
   reportLinkInActionPointSummary: false,
 

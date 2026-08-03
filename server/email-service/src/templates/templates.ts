@@ -256,3 +256,37 @@ export function processAssignedEmail(
   ].filter(Boolean).join('\n');
   return { subject, html, text };
 }
+
+export function submissionReportEmail(
+  theme: ResolvedEmailTheme,
+  input: {
+    name: string;
+    processTitle: string;
+    submissionId: string;
+    reportUrl: string;
+  },
+): EmailTemplate {
+  const subject = `Submission report: ${input.processTitle}`;
+  const html = shell(
+    theme,
+    'Submission report',
+    `
+    <p>Hello ${input.name},</p>
+    <p>A submission report for <strong>${input.processTitle}</strong> is ready. A PDF copy is attached to this email.</p>
+    <p style="font-size: 13px; color: #64748b;">Submission reference: ${input.submissionId}</p>
+    <p style="text-align: center; margin: 28px 0;">
+      ${buttonHtml(theme, input.reportUrl, 'View report')}
+    </p>
+    `,
+  );
+  const text = [
+    `Hello ${input.name},`,
+    '',
+    `A submission report for "${input.processTitle}" is ready.`,
+    `A PDF copy is attached to this email.`,
+    `Submission reference: ${input.submissionId}`,
+    '',
+    `View report: ${input.reportUrl}`,
+  ].join('\n');
+  return { subject, html, text };
+}

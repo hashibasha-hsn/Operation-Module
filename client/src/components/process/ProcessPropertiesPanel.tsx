@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEffect, useState } from "react";
 import {
   COMMON_LANGUAGES,
   MONTH_NAMES,
@@ -11,7 +12,10 @@ import {
   type ProcessProperties,
 } from "@/lib/processProperties";
 import ReviewLevelsEditor from "@/components/process/ReviewLevelsEditor";
-import { AlertCircle, Check } from "lucide-react";
+import { fetchUsers } from "@/lib/processApi";
+import { fetchDesignations } from "@/lib/assessmentApi";
+import { getOrganizationId } from "@/lib/authStorage";
+import { AlertCircle, Check, Search } from "lucide-react";
 
 type ProcessPropertiesPanelProps = {
   properties: ProcessProperties;
@@ -83,12 +87,89 @@ function ToggleRow({
   );
 }
 
+function RecipientMultiPicker({
+  title,
+  options,
+  selected,
+  onToggle,
+}: {
+  title: string;
+  options: Array<{ id: string; label: string }>;
+  selected: string[];
+  onToggle: (id: string) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const filtered = options.filter((o) =>
+    o.label.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+  return (
+    <div className="rounded-md border bg-muted/20 p-2 space-y-2">
+      <Label className="text-xs">{title}</Label>
+      <div className="relative">
+        <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          className="pl-7 h-8 text-sm"
+          placeholder="Search…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+      <div className="max-h-40 overflow-y-auto space-y-1">
+        {filtered.length === 0 ? (
+          <p className="text-xs text-muted-foreground px-1 py-2">No options</p>
+        ) : (
+          filtered.map((option) => (
+            <label key={option.id} className="flex items-center gap-2 text-sm px-1 py-0.5">
+              <Checkbox
+                checked={selected.includes(option.id)}
+                onCheckedChange={() => onToggle(option.id)}
+              />
+              <span className="truncate">{option.label}</span>
+            </label>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ProcessPropertiesPanel({
   properties,
   onChange,
   selectedSection,
 }: ProcessPropertiesPanelProps) {
   const patch = (partial: Partial<ProcessProperties>) => onChange({ ...properties, ...partial });
+
+  const patchRecipients = (partial: Partial<ProcessProperties['reportRecipients']>) =>
+    patch({ reportRecipients: { ...properties.reportRecipients, ...partial } });
+
+  const [users, setUsers] = useState<any[]>([]);
+  const [designations, setDesignations] = useState<any[]>([]);
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
+
+  useEffect(() => {
+    if (selectedSection !== 'submissionReport' || catalogLoaded) return;
+    let cancelled = false;
+    (async () => {
+      const [userRows, designationRows] = await Promise.all([
+        fetchUsers(1000).catch(() => []),
+        fetchDesignations(getOrganizationId()).catch(() => []),
+      ]);
+      if (cancelled) return;
+      setUsers(userRows);
+      setDesignations(designationRows);
+      setCatalogLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSection, catalogLoaded]);
+
+  const toggleInArray = (field: 'customUserIds' | 'customDesignationIds', id: string) => {
+    const current = properties.reportRecipients[field] ?? [];
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+    patchRecipients({ [field]: next });
+  };
 
   const patchMonthly = (key: 'monthlyStart' | 'monthlyEnd', partial: Partial<ProcessProperties['monthlyStart']>) =>
     onChange({ ...properties, [key]: { ...properties[key], ...partial } });
@@ -401,8 +482,6 @@ export default function ProcessPropertiesPanel({
 
   if (selectedSection === 'submissionReport') {
     const recipients = properties.reportRecipients;
-    const patchRecipients = (partial: Partial<typeof recipients>) =>
-      patch({ reportRecipients: { ...recipients, ...partial } });
 
     return (
       <div className="space-y-4 max-w-3xl">
@@ -434,7 +513,7 @@ export default function ProcessPropertiesPanel({
               </label>
             ))}
             {recipients.custom && (
-              <div className="ml-6 space-y-2 border-l pl-4">
+              <div className="ml-6 space-y-3 border-l pl-4">
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox
                     checked={recipients.hierarchical}
@@ -449,6 +528,23 @@ export default function ProcessPropertiesPanel({
                   />
                   Store Hierarchical
                 </label>
+
+                <RecipientMultiPicker
+                  title="Users"
+                  options={users.map((u) => ({
+                    id: u.id ?? u.userId ?? u.email,
+                    label: u.name || u.email || u.userId,
+                  }))}
+                  selected={recipients.customUserIds ?? []}
+                  onToggle={(id) => toggleInArray('customUserIds', id)}
+                />
+
+                <RecipientMultiPicker
+                  title="Designations"
+                  options={designations.map((d) => ({ id: d.id, label: d.name || d.title }))}
+                  selected={recipients.customDesignationIds ?? []}
+                  onToggle={(id) => toggleInArray('customDesignationIds', id)}
+                />
               </div>
             )}
           </div>

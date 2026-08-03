@@ -163,6 +163,51 @@ export class EmailController {
     });
   }
 
+  @Post('submission-report')
+  async sendSubmissionReport(
+    @Req() req: any,
+    @Body() body: {
+      to?: string[];
+      names?: string[];
+      processTitle?: string;
+      submissionId?: string;
+      report?: {
+        processTitle: string;
+        workflowType?: string;
+        submittedBy?: string;
+        storeName?: string;
+        submittedAt?: string;
+        status?: string;
+        sections: Array<{
+          title: string;
+          questions: Array<{ questionText: string; questionType?: string; answer?: unknown }>;
+        }>;
+      };
+    },
+  ) {
+    const token = process.env.INTERNAL_SERVICE_TOKEN;
+    if (token && req?.headers?.['x-service-token'] !== token) {
+      throw new ForbiddenException('Invalid service token');
+    }
+    const to = (body?.to ?? []).map((addr) => addr?.trim()).filter(Boolean);
+    if (to.length === 0) {
+      return { success: false, error: 'At least one recipient email is required' };
+    }
+    if (!body?.processTitle?.trim()) {
+      return { success: false, error: 'Process title is required' };
+    }
+    if (!body?.submissionId?.trim()) {
+      return { success: false, error: 'Submission id is required' };
+    }
+    return this.emailService.sendSubmissionReport({
+      to,
+      names: body.names,
+      processTitle: body.processTitle,
+      submissionId: body.submissionId,
+      report: body.report ?? { processTitle: body.processTitle, sections: [] },
+    });
+  }
+
   @Post('password-reset')
   sendPasswordReset(@Body() body: { to?: string; token?: string; resetPath?: string }) {
     const to = body?.to?.trim();
