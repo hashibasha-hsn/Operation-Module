@@ -9,7 +9,7 @@ import {
   saveProcessDraftLocal,
   type ProcessDraftState,
 } from "@/lib/processDraft";
-import { fetchProcessTags, saveProcessDraft } from "@/lib/processApi";
+import { fetchProcessTags } from "@/lib/processApi";
 
 export default function TitleSetup() {
   const { t } = useLanguage();
@@ -17,7 +17,6 @@ export default function TitleSetup() {
   const [activeTab, setActiveTab] = useState("title");
   const [draft, setDraft] = useState<ProcessDraftState>(emptyProcessDraft);
   const [processTags, setProcessTags] = useState<any[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setDraft(loadProcessDraft());
@@ -36,24 +35,6 @@ export default function TitleSetup() {
     }));
   };
 
-  const handleSave = async () => {
-    if (!draft.title.trim()) {
-      toast.error(t('processTitleRequired'));
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const saved = await saveProcessDraft(draft);
-      setDraft(saved);
-      toast.success(t('processSavedAsDraft'));
-    } catch (error: any) {
-      toast.error(error.message || t('failedToSaveProcess'));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handlePublish = () => {
     toast.message(t('publishAfterConfigDesc'));
   };
@@ -68,7 +49,6 @@ export default function TitleSetup() {
       <ProcessHeader
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        onSave={handleSave}
         onPublish={handlePublish}
       />
 
@@ -123,19 +103,14 @@ export default function TitleSetup() {
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-          <p className="text-sm text-muted-foreground">
-            {draft.id ? t('draftSaved') : t('notSavedYet')}
-          </p>
-          <div className="flex gap-2">
-            <button type="button" onClick={handleSave} disabled={isSaving} className="workflow-btn-outline">
-              {isSaving ? t('saving') : t('saveDraft')}
-            </button>
+          <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+            <p className="text-sm text-muted-foreground">
+              {draft.id ? t('draftSaved') : t('notSavedYet')}
+            </p>
             <button type="button" onClick={goToBuild} className="workflow-btn-primary">
               {t('continueToBuild')}
             </button>
           </div>
-        </div>
       </div>
     </div>
   );

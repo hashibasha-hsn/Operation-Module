@@ -201,6 +201,29 @@ export default function CreateForm() {
     sections,
   ]);
 
+  // Auto-save process draft on every change so nothing is lost when switching tabs/navigating.
+  useEffect(() => {
+    if (isSectionDraftMode || isAssessmentMode || !processDraft) return;
+    const synced = activeSectionId
+      ? syncActiveSectionQuestions(sections as ProcessSectionDraft[], activeSectionId, formElements)
+      : (sections as ProcessSectionDraft[]);
+    saveProcessDraftLocal({
+      ...(processDraft as ProcessDraftState),
+      title: fieldValues.field1 || (processDraft as ProcessDraftState).title,
+      description: fieldValues.field2,
+      sections: synced,
+    });
+  }, [
+    isSectionDraftMode,
+    isAssessmentMode,
+    processDraft,
+    fieldValues.field1,
+    fieldValues.field2,
+    sections,
+    formElements,
+    activeSectionId,
+  ]);
+
   const switchSection = (sectionId: string) => {
     if (sectionId === activeSectionId) return;
     const synced = syncActiveSectionQuestions(sections as ProcessSectionDraft[], activeSectionId, formElements);
@@ -1139,7 +1162,20 @@ export default function CreateForm() {
                         questionTags={questionTags}
                       />
                       <div className="flex items-center gap-2 mb-2">
-                        <Input placeholder="Type Question Here" className="flex-grow" />
+                        <Input
+                          placeholder="Type Question Here"
+                          className="flex-grow"
+                          value={element.label}
+                          onChange={(e) => {
+                            const newElements = formElements.map(el => {
+                              if (el.id === element.id) {
+                                return { ...el, label: e.target.value };
+                              }
+                              return el;
+                            });
+                            setFormElements(newElements);
+                          }}
+                        />
                         <Input value="0" className="w-16 text-center" />
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500"><Pen className="h-4 w-4" /></Button>
                       </div>

@@ -89,43 +89,47 @@ export default function ProcessHeader({ activeTab, onTabChange, onSave, onPublis
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        <button
-          type="button"
-          onClick={onSave}
-          style={{
-            padding: "5px 14px",
-            border: "1px solid rgba(255,255,255,0.35)",
-            background: "transparent",
-            color: "#fff",
-            borderRadius: "6px",
-            fontSize: "13px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "5px",
-          }}
-        >
-          <Save size={15} /> {t('save')}
-        </button>
-        <button
-          type="button"
-          onClick={onPublish}
-          style={{
-            padding: "5px 16px",
-            background: "#fff",
-            color: ACTIVE_COLOR,
-            border: "none",
-            borderRadius: "6px",
-            fontSize: "13px",
-            cursor: "pointer",
-            fontWeight: 500,
-            display: "flex",
-            alignItems: "center",
-            gap: "5px",
-          }}
-        >
-          <Upload size={15} /> {t('publish')}
-        </button>
+        {activeTab === "assign" && (
+          <>
+            <button
+              type="button"
+              onClick={onSave}
+              style={{
+                padding: "5px 14px",
+                border: "1px solid rgba(255,255,255,0.35)",
+                background: "transparent",
+                color: "#fff",
+                borderRadius: "6px",
+                fontSize: "13px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              <Save size={15} /> {t('save')}
+            </button>
+            <button
+              type="button"
+              onClick={onPublish}
+              style={{
+                padding: "5px 16px",
+                background: "#fff",
+                color: ACTIVE_COLOR,
+                border: "none",
+                borderRadius: "6px",
+                fontSize: "13px",
+                cursor: "pointer",
+                fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              <Upload size={15} /> {t('publish')}
+            </button>
+          </>
+        )}
       </div>
     </nav>
   );

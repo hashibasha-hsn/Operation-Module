@@ -199,21 +199,17 @@ export default function ProcessCreation() {
   };
 
   const handleSave = async () => {
-    if (!processDraft?.id) {
-      toast.error(t('saveDraftOnTitleBuildFirst'));
-      return;
-    }
-    if (!hasAssignment()) {
-      toast.error(t('selectAtLeastOneAssignee'));
+    if (!processDraft?.title.trim()) {
+      toast.error(t('processTitleRequired') || "Add a process title on the Title tab first");
       return;
     }
 
+    const latest = loadProcessDraft();
     const { assigneeIds, storeIds } = getEffectiveAssignment();
     setIsSaving(true);
     try {
-      await assignProcess(processDraft.id, { assigneeIds, storeIds });
       const saved = await saveProcessDraft({
-        ...processDraft,
+        ...latest,
         assigneeIds,
         storeIds,
         assignBy,
@@ -221,33 +217,46 @@ export default function ProcessCreation() {
       });
       setProcessDraft(saved);
       persistAssignmentLocally();
-      toast.success(t('assignmentSaved'));
+      toast.success(t('assignmentSaved') || "Process saved — everything from the creator form is saved");
     } catch (error: any) {
-      toast.error(error.message || t('failedToSaveAssignment'));
+      toast.error(error.message || t('failedToSaveAssignment') || "Failed to save process");
     } finally {
       setIsSaving(false);
     }
   };
 
   const handlePublish = async () => {
-    if (!processDraft?.id) {
-      toast.error(t('saveDraftFirst'));
+    if (!processDraft?.title.trim()) {
+      toast.error(t('processTitleRequired') || "Add a process title on the Title tab first");
       return;
     }
     if (!hasAssignment()) {
-      toast.error(t('assignBeforePublishing'));
+      toast.error(t('assignBeforePublishing') || "Assign at least one store or user before publishing");
       return;
     }
 
+    const latest = loadProcessDraft();
     const { assigneeIds, storeIds } = getEffectiveAssignment();
+    const saved = await saveProcessDraft({
+      ...latest,
+      assigneeIds,
+      storeIds,
+      assignBy,
+      assigneeProfileIds: selectedProfileIds,
+    });
+    if (!saved.id) {
+      toast.error("Process could not be saved — try again");
+      return;
+    }
+    setProcessDraft(saved);
     setIsSaving(true);
     try {
-      await assignProcess(processDraft.id, { assigneeIds, storeIds });
-      await publishProcess(processDraft.id);
-      toast.success(t('processPublished'));
+      await assignProcess(saved.id, { assigneeIds, storeIds });
+      await publishProcess(saved.id);
+      toast.success(t('processPublished') || "Process published to users");
       navigate("/process");
     } catch (error: any) {
-      toast.error(error.message || t('failedToPublishProcess'));
+      toast.error(error.message || t('failedToPublishProcess') || "Failed to publish process");
     } finally {
       setIsSaving(false);
     }
