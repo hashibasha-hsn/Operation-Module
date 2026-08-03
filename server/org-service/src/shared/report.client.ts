@@ -193,7 +193,7 @@ export async function emailSubmissionReport(input: {
       return;
     }
 
-    const report = buildReportPayload({
+    const report = await buildReportPayload({
       process,
       submission,
       processTitle,
@@ -225,12 +225,38 @@ export async function emailSubmissionReport(input: {
   }
 }
 
-function buildReportPayload(input: {
+async function resolveSubmitterName(userId: string): Promise<string | null> {
+  if (!userId) return null;
+  const users = await fetchAllUsers();
+  const match = users.find(
+    (u) =>
+      u.id === userId ||
+      u.userId === userId ||
+      String(u.email ?? '').toLowerCase() === String(userId).toLowerCase(),
+  );
+  const name = match?.name?.trim();
+  return name || match?.email?.trim() || null;
+}
+
+async function resolveStoreName(storeId: string): Promise<string | null> {
+  if (!storeId) return null;
+  const users = await fetchAllUsers();
+  const match = users.find(
+    (u) =>
+      u.entityId === storeId ||
+      u.storeId === storeId ||
+      String(u.storeName ?? '').toLowerCase() === String(storeId).toLowerCase(),
+  );
+  const name = match?.storeName?.trim();
+  return name || match?.entityName?.trim() || null;
+}
+
+async function buildReportPayload(input: {
   process: any;
   submission: any;
   processTitle: string;
   workflowType?: string;
-}): SubmissionReportPayload {
+}): Promise<SubmissionReportPayload> {
   const sections: ReportSection[] = [];
   const answers = input.submission?.answers?.responses ?? {};
   const sectionsRaw = input.process?.sections ?? [];
@@ -247,11 +273,17 @@ function buildReportPayload(input: {
     sections.push({ title: section?.title ?? 'Section', questions });
   }
 
+  const submittedBy =
+    (await resolveSubmitterName(input.submission?.submittedBy)) ||
+    input.submission?.submittedBy;
+  const storeName =
+    (await resolveStoreName(input.submission?.storeId)) || input.submission?.storeId;
+
   return {
     processTitle: input.processTitle,
     workflowType: input.workflowType ?? input.submission?.workflowType,
-    submittedBy: input.submission?.submittedBy,
-    storeName: input.submission?.storeId,
+    submittedBy,
+    storeName,
     submittedAt: input.submission?.submittedAt
       ? new Date(input.submission.submittedAt).toISOString()
       : undefined,
