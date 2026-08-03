@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, In } from 'typeorm';
 import { Submission } from './submission.entity';
@@ -76,13 +76,141 @@ export class SubmissionsService {
     });
   }
 
-  private async getReviewConfigForSubmission(submission: Submission): Promise<ReviewConfig> {
+  private getReviewConfigForSubmission(submission: Submission): Promise<ReviewConfig> {
     if (submission.workflowType === 'audit') {
-      const audit = await this.auditsService.findOne(submission.workflowId);
-      return getReviewConfigFromAudit(audit);
+      return this.auditsService.findOne(submission.workflowId).then(getReviewConfigFromAudit);
     }
-    const process = await this.processesService.findOne(submission.workflowId);
-    return getReviewConfigFromProcess(process);
+    return this.processesService.findOne(submission.workflowId).then(getReviewConfigFromProcess);
+  }
+
+  private getSubmissionWindow(props: Record<string, unknown>): { startTime?: string; endTime?: string } {
+    const fc = (props.frequencyConfig ?? {}) as Record<string, unknown>;
+    const start = String(props.startTime ?? fc.startTime ?? '').trim();
+    const end = String(props.endTime ?? fc.endTime ?? '').trim();
+    return { startTime: start || undefined, endTime: end || undefined };
+  }
+
+  private getSubmissionDate(submission: Submission): Date {
+    const raw = (submission.answers as any)?.submissionDate;
+    const dateStr = String(raw || submission.submittedAt?.toISOString().slice(0, 10) || new Date().toISOString().slice(0, 10)).slice(0, 10);
+    return new Date(`${dateStr}T00:00:00`);
+  }
+
+  private periodKey(periodicityType: string, date: Date): string {
+    const y = date.getFullYear();
+    switch (periodicityType) {
+      case 'weekly': {
+        const start = new Date(date);
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() - start.getDay());
+        return `W-${start.toISOString().slice(0, 10)}`;
+      }
+      case 'monthly':
+        return `M-${y}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      case 'yearly':
+        return `Y-${y}`;
+      default:
+        return `D-${date.toISOString().slice(0, 10)}`;
+    }
+  }
+
+  private async assertCanSubmit(
+    props: Record<string, unknown> | undefined | null,
+    submission: Submission,
+  ): Promise<void> {
+    if (!props) return;
+
+    const now = new Date();
+    const subDate = this.getSubmissionDate(submission);
+    const window = this.getSubmissionWindow(props);
+
+    const occurrence = props.occurrence === 'one-time' ? 'one-time' : 'recurring';
+    const responsesAfterEndTime = props.responsesAfterEndTime === 'reject' ? 'reject' : 'accept';
+    const numberOfResponses = props.numberOfResponses === 'multiple-per-user' ? 'multiple-per-user' : 'one-per-user';
+    const submissionBy = props.submissionBy === 'everyone' ? 'everyone' : 'anyone';
+    const dateRangeSelection = props.dateRangeSelection === 'restricted' ? 'restricted' : 'allowed';
+    const periodicityType = String(props.periodicityType || 'daily');
+
+    // Responses-after-end-time / restricted date range
+    if (window.endTime) {
+      const [hh, mm] = window.endTime.split(':').map(Number);
+      if (!Number.isNaN(hh)) {
+        const endBound = new Date(subDate);
+        endBound.setHours(hh || 0, mm || 0, 0, 0);
+        const pastEnd = now.getTime() > endBound.getTime();
+        if (pastEnd && (responsesAfterEndTime === 'reject' || dateRangeSelection === 'restricted')) {
+          throw new BadRequestException(
+            `Responses are closed after the end time (${window.endTime}) for this submission date.`,
+          );
+        }
+      }
+    }
+
+    if (dateRangeSelection === 'restricted' && window.startTime) {
+      const [hh, mm] = window.startTime.split(':').map(Number);
+      if (!Number.isNaN(hh)) {
+        const startBound = new Date(subDate);
+        startBound.setHours(hh || 0, mm || 0, 0, 0);
+        if (now.getTime() < startBound.getTime()) {
+          throw new BadRequestException(
+            `Responses are not open yet. This form opens at ${window.startTime} for the selected date.`,
+          );
+        }
+      }
+    }
+
+    const active = await this.submissionsRepository.find({
+      where: {
+        workflowType: submission.workflowType as any,
+        workflowId: submission.workflowId,
+        storeId: submission.storeId,
+        status: In(['completed', 'pending_review', 'correction']),
+      },
+    });
+    const others = active.filter((s) => s.id !== submission.id);
+
+    // Occurrence: one-time (single submission) or recurring (one per period per user)
+    const isRecurring = occurrence === 'recurring';
+    let samePeriodByUser: Submission[] = [];
+    if (isRecurring) {
+      const currentPeriod = this.periodKey(periodicityType, subDate);
+      samePeriodByUser = others.filter(
+        (s) =>
+          s.submittedBy === submission.submittedBy &&
+          this.periodKey(periodicityType, this.getSubmissionDate(s)) === currentPeriod,
+      );
+      if (samePeriodByUser.length > 0) {
+        const label =
+          periodicityType === 'yearly' ? 'year' : periodicityType === 'monthly' ? 'month' : periodicityType === 'weekly' ? 'week' : 'day';
+        throw new BadRequestException(
+          `You have already submitted this form. Only one submission is allowed per ${label}.`,
+        );
+      }
+    } else if (others.length > 0) {
+      throw new BadRequestException(
+        'This form allows only a single submission and one already exists.',
+      );
+    }
+
+    // Number of responses: one-per-user gate (scoped to the active period for recurring forms)
+    if (numberOfResponses === 'one-per-user') {
+      const scoped = isRecurring
+        ? samePeriodByUser
+        : others.filter((s) => s.submittedBy === submission.submittedBy);
+      if (scoped.length > 0) {
+        throw new BadRequestException('You already have a response for this form. Only one response per user is allowed.');
+      }
+    }
+
+    // Submission by: everyone must submit (a user cannot duplicate their own submission in the same scope)
+    if (submissionBy === 'everyone') {
+      const byUser = isRecurring
+        ? samePeriodByUser
+        : others.filter((s) => s.submittedBy === submission.submittedBy);
+      if (byUser.length > 0) {
+        throw new BadRequestException('Every user is expected to submit this form once; duplicate submissions are not allowed.');
+      }
+    }
   }
 
   private assertReviewer(submission: Submission, config: ReviewConfig, reviewerId: string) {
@@ -440,6 +568,7 @@ export class SubmissionsService {
     }
 
     const process = await this.processesService.findOne(submission.workflowId);
+    await this.assertCanSubmit(process?.properties, submission);
     const reviewConfig = getReviewConfigFromProcess(process);
     const result = await this.finalizeSubmit(submission, answers, reviewConfig);
     await this.logFormAction(submission, userId, 'Update', process?.title);
@@ -546,6 +675,7 @@ export class SubmissionsService {
     }
 
     const audit = await this.auditsService.findOne(submission.workflowId);
+    await this.assertCanSubmit(audit?.properties, submission);
     const reviewConfig = getReviewConfigFromAudit(audit);
     const result = await this.finalizeSubmit(submission, answers, reviewConfig);
     await this.logFormAction(submission, userId, 'Update', audit?.title);
