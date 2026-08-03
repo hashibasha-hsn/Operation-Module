@@ -121,7 +121,7 @@ export class SubmissionsService {
         answers: answersPayload,
       });
       await this.notifyReviewRequested(submission, reviewer, 1);
-      await this.maybeSendSubmissionReport(submission, 'on-submission');
+      await this.maybeSendSubmissionReport(result, 'on-submission');
       return result;
     }
 
@@ -132,7 +132,7 @@ export class SubmissionsService {
       currentReviewerId: null,
       answers: answersPayload,
     });
-    await this.maybeSendSubmissionReport(submission, 'on-submission');
+    await this.maybeSendSubmissionReport(result, 'on-submission');
     return result;
   }
 
