@@ -286,6 +286,11 @@ export default function Tasks() {
                           <p className="text-xs text-muted-foreground">
                             {draft.status === "correction" ? t("correction") : t("draftSaved")}
                           </p>
+                          {draft.status === "correction" && draft.answers?.correction?.reviewerName && (
+                            <p className="text-xs text-amber-700">
+                              Reviewed by: {draft.answers.correction.reviewerName}
+                            </p>
+                          )}
                         </div>
                         <Button
                           size="sm"
@@ -391,6 +396,11 @@ export default function Tasks() {
                           <p className="text-xs text-muted-foreground">
                             {draft.status === "correction" ? t("correction") : t("draftSaved")}
                           </p>
+                          {draft.status === "correction" && draft.answers?.correction?.reviewerName && (
+                            <p className="text-xs text-amber-700">
+                              Reviewed by: {draft.answers.correction.reviewerName}
+                            </p>
+                          )}
                         </div>
                         <Button
                           size="sm"

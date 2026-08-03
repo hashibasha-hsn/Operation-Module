@@ -278,6 +278,7 @@ export async function notifyReviewResolved(input: {
   itemTitle: string;
   itemType: 'process' | 'audit';
   submissionId: string;
+  workflowId?: string;
   outcome: 'approved' | 'rejected' | 'correction' | 'completed';
   level?: number;
   reviewerId?: string;
@@ -303,6 +304,12 @@ export async function notifyReviewResolved(input: {
     content += `\nReviewed by: ${reviewer}.`;
   }
 
+  let link = `/tasks`;
+  if (input.outcome === 'correction' && input.workflowId) {
+    const base = input.itemType === 'audit' ? '/tasks/audit/' : '/tasks/process/';
+    link = `${base}${input.workflowId}`;
+  }
+
   await sendUserNotification({
     userId: input.userId,
     type: REVIEW_RESOLVED_TYPE,
@@ -311,12 +318,13 @@ export async function notifyReviewResolved(input: {
     data: {
       itemType: input.itemType,
       itemId: input.submissionId,
+      workflowId: input.workflowId ?? null,
       outcome: input.outcome,
       level: input.level ?? null,
       reviewerId: input.reviewerId ?? null,
       reviewerName: reviewer,
       notes: input.notes ?? null,
-      link: `/tasks`,
+      link,
     },
     deliveryMethod: 'IN_APP',
     priority: input.outcome === 'rejected' ? 'HIGH' : 'NORMAL',

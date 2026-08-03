@@ -406,6 +406,7 @@ export class SubmissionsService {
         itemTitle: title ?? submission.workflowId,
         itemType: submission.workflowType === 'audit' ? 'audit' : 'process',
         submissionId: submission.id,
+        workflowId: submission.workflowId,
         outcome,
         level,
         reviewerId,
