@@ -399,14 +399,15 @@ export class SubmissionsService {
   }
 
   async findUserProcessSubmissions(userId: string, organizationId: string) {
-    return this.submissionsRepository.find({
-      where: {
-        organizationId,
-        submittedBy: userId,
-        workflowType: 'process',
-      },
-      order: { updatedAt: 'DESC' },
-    });
+    return this.submissionsRepository
+      .createQueryBuilder('submission')
+      .leftJoinAndSelect('submission.process', 'process')
+      .where('submission.organizationId = :organizationId', { organizationId })
+      .andWhere('submission.submittedBy = :userId', { userId })
+      .andWhere('submission.workflowType = :workflowType', { workflowType: 'process' })
+      .andWhere('process.id IS NOT NULL')
+      .orderBy('submission.updatedAt', 'DESC')
+      .getMany();
   }
 
   async findAuditDraft(
@@ -509,14 +510,15 @@ export class SubmissionsService {
   }
 
   async findUserAuditSubmissions(userId: string, organizationId: string) {
-    return this.submissionsRepository.find({
-      where: {
-        organizationId,
-        submittedBy: userId,
-        workflowType: 'audit',
-      },
-      order: { updatedAt: 'DESC' },
-    });
+    return this.submissionsRepository
+      .createQueryBuilder('submission')
+      .leftJoinAndSelect('submission.audit', 'audit')
+      .where('submission.organizationId = :organizationId', { organizationId })
+      .andWhere('submission.submittedBy = :userId', { userId })
+      .andWhere('submission.workflowType = :workflowType', { workflowType: 'audit' })
+      .andWhere('audit.id IS NOT NULL')
+      .orderBy('submission.updatedAt', 'DESC')
+      .getMany();
   }
 
   // Report methods — only fully approved submissions appear in analytics reports
