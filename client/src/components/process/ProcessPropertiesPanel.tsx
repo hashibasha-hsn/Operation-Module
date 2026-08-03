@@ -651,11 +651,6 @@ export default function ProcessPropertiesPanel({
           checked={properties.createActionPointsFromReports}
           onCheckedChange={(checked) => patch({ createActionPointsFromReports: checked })}
         />
-        <ToggleRow
-          title="Allow Offline Submission (Beta)"
-          checked={properties.allowOfflineSubmission}
-          onCheckedChange={(checked) => patch({ allowOfflineSubmission: checked })}
-        />
         <SettingCard title="Make Reports Confidential">
           <select
             className="w-full border rounded px-3 py-2 text-sm"
@@ -679,15 +674,6 @@ export default function ProcessPropertiesPanel({
             <option value="4">Priority 4</option>
             <option value="5">Priority 5 (lowest)</option>
           </select>
-        </SettingCard>
-        <SettingCard title="Add Page Count (Paper Equivalent)">
-          <Input
-            type="number"
-            min={0}
-            value={properties.pageCount || ''}
-            onChange={(e) => patch({ pageCount: Number(e.target.value) || 0 })}
-            placeholder="Estimated manual pages replaced"
-          />
         </SettingCard>
       </div>
     );

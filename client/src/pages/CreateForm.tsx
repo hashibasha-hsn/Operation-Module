@@ -804,16 +804,6 @@ export default function CreateForm() {
                         <option value="critical">Critical</option>
                       </select>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Add Page Count (Paper Equivalent)</label>
-                      <Input
-                        type="number"
-                        placeholder="Enter page count"
-                        className="w-full"
-                        value={processProperties.pageCount || ''}
-                        onChange={(e) => setProcessProperties({ ...processProperties, pageCount: parseInt(e.target.value) || 0 })}
-                      />
-                    </div>
                   </div>
                 </div>
               )}
