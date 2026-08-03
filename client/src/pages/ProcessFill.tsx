@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   discardSubmissionDraft,
@@ -461,12 +462,16 @@ export default function ProcessFill() {
                 </Button>
               </div>
 
-              {submission?.status === 'correction' && submission.answers?.correctionNotes && (
-                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
-                  <p className="font-semibold text-amber-800">Correction requested</p>
-                  <p className="mt-1 text-amber-900">{submission.answers.correctionNotes}</p>
-                  {submission.answers.correction?.reviewerName && (
-                    <p className="mt-1 text-xs text-amber-700">
+              {submission?.status === 'correction' && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 space-y-2">
+                  <Badge className="bg-amber-500 hover:bg-amber-500 text-white">
+                    Correction
+                  </Badge>
+                  <p className="text-sm text-amber-900 whitespace-pre-wrap">
+                    {submission.answers?.correction?.notes || submission.answers?.correctionNotes || ''}
+                  </p>
+                  {submission.answers?.correction?.reviewerName && (
+                    <p className="text-xs text-amber-700">
                       Reviewed by: {submission.answers.correction.reviewerName}
                       {submission.answers.correction.reviewedAt
                         ? ` · ${new Date(submission.answers.correction.reviewedAt).toLocaleString()}`
