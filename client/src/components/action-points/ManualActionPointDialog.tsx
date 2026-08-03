@@ -30,7 +30,7 @@ type ManualActionPointDialogProps = {
   workflowId: string;
   storeId: string;
   stores: Array<{ id: string; storeName?: string; entityName?: string; name?: string }>;
-  users?: Array<{ id: string; name?: string; email?: string }>;
+  users?: Array<{ id?: string; userId?: string; name?: string; email?: string }>;
   defaultStoreId?: string;
   onCreated?: () => void;
 };
@@ -58,6 +58,8 @@ export default function ManualActionPointDialog({
   const [closureAssignedTo, setClosureAssignedTo] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const assigneeValue = (user: { id?: string; userId?: string }) => user.userId ?? user.id ?? "";
 
   const handleSubmit = async () => {
     if (!title.trim() || !assignedTo) return;
@@ -138,8 +140,8 @@ export default function ManualActionPointDialog({
               </SelectTrigger>
               <SelectContent>
                 {users.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {u.name || u.email || u.id}
+                  <SelectItem key={u.id ?? u.userId ?? u.email} value={assigneeValue(u)}>
+                    {u.name || u.email || u.userId || u.id}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -153,8 +155,8 @@ export default function ManualActionPointDialog({
               </SelectTrigger>
               <SelectContent>
                 {users.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {u.name || u.email || u.id}
+                  <SelectItem key={`closure-${u.id ?? u.userId ?? u.email}`} value={assigneeValue(u)}>
+                    {u.name || u.email || u.userId || u.id}
                   </SelectItem>
                 ))}
               </SelectContent>

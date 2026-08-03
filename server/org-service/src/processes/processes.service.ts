@@ -63,6 +63,8 @@ export class ProcessesService {
       throw new Error('Process title is required');
     }
 
+    let previousAssigneeIds: string[] = [];
+
     return this.dataSource.transaction(async (manager) => {
       const processRepo = manager.getRepository(Process);
       const sectionRepo = manager.getRepository(ProcessSection);
@@ -90,6 +92,7 @@ export class ProcessesService {
         if (!existing) {
           throw new NotFoundException(`Process ${dto.id} not found`);
         }
+        previousAssigneeIds = existing.assigneeIds ?? [];
         if (!existing.createdBy && dto.createdBy) {
           processPayload.createdBy = dto.createdBy;
         }
@@ -131,6 +134,16 @@ export class ProcessesService {
         relations: ['sections', 'sections.questions'],
       });
     }).then(async (saved) => {
+      const savedAssigneeIds = saved.assigneeIds ?? [];
+      const added = savedAssigneeIds.filter((uid) => !previousAssigneeIds.includes(uid));
+      for (const uid of added) {
+        notifyProcessAssigned({
+          userId: uid,
+          processId: saved.id,
+          processTitle: saved.title,
+          assignedBy: dto.createdBy || saved.createdBy,
+        });
+      }
       await this.logProcessAction(
         saved,
         dto.id ? 'Update' : 'Create',
