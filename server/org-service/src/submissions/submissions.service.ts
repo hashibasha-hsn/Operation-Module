@@ -4,6 +4,7 @@ import { Repository, LessThan, In } from 'typeorm';
 import { Submission } from './submission.entity';
 import { ProcessesService } from '../processes/processes.service';
 import { AuditsService } from '../audits/audits.service';
+import { EntitiesService } from '../entities/entities.service';
 import { AuditLogClient } from '../shared/audit-log.client';
 import { notifyReviewRequested, notifyReviewResolved } from '../shared/notification-client';
 import { emailSubmissionReport } from '../shared/report.client';
@@ -14,6 +15,17 @@ import {
   ReviewConfig,
 } from './review-config.util';
 
+function haversineMeters(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const R = 6371000;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
 @Injectable()
 export class SubmissionsService {
   constructor(
@@ -21,6 +33,7 @@ export class SubmissionsService {
     private submissionsRepository: Repository<Submission>,
     private readonly processesService: ProcessesService,
     private readonly auditsService: AuditsService,
+    private readonly entitiesService: EntitiesService,
     private readonly auditLogsService: AuditLogClient,
   ) {}
 
@@ -209,6 +222,41 @@ export class SubmissionsService {
         : others.filter((s) => s.submittedBy === submission.submittedBy);
       if (byUser.length > 0) {
         throw new BadRequestException('Every user is expected to submit this form once; duplicate submissions are not allowed.');
+      }
+    }
+
+    // Geo-fence: restrict submissions to the store radius (location-optional, so a missing GPS tag is allowed)
+    if (Boolean(props.geoFence)) {
+      const geoTag = (submission.answers as any)?.geoTag as Record<string, unknown> | undefined;
+      const hasTag = Boolean(
+        geoTag &&
+          geoTag.available === true &&
+          geoTag.latitude != null &&
+          geoTag.longitude != null,
+      );
+      if (hasTag && submission.storeId) {
+        const store = await this.entitiesService.findOne(submission.storeId);
+        const storeLat = Number((store as any)?.latitude);
+        const storeLng = Number((store as any)?.longitude);
+        if (
+          store &&
+          !Number.isNaN(storeLat) &&
+          !Number.isNaN(storeLng) &&
+          (storeLat !== 0 || storeLng !== 0)
+        ) {
+          const dist = haversineMeters(
+            Number(geoTag.latitude),
+            Number(geoTag.longitude),
+            storeLat,
+            storeLng,
+          );
+          const radius = Math.max(1, Number(props.geoFenceRadiusMeters ?? 500));
+          if (dist > radius) {
+            throw new BadRequestException(
+              `You are ${Math.round(dist)} m from the store — outside the ${radius} m geo-fence.`,
+            );
+          }
+        }
       }
     }
   }

@@ -63,6 +63,7 @@ export type ProcessProperties = {
   reviewConfig: ReviewConfig;
 
   geoFence: boolean;
+  geoFenceRadiusMeters: number;
   captureGeoTag: boolean;
   hideScoresCompliance: boolean;
   trackVisualMerchandising: boolean;
@@ -155,6 +156,7 @@ export const defaultProcessProperties = (): ProcessProperties => ({
   reviewConfig: defaultReviewConfig(),
 
   geoFence: false,
+  geoFenceRadiusMeters: 500,
   captureGeoTag: false,
   hideScoresCompliance: false,
   trackVisualMerchandising: false,

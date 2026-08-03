@@ -602,6 +602,20 @@ export default function ProcessPropertiesPanel({
               <Checkbox checked={properties.geoFence} onCheckedChange={(c) => patch({ geoFence: Boolean(c) })} />
               Geo-Fence (restrict submissions to store radius)
             </label>
+            {properties.geoFence && (
+              <label className="flex items-center gap-2 text-sm">
+                <span className="shrink-0">Radius (meters)</span>
+                <Input
+                  type="number"
+                  min={1}
+                  value={properties.geoFenceRadiusMeters}
+                  onChange={(e) =>
+                    patch({ geoFenceRadiusMeters: Math.max(1, Number(e.target.value) || 1) })
+                  }
+                  className="w-24 h-8"
+                />
+              </label>
+            )}
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={properties.captureGeoTag} onCheckedChange={(c) => patch({ captureGeoTag: Boolean(c) })} />
               Capture Geo-Tag (log location without blocking)

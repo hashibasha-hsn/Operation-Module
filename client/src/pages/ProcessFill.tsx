@@ -18,6 +18,7 @@ import {
   submitProcessSubmission,
 } from "@/lib/processSubmission";
 import { ArrowLeft, Save, Send, Trash2, AlertCircle, Clock, Paperclip } from "lucide-react";
+import { getCurrentLocation, distanceMeters } from "@/lib/geo";
 import ManualActionPointDialog from "@/components/action-points/ManualActionPointDialog";
 import {
   createActionPointsFromSubmission,
@@ -139,11 +140,38 @@ export default function ProcessFill() {
     if (!submission?.id) return;
     setIsSaving(true);
     try {
+      const props = process?.properties ?? {};
+      const wantsGeo = Boolean(props.captureGeoTag) || Boolean(props.geoFence);
+      let geoTag: Record<string, unknown> | undefined;
+      if (wantsGeo) {
+        const geo = await getCurrentLocation();
+        geoTag = geo as Record<string, unknown>;
+        if (props.geoFence && geo.available && geo.latitude != null && geo.longitude != null) {
+          const store = stores.find((s: any) => s.id === storeId);
+          const storeLat = Number(store?.latitude);
+          const storeLng = Number(store?.longitude);
+          const radius = Math.max(1, Number(props.geoFenceRadiusMeters ?? 500));
+          if (
+            store &&
+            !Number.isNaN(storeLat) &&
+            !Number.isNaN(storeLng) &&
+            (storeLat !== 0 || storeLng !== 0)
+          ) {
+            const dist = distanceMeters(geo.latitude, geo.longitude, storeLat, storeLng);
+            if (dist > radius) {
+              setIsSaving(false);
+              toast.error(`You are ${Math.round(dist)} m from the store — outside the ${radius} m geo-fence.`);
+              return;
+            }
+          }
+        }
+      }
       await submitProcessSubmission(
         submission.id,
         userId,
         responses,
         useCustomDate ? submissionDate : undefined,
+        geoTag,
       );
       await createActionPointsFromSubmission({
         submissionId: submission.id,

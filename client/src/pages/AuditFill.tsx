@@ -19,6 +19,7 @@ import {
   submitAuditSubmission,
 } from "@/lib/auditSubmission";
 import { ArrowLeft, Save, Send, Trash2 } from "lucide-react";
+import { getCurrentLocation, distanceMeters } from "@/lib/geo";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function AuditFill() {
@@ -127,11 +128,38 @@ export default function AuditFill() {
     if (!submission?.id) return;
     setIsSaving(true);
     try {
+      const props = audit?.properties ?? {};
+      const wantsGeo = Boolean(props.captureGeoTag) || Boolean(props.geoFence);
+      let geoTag: Record<string, unknown> | undefined;
+      if (wantsGeo) {
+        const geo = await getCurrentLocation();
+        geoTag = geo as Record<string, unknown>;
+        if (props.geoFence && geo.available && geo.latitude != null && geo.longitude != null) {
+          const store = stores.find((s: any) => s.id === storeId);
+          const storeLat = Number(store?.latitude);
+          const storeLng = Number(store?.longitude);
+          const radius = Math.max(1, Number(props.geoFenceRadiusMeters ?? 500));
+          if (
+            store &&
+            !Number.isNaN(storeLat) &&
+            !Number.isNaN(storeLng) &&
+            (storeLat !== 0 || storeLng !== 0)
+          ) {
+            const dist = distanceMeters(geo.latitude, geo.longitude, storeLat, storeLng);
+            if (dist > radius) {
+              setIsSaving(false);
+              toast.error(`You are ${Math.round(dist)} m from the store — outside the ${radius} m geo-fence.`);
+              return;
+            }
+          }
+        }
+      }
       await submitAuditSubmission(
         submission.id,
         userId,
         responses,
         useCustomDate ? submissionDate : undefined,
+        geoTag,
       );
       const reviewEnabled = audit?.properties?.processWithReview || audit?.requiresApproval;
       toast.success(

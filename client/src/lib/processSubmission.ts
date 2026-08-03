@@ -117,13 +117,14 @@ export async function submitProcessSubmission(
   userId: string,
   responses: Record<string, unknown>,
   submissionDate?: string,
+  geoTag?: Record<string, unknown>,
 ) {
   const response = await fetch(`${ORG_API}/submissions/process/${submissionId}/submit`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       userId,
-      answers: { responses, submissionDate },
+      answers: { responses, submissionDate, geoTag },
     }),
   });
   const data = await response.json().catch(() => null);
