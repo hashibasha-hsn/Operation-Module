@@ -399,23 +399,6 @@ export default function ProcessPropertiesPanel({
             ]}
           />
         </SettingCard>
-        <SettingCard title="Mobile Notification Alerts for the Process">
-          <RadioGroup
-            name="mobileNotifications"
-            value={properties.mobileNotifications ? 'yes' : 'no'}
-            onChange={(value) => patch({ mobileNotifications: value === 'yes' })}
-            options={[
-              { value: 'yes', label: 'Yes' },
-              { value: 'no', label: 'No' },
-            ]}
-          />
-        </SettingCard>
-        <ToggleRow
-          title="Enable Report URL Sharing"
-          description="Include a direct submission report link in email alerts."
-          checked={properties.reportUrlSharing}
-          onCheckedChange={(checked) => patch({ reportUrlSharing: checked })}
-        />
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">

@@ -705,39 +705,6 @@ export default function CreateForm() {
                         </label>
                       </div>
                     </div>
-                    <div className="p-4 border rounded-md bg-white">
-                      <h4 className="font-medium mb-3">Mobile Push Notification Alerts for the Process</h4>
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="mobileNotifications"
-                            checked={processProperties.mobileNotifications}
-                            onChange={() => setProcessProperties({ ...processProperties, mobileNotifications: true })}
-                          />
-                          <span className="text-sm">Yes</span>
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="mobileNotifications"
-                            checked={!processProperties.mobileNotifications}
-                            onChange={() => setProcessProperties({ ...processProperties, mobileNotifications: false })}
-                          />
-                          <span className="text-sm">No</span>
-                        </label>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-4 border rounded-md bg-white">
-                      <div>
-                        <h4 className="font-medium">Enable Report URL Sharing</h4>
-                        <p className="text-sm text-gray-500">Allow recipients to open reports via URL</p>
-                      </div>
-                      <Switch
-                        checked={processProperties.reportUrlSharing}
-                        onCheckedChange={(checked) => setProcessProperties({ ...processProperties, reportUrlSharing: checked })}
-                      />
-                    </div>
                     <div className="flex gap-2">
                       <Button variant="outline" className="flex-1">+ Add Reminder</Button>
                       <Button variant="outline" className="flex-1">+ Add Recurring Reminder</Button>
