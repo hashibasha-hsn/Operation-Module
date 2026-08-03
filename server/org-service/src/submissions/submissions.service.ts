@@ -5,6 +5,7 @@ import { Submission } from './submission.entity';
 import { ProcessesService } from '../processes/processes.service';
 import { AuditsService } from '../audits/audits.service';
 import { AuditLogClient } from '../shared/audit-log.client';
+import { notifyReviewRequested, notifyReviewResolved } from '../shared/notification-client';
 import {
   getReviewConfigFromAudit,
   getReviewConfigFromProcess,
@@ -111,13 +112,15 @@ export class SubmissionsService {
       if (!reviewer) {
         throw new Error('Review is enabled but Level 1 reviewer is not assigned');
       }
-      return this.update(submission.id, {
+      const result = await this.update(submission.id, {
         status: 'pending_review',
         submittedAt,
         currentReviewLevel: 1,
         currentReviewerId: reviewer,
         answers: answersPayload,
       });
+      await this.notifyReviewRequested(submission, reviewer, 1);
+      return result;
     }
 
     return this.update(submission.id, {
@@ -127,6 +130,52 @@ export class SubmissionsService {
       currentReviewerId: null,
       answers: answersPayload,
     });
+  }
+
+  private async notifyReviewRequested(
+    submission: Submission,
+    reviewerId: string,
+    level: number,
+  ) {
+    try {
+      const title =
+        submission.workflowType === 'audit'
+          ? (await this.auditsService.findOne(submission.workflowId))?.title
+          : (await this.processesService.findOne(submission.workflowId))?.title;
+      await notifyReviewRequested({
+        userId: reviewerId,
+        itemTitle: title ?? submission.workflowId,
+        itemType: submission.workflowType === 'audit' ? 'audit' : 'process',
+        submissionId: submission.id,
+        level,
+        submittedBy: submission.submittedBy,
+      });
+    } catch (error) {
+      console.error('Failed to notify reviewer:', error);
+    }
+  }
+
+  private async notifySubmitter(
+    submission: Submission,
+    outcome: 'approved' | 'rejected' | 'correction' | 'completed',
+    level?: number,
+  ) {
+    try {
+      const title =
+        submission.workflowType === 'audit'
+          ? (await this.auditsService.findOne(submission.workflowId))?.title
+          : (await this.processesService.findOne(submission.workflowId))?.title;
+      await notifyReviewResolved({
+        userId: submission.submittedBy,
+        itemTitle: title ?? submission.workflowId,
+        itemType: submission.workflowType === 'audit' ? 'audit' : 'process',
+        submissionId: submission.id,
+        outcome,
+        level,
+      });
+    } catch (error) {
+      console.error('Failed to notify submitter:', error);
+    }
   }
 
   async findOne(id: string): Promise<Submission> {
@@ -166,11 +215,13 @@ export class SubmissionsService {
     });
 
     if (level >= config.levels) {
-      return await this.update(id, {
+      const result = await this.update(id, {
         status: 'completed',
         currentReviewerId: null,
         reviewHistory,
       });
+      await this.notifySubmitter(submission, 'completed', level);
+      return result;
     }
 
     const nextLevel = level + 1;
@@ -179,12 +230,15 @@ export class SubmissionsService {
       throw new Error(`Level ${nextLevel} reviewer is not assigned`);
     }
 
-    return await this.update(id, {
+    const result = await this.update(id, {
       status: 'pending_review',
       currentReviewLevel: nextLevel,
       currentReviewerId: nextReviewer,
       reviewHistory,
     });
+    await this.notifyReviewRequested(submission, nextReviewer, nextLevel);
+    await this.notifySubmitter(submission, 'approved', level);
+    return result;
   }
 
   async sendForCorrection(id: string, reviewerId: string, correctionNotes: string): Promise<Submission> {
@@ -205,7 +259,7 @@ export class SubmissionsService {
       timestamp: new Date(),
     });
 
-    return await this.update(id, {
+    const result = await this.update(id, {
       status: 'correction',
       currentReviewLevel: 0,
       currentReviewerId: null,
@@ -215,6 +269,8 @@ export class SubmissionsService {
         correctionNotes,
       },
     });
+    await this.notifySubmitter(submission, 'correction', submission.currentReviewLevel);
+    return result;
   }
 
   async reject(id: string, reviewerId: string, rejectionReason: string): Promise<Submission> {
@@ -235,11 +291,13 @@ export class SubmissionsService {
       timestamp: new Date(),
     });
 
-    return await this.update(id, {
+    const result = await this.update(id, {
       status: 'rejected',
       currentReviewerId: null,
       reviewHistory,
     });
+    await this.notifySubmitter(submission, 'rejected', submission.currentReviewLevel);
+    return result;
   }
 
   async remove(id: string): Promise<void> {

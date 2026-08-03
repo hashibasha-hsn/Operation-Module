@@ -15,6 +15,8 @@ export const PROCESS_ASSIGNED_TYPE = 'process_assigned';
 export const AUDIT_ASSIGNED_TYPE = 'audit_assigned';
 export const ACTION_POINT_ASSIGNED_TYPE = 'action_point_assigned';
 export const TICKET_ASSIGNED_TYPE = 'ticket_assigned';
+export const REVIEW_REQUESTED_TYPE = 'review_requested';
+export const REVIEW_RESOLVED_TYPE = 'review_resolved';
 
 export type AppNotification = {
   id: string;
@@ -386,6 +388,10 @@ export function getNotificationTypeLabel(type: string, t?: (key: string) => stri
       return 'Action Point';
     case TICKET_ASSIGNED_TYPE:
       return 'Ticket';
+    case REVIEW_REQUESTED_TYPE:
+      return 'Review request';
+    case REVIEW_RESOLVED_TYPE:
+      return 'Review result';
     default:
       return type.replace(/_/g, ' ');
   }

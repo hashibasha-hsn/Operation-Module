@@ -5,6 +5,8 @@ export const PROCESS_ASSIGNED_TYPE = 'process_assigned';
 export const AUDIT_ASSIGNED_TYPE = 'audit_assigned';
 export const ACTION_POINT_ASSIGNED_TYPE = 'action_point_assigned';
 export const TICKET_ASSIGNED_TYPE = 'ticket_assigned';
+export const REVIEW_REQUESTED_TYPE = 'review_requested';
+export const REVIEW_RESOLVED_TYPE = 'review_resolved';
 
 const NOTIFICATION_SERVICE_URL =
   process.env.NOTIFICATION_SERVICE_URL || process.env.USER_SERVICE_URL || 'http://localhost:3002';
@@ -243,5 +245,69 @@ export async function notifyTicketAssigned(input: {
     },
     deliveryMethod: 'IN_APP',
     priority: 'NORMAL',
+  });
+}
+
+export async function notifyReviewRequested(input: {
+  userId: string;
+  itemTitle: string;
+  itemType: 'process' | 'audit';
+  submissionId: string;
+  level: number;
+  submittedBy?: string;
+}): Promise<void> {
+  await sendUserNotification({
+    userId: input.userId,
+    type: REVIEW_REQUESTED_TYPE,
+    title: 'Submission awaiting your review',
+    content: `"${input.itemTitle}" has been submitted and is waiting for your review (Level ${input.level}).`,
+    data: {
+      itemType: input.itemType,
+      itemId: input.submissionId,
+      level: input.level,
+      submittedBy: input.submittedBy ?? null,
+      link: `/approvals`,
+    },
+    deliveryMethod: 'IN_APP',
+    priority: 'NORMAL',
+  });
+}
+
+export async function notifyReviewResolved(input: {
+  userId: string;
+  itemTitle: string;
+  itemType: 'process' | 'audit';
+  submissionId: string;
+  outcome: 'approved' | 'rejected' | 'correction' | 'completed';
+  level?: number;
+  reviewerId?: string;
+}): Promise<void> {
+  const outcomeTitle =
+    input.outcome === 'approved'
+      ? 'Approved'
+      : input.outcome === 'completed'
+        ? 'Fully approved'
+        : input.outcome === 'rejected'
+          ? 'Rejected'
+          : 'Correction requested';
+
+  await sendUserNotification({
+    userId: input.userId,
+    type: REVIEW_RESOLVED_TYPE,
+    title: `${outcomeTitle}: ${input.itemTitle}`,
+    content:
+      input.outcome === 'correction'
+        ? `"${input.itemTitle}" was sent back to you for correction. Please revise and resubmit.`
+        : `Your submission for "${input.itemTitle}" has been ${outcomeTitle.toLowerCase()}.`,
+    data: {
+      itemType: input.itemType,
+      itemId: input.submissionId,
+      outcome: input.outcome,
+      level: input.level ?? null,
+      reviewerId: input.reviewerId ?? null,
+      link: `/approvals`,
+    },
+    deliveryMethod: 'IN_APP',
+    priority: input.outcome === 'rejected' ? 'HIGH' : 'NORMAL',
   });
 }
