@@ -50,6 +50,22 @@ export async function assignUserToProcesses(userId: string, processIds: string[]
   }
 }
 
+export async function autoAssignUserToProcesses(payload: {
+  userId: string;
+  designation?: string;
+  storeId?: string;
+}) {
+  const response = await fetch(`${ORG_API}/processes/auto-assign-user`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, organizationId: getOrganizationId() }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to auto-assign processes to user');
+  }
+  return response.json();
+}
+
 export async function fetchProcessDraft(processId: string, userId: string, storeId: string) {
   const params = new URLSearchParams({
     processId,

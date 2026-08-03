@@ -281,6 +281,8 @@ export async function notifyReviewResolved(input: {
   outcome: 'approved' | 'rejected' | 'correction' | 'completed';
   level?: number;
   reviewerId?: string;
+  reviewerName?: string | null;
+  notes?: string;
 }): Promise<void> {
   const outcomeTitle =
     input.outcome === 'approved'
@@ -291,21 +293,30 @@ export async function notifyReviewResolved(input: {
           ? 'Rejected'
           : 'Correction requested';
 
+  let content =
+    input.outcome === 'correction'
+      ? `"${input.itemTitle}" was sent back to you for correction. Please revise and resubmit.`
+      : `Your submission for "${input.itemTitle}" has been ${outcomeTitle.toLowerCase()}.`;
+
+  const reviewer = input.reviewerName || input.reviewerId || null;
+  if (reviewer && input.outcome === 'correction') {
+    content += `\nReviewed by: ${reviewer}.`;
+  }
+
   await sendUserNotification({
     userId: input.userId,
     type: REVIEW_RESOLVED_TYPE,
     title: `${outcomeTitle}: ${input.itemTitle}`,
-    content:
-      input.outcome === 'correction'
-        ? `"${input.itemTitle}" was sent back to you for correction. Please revise and resubmit.`
-        : `Your submission for "${input.itemTitle}" has been ${outcomeTitle.toLowerCase()}.`,
+    content,
     data: {
       itemType: input.itemType,
       itemId: input.submissionId,
       outcome: input.outcome,
       level: input.level ?? null,
       reviewerId: input.reviewerId ?? null,
-      link: `/approvals`,
+      reviewerName: reviewer,
+      notes: input.notes ?? null,
+      link: `/tasks`,
     },
     deliveryMethod: 'IN_APP',
     priority: input.outcome === 'rejected' ? 'HIGH' : 'NORMAL',

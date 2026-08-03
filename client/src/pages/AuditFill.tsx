@@ -304,6 +304,21 @@ export default function AuditFill() {
                 </Button>
               </div>
 
+              {submission?.status === 'correction' && submission.answers?.correctionNotes && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
+                  <p className="font-semibold text-amber-800">Correction requested</p>
+                  <p className="mt-1 text-amber-900">{submission.answers.correctionNotes}</p>
+                  {submission.answers.correction?.reviewerName && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      Reviewed by: {submission.answers.correction.reviewerName}
+                      {submission.answers.correction.reviewedAt
+                        ? ` · ${new Date(submission.answers.correction.reviewedAt).toLocaleString()}`
+                        : ''}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-4">
                 {questions.map((question: any, index: number) => (
                   <div key={question.id} className="rounded-lg border p-4 space-y-2">

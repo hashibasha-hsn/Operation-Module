@@ -68,6 +68,7 @@ export type ProcessProperties = {
   hideScoresCompliance: boolean;
   trackVisualMerchandising: boolean;
   dynamicAssignment: boolean;
+  assignedDesignations: string[];
   carryForwardActionPoints: boolean;
   createActionPointsFromReports: boolean;
   allowOfflineSubmission: boolean;
@@ -161,6 +162,7 @@ export const defaultProcessProperties = (): ProcessProperties => ({
   hideScoresCompliance: false,
   trackVisualMerchandising: false,
   dynamicAssignment: false,
+  assignedDesignations: [],
   carryForwardActionPoints: false,
   createActionPointsFromReports: false,
   allowOfflineSubmission: false,

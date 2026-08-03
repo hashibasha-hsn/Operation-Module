@@ -225,8 +225,19 @@ export async function emailSubmissionReport(input: {
   }
 }
 
-async function resolveSubmitterName(userId: string): Promise<string | null> {
+export async function resolveUserName(userId: string): Promise<string | null> {
   if (!userId) return null;
+  if (userId.includes('@')) return userId;
+  try {
+    const response = await axios.get(
+      `${USER_SERVICE_URL}/users/${encodeURIComponent(userId)}`,
+      { timeout: 3000 },
+    );
+    const name = response.data?.name?.trim();
+    if (name) return name;
+  } catch (error) {
+    console.warn('[report-client] failed to resolve user name', userId, String(error));
+  }
   const users = await fetchAllUsers();
   const match = users.find(
     (u) =>
@@ -236,6 +247,10 @@ async function resolveSubmitterName(userId: string): Promise<string | null> {
   );
   const name = match?.name?.trim();
   return name || match?.email?.trim() || null;
+}
+
+async function resolveSubmitterName(userId: string): Promise<string | null> {
+  return resolveUserName(userId);
 }
 
 async function resolveStoreName(storeId: string): Promise<string | null> {

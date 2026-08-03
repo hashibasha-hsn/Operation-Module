@@ -110,6 +110,19 @@ export async function createActionPointsFromSubmission(payload: {
   });
 }
 
+export async function carryForwardActionPoints(payload: {
+  submissionId: string;
+  workflowType: 'process' | 'audit';
+  workflowId: string;
+  storeId: string;
+}) {
+  const { organizationId, userId } = getActionPointContext();
+  return orgRequest<any[]>('/action-points/carry-forward', {
+    method: 'POST',
+    body: JSON.stringify({ ...payload, organizationId, createdBy: userId }),
+  });
+}
+
 export function exportActionPointsToCsv(
   actionPoints: any[],
   fields: 'shown' | 'all' = 'shown',

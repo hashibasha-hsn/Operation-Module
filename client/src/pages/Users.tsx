@@ -78,6 +78,7 @@ import {
 } from "@/lib/designationOrder";
 import {
   assignUserToProcesses,
+  autoAssignUserToProcesses,
   fetchPublishedProcesses,
 } from "@/lib/processSubmission";
 import UserHierarchyTree from "@/components/users/UserHierarchyTree";
@@ -793,6 +794,19 @@ export default function UsersPage() {
           } catch (error) {
             console.error('Failed to assign processes to user:', error);
           }
+        }
+
+        try {
+          const autoAssign = await autoAssignUserToProcesses({
+            userId: userData.userId,
+            designation: formData.designation,
+            storeId: formData.entityId,
+          });
+          if (autoAssign?.matched > 0) {
+            toast.success(`${autoAssign.matched} process(es) auto-assigned by dynamic assignment`);
+          }
+        } catch (error) {
+          console.error('Failed to auto-assign processes to user:', error);
         }
 
         setFormData({

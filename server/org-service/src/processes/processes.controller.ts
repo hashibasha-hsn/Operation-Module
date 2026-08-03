@@ -49,6 +49,13 @@ export class ProcessesController {
     return this.processesService.assignUserToProcesses(body.userId, body.processIds ?? []);
   }
 
+  @Post('auto-assign-user')
+  autoAssignUserToProcesses(
+    @Body() body: { userId: string; designation?: string; storeId?: string; organizationId?: string },
+  ) {
+    return this.processesService.autoAssignUserToProcesses(body);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.processesService.findOne(id);

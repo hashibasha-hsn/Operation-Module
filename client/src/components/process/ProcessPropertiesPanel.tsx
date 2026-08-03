@@ -171,6 +171,12 @@ export default function ProcessPropertiesPanel({
     patchRecipients({ [field]: next });
   };
 
+  const toggleAssignmentDesignation = (id: string) => {
+    const current = properties.assignedDesignations ?? [];
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+    patch({ assignedDesignations: next });
+  };
+
   const patchMonthly = (key: 'monthlyStart' | 'monthlyEnd', partial: Partial<ProcessProperties['monthlyStart']>) =>
     onChange({ ...properties, [key]: { ...properties[key], ...partial } });
 
@@ -633,6 +639,19 @@ export default function ProcessPropertiesPanel({
           checked={properties.dynamicAssignment}
           onCheckedChange={(checked) => patch({ dynamicAssignment: checked })}
         />
+        {properties.dynamicAssignment && (
+          <SettingCard
+            title="Designations to auto-assign"
+            description="New users with one of these designations are auto-assigned when their store matches this process. Leave empty to auto-assign regardless of designation."
+          >
+            <RecipientMultiPicker
+              title="Designations"
+              options={designations.map((d) => ({ id: d.id, label: d.name || d.title }))}
+              selected={properties.assignedDesignations ?? []}
+              onToggle={(id) => toggleAssignmentDesignation(id)}
+            />
+          </SettingCard>
+        )}
         <ToggleRow
           title="Carry Forward Action Points"
           description="Open, in-progress, and on-hold action points carry to the next submission."

@@ -7,7 +7,7 @@ import { AuditsService } from '../audits/audits.service';
 import { EntitiesService } from '../entities/entities.service';
 import { AuditLogClient } from '../shared/audit-log.client';
 import { notifyReviewRequested, notifyReviewResolved } from '../shared/notification-client';
-import { emailSubmissionReport } from '../shared/report.client';
+import { emailSubmissionReport, resolveUserName } from '../shared/report.client';
 import {
   getReviewConfigFromAudit,
   getReviewConfigFromProcess,
@@ -264,7 +264,7 @@ export class SubmissionsService {
   private assertReviewer(submission: Submission, config: ReviewConfig, reviewerId: string) {
     const expected = getReviewerForLevel(config, submission.currentReviewLevel);
     if (!expected || expected !== reviewerId) {
-      throw new Error('You are not the assigned reviewer for this level');
+      throw new BadRequestException('You are not the assigned reviewer for this level');
     }
   }
 
@@ -392,6 +392,9 @@ export class SubmissionsService {
     submission: Submission,
     outcome: 'approved' | 'rejected' | 'correction' | 'completed',
     level?: number,
+    reviewerId?: string,
+    reviewerName?: string | null,
+    notes?: string,
   ) {
     try {
       const title =
@@ -405,6 +408,9 @@ export class SubmissionsService {
         submissionId: submission.id,
         outcome,
         level,
+        reviewerId,
+        reviewerName,
+        notes,
       });
     } catch (error) {
       console.error('Failed to notify submitter:', error);
@@ -438,12 +444,14 @@ export class SubmissionsService {
     const config = await this.getReviewConfigForSubmission(submission);
     this.assertReviewer(submission, config, reviewerId);
 
+    const reviewerName = await resolveUserName(reviewerId);
     const reviewHistory = [...(submission.reviewHistory || [])];
     const level = submission.currentReviewLevel;
     reviewHistory.push({
       level,
       action: 'approved',
       reviewerId,
+      reviewerName,
       timestamp: new Date(),
     });
 
@@ -471,26 +479,30 @@ export class SubmissionsService {
       reviewHistory,
     });
     await this.notifyReviewRequested(submission, nextReviewer, nextLevel);
-    await this.notifySubmitter(submission, 'approved', level);
+    await this.notifySubmitter(submission, 'approved', level, reviewerId, reviewerName);
     return result;
   }
 
   async sendForCorrection(id: string, reviewerId: string, correctionNotes: string): Promise<Submission> {
     const submission = await this.findOne(id);
     if (!submission || submission.status !== 'pending_review') {
-      throw new Error('Submission is not pending review');
+      throw new BadRequestException('Submission is not pending review');
     }
 
     const config = await this.getReviewConfigForSubmission(submission);
     this.assertReviewer(submission, config, reviewerId);
+
+    const reviewerName = await resolveUserName(reviewerId);
+    const reviewedAt = new Date();
 
     const reviewHistory = [...(submission.reviewHistory || [])];
     reviewHistory.push({
       level: submission.currentReviewLevel,
       action: 'correction',
       reviewerId,
+      reviewerName,
       notes: correctionNotes,
-      timestamp: new Date(),
+      timestamp: reviewedAt,
     });
 
     const result = await this.update(id, {
@@ -501,26 +513,41 @@ export class SubmissionsService {
       answers: {
         ...(submission.answers ?? {}),
         correctionNotes,
+        correction: {
+          notes: correctionNotes,
+          reviewerId,
+          reviewerName,
+          reviewedAt: reviewedAt.toISOString(),
+        },
       },
     });
-    await this.notifySubmitter(submission, 'correction', submission.currentReviewLevel);
+    await this.notifySubmitter(
+      submission,
+      'correction',
+      submission.currentReviewLevel,
+      reviewerId,
+      reviewerName,
+      correctionNotes,
+    );
     return result;
   }
 
   async reject(id: string, reviewerId: string, rejectionReason: string): Promise<Submission> {
     const submission = await this.findOne(id);
     if (!submission || submission.status !== 'pending_review') {
-      throw new Error('Submission is not pending review');
+      throw new BadRequestException('Submission is not pending review');
     }
 
     const config = await this.getReviewConfigForSubmission(submission);
     this.assertReviewer(submission, config, reviewerId);
 
+    const reviewerName = await resolveUserName(reviewerId);
     const reviewHistory = [...(submission.reviewHistory || [])];
     reviewHistory.push({
       level: submission.currentReviewLevel,
       action: 'rejected',
       reviewerId,
+      reviewerName,
       reason: rejectionReason,
       timestamp: new Date(),
     });
@@ -530,7 +557,14 @@ export class SubmissionsService {
       currentReviewerId: null,
       reviewHistory,
     });
-    await this.notifySubmitter(submission, 'rejected', submission.currentReviewLevel);
+    await this.notifySubmitter(
+      submission,
+      'rejected',
+      submission.currentReviewLevel,
+      reviewerId,
+      reviewerName,
+      rejectionReason,
+    );
     return result;
   }
 
@@ -880,6 +914,12 @@ export class SubmissionsService {
       }
     }
 
+    const hiddenProcessIds = new Set(
+      (processes || [])
+        .filter((p: any) => p.properties?.hideScoresCompliance === true)
+        .map((p: any) => p.id),
+    );
+
     const selectedProcess = processes.length === 1 ? processes[0] : null;
     let expected = 0;
     processes.forEach((process: any) => {
@@ -904,7 +944,15 @@ export class SubmissionsService {
       ['new', 'pending_review', 'correction', 'draft'].includes(s.status),
     ).length;
     const rejected = submissions.filter((s) => s.status === 'rejected').length;
-    const complianceRate = totalSubmitted > 0 ? Math.round((completed / totalSubmitted) * 100) : 0;
+    const visibleSubmissions = submissions.filter((s) => !hiddenProcessIds.has(s.workflowId));
+    const complianceRate =
+      visibleSubmissions.length > 0
+        ? Math.round(
+            (visibleSubmissions.filter((s) => s.status === 'completed').length /
+              visibleSubmissions.length) *
+              100,
+          )
+        : 0;
     const completionRate =
       expected > 0 ? Math.min(100, Math.round((totalSubmitted / expected) * 100)) : complianceRate;
 
@@ -1033,12 +1081,20 @@ export class SubmissionsService {
     });
 
     const byProcess = Object.values(processMap)
-      .map((row: any) => ({
-        ...row,
-        complianceRate: row.submitted > 0 ? Math.round((row.completed / row.submitted) * 100) : 0,
-        completionRate:
-          row.expected > 0 ? Math.min(100, Math.round((row.submitted / row.expected) * 100)) : 0,
-      }))
+      .map((row: any) => {
+        const hidden = hiddenProcessIds.has(row.processId);
+        return {
+          ...row,
+          complianceHidden: hidden,
+          complianceRate: hidden
+            ? null
+            : row.submitted > 0
+              ? Math.round((row.completed / row.submitted) * 100)
+              : 0,
+          completionRate:
+            row.expected > 0 ? Math.min(100, Math.round((row.submitted / row.expected) * 100)) : 0,
+        };
+      })
       .sort((a: any, b: any) => a.processTitle.localeCompare(b.processTitle));
 
     return {
@@ -1089,6 +1145,9 @@ export class SubmissionsService {
 
   async getVisualReport(organizationId: string, startDate?: Date, endDate?: Date): Promise<any> {
     const query = this.submissionsRepository.createQueryBuilder('submission')
+      .leftJoinAndSelect('submission.process', 'process')
+      .leftJoinAndSelect('process.sections', 'sections')
+      .leftJoinAndSelect('sections.questions', 'questions')
       .where('submission.organizationId = :organizationId', { organizationId });
 
     this.applyReportableFilter(query);
@@ -1126,6 +1185,36 @@ export class SubmissionsService {
       return acc;
     }, {} as Record<string, number>);
 
+    // Track Visual Merchandising: collect photo answers for processes with the flag on,
+    // grouped by question tag.
+    const trackedProcessIds = new Set<string>();
+    const photoEntries: any[] = [];
+    submissions.forEach((submission: any) => {
+      const process = submission.process;
+      if (!process || process.properties?.trackVisualMerchandising !== true) return;
+      trackedProcessIds.add(process.id);
+      const responses = submission.answers?.responses ?? {};
+      (process.sections ?? []).forEach((section: any) => {
+        (section.questions ?? []).forEach((question: any) => {
+          const type = question.questionType || 'text';
+          if (type !== 'photo' && type !== 'file') return;
+          const value = responses?.[question.id];
+          if (!value || typeof value !== 'string' || !value.trim()) return;
+          photoEntries.push({
+            submissionId: submission.id,
+            storeId: submission.storeId,
+            processId: process.id,
+            processName: process.title,
+            questionId: question.id,
+            questionText: question.questionText,
+            questionTag: question.options?.questionTag || 'Uncategorized',
+            photoUrl: value.trim(),
+            submittedAt: submission.submittedAt || submission.createdAt,
+          });
+        });
+      });
+    });
+
     return {
       totalSubmissions,
       completedSubmissions,
@@ -1136,6 +1225,9 @@ export class SubmissionsService {
       auditSubmissions,
       byStore,
       byDate,
+      visualTrackingEnabled: trackedProcessIds.size > 0,
+      trackedProcessIds: Array.from(trackedProcessIds),
+      photoEntries,
     };
   }
 

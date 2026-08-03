@@ -520,7 +520,17 @@ export default function Approvals() {
                 <div>
                   <Label>Correction Notes</Label>
                   <div className="mt-2 text-sm rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-                    {selectedSubmission.answers.correctionNotes}
+                    <div>{selectedSubmission.answers.correctionNotes}</div>
+                    {selectedSubmission.answers.correction?.reviewerName && (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        Reviewed by: {selectedSubmission.answers.correction.reviewerName}
+                        {selectedSubmission.answers.correction.reviewedAt
+                          ? ` · ${new Date(
+                              selectedSubmission.answers.correction.reviewedAt,
+                            ).toLocaleString()}`
+                          : ''}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -536,7 +546,7 @@ export default function Approvals() {
                           {history.action}
                         </Badge>
                         <span className="text-muted-foreground">
-                          {userLabel(history.reviewerId)} · {new Date(history.timestamp).toLocaleString()}
+                          {history.reviewerName || userLabel(history.reviewerId)} · {new Date(history.timestamp).toLocaleString()}
                         </span>
                         {history.notes && <span className="text-muted-foreground">{history.notes}</span>}
                       </div>
@@ -564,10 +574,9 @@ export default function Approvals() {
               </>
             )}
             {selectedSubmission?.status === 'correction' && (
-              <Button onClick={() => handleApprove(selectedSubmission.id)}>
-                <Check className="w-4 h-4 mr-2" />
-                Approve Correction
-              </Button>
+              <p className="text-sm text-muted-foreground self-center">
+                Waiting for the submitter to revise and resubmit this submission.
+              </p>
             )}
             <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
               Close

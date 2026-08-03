@@ -95,6 +95,21 @@ export class ActionPointsController {
     return this.actionPointsService.createFromSubmission(body);
   }
 
+  @Post('carry-forward')
+  carryForward(
+    @Body()
+    body: {
+      submissionId: string;
+      workflowType: string;
+      workflowId: string;
+      storeId: string;
+      organizationId: string;
+      createdBy: string;
+    },
+  ) {
+    return this.actionPointsService.carryForward(body);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.actionPointsService.findOne(id);

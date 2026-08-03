@@ -204,6 +204,51 @@ export class ProcessesService {
     }
   }
 
+  async autoAssignUserToProcesses(body: {
+    userId: string;
+    designation?: string;
+    storeId?: string;
+    organizationId?: string;
+  }): Promise<{ matched: number; processIds: string[] }> {
+    const orgId = body.organizationId ?? 'default-org';
+    const published = await this.processesRepository.find({
+      where: { organizationId: orgId, status: 'published', isActive: true },
+    });
+
+    const matches: Process[] = [];
+    for (const process of published) {
+      const props = process.properties ?? {};
+      if (props.dynamicAssignment !== true) continue;
+
+      const storeIds = process.storeIds ?? [];
+      const storeMatch = storeIds.length === 0 || (body.storeId ? storeIds.includes(body.storeId) : false);
+      if (!storeMatch) continue;
+
+      const designations: string[] = (props.assignedDesignations ?? []).filter(Boolean);
+      const designationMatch =
+        designations.length === 0 ||
+        (body.designation
+          ? designations.some((d) => String(d).trim().toLowerCase() === body.designation!.trim().toLowerCase())
+          : false);
+      if (!designationMatch) continue;
+
+      matches.push(process);
+    }
+
+    for (const process of matches) {
+      const assigneeIds = [...new Set([...(process.assigneeIds ?? []), body.userId])];
+      await this.processesRepository.update(process.id, { assigneeIds });
+      notifyProcessAssigned({
+        userId: body.userId,
+        processId: process.id,
+        processTitle: process.title,
+        assignedBy: body.userId,
+      });
+    }
+
+    return { matched: matches.length, processIds: matches.map((p) => p.id) };
+  }
+
   async findOne(id: string): Promise<Process> {
     const process = await this.processesRepository.findOne({
       where: { id },

@@ -627,6 +627,7 @@ export class ExecutiveDashboardService {
         processId: item.id,
         processName: item.title,
         processTag: item.processTag || 'Uncategorized',
+        priority: item.properties?.processPriority ? Number(item.properties.processPriority) : 3,
         expected: item.assigneeIds?.length || 1,
         submitted: 0,
         compliant: 0,
@@ -643,6 +644,9 @@ export class ExecutiveDashboardService {
           processId: id,
           processName: submission.process?.title || submission.audit?.title || 'Unknown',
           processTag: submission.process?.processTag || submission.audit?.processTag || 'Uncategorized',
+          priority: submission.process?.properties?.processPriority
+            ? Number(submission.process.properties.processPriority)
+            : 3,
           expected: 1,
           submitted: 0,
           compliant: 0,
@@ -674,7 +678,9 @@ export class ExecutiveDashboardService {
       totalExpected,
       completionPercentage: totalExpected > 0 ? Math.round((totalSubmitted / totalExpected) * 100) : 0,
       compliancePercentage: totalSubmitted > 0 ? Math.round((totalCompliant / totalSubmitted) * 100) : 0,
-      processes: processDetails.sort((a: any, b: any) => a.processName.localeCompare(b.processName)),
+      processes: processDetails.sort(
+        (a: any, b: any) => (a.priority - b.priority) || a.processName.localeCompare(b.processName),
+      ),
       recentSubmissions: submissions
         .slice()
         .sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime())
@@ -816,17 +822,28 @@ export class ExecutiveDashboardService {
       };
     });
 
+    const priorityMap: Record<string, number> = {};
+    [...processes, ...audits].forEach((item: any) => {
+      const val = item.properties?.processPriority;
+      priorityMap[item.id] = val ? Number(val) : 3;
+    });
+
+    const processList = Array.from(processIds).map((id) => ({
+      processId: id,
+      processName:
+        processNames[id] &&
+        processNames[id] !== id &&
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(processNames[id])
+          ? processNames[id]
+          : 'Untitled',
+      priority: priorityMap[id] ?? 3,
+    }));
+
     return {
       stores: storeList,
-      processes: Array.from(processIds).map((id) => ({
-        processId: id,
-        processName:
-          processNames[id] &&
-          processNames[id] !== id &&
-          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(processNames[id])
-            ? processNames[id]
-            : 'Untitled',
-      })),
+      processes: processList.sort(
+        (a: any, b: any) => (a.priority - b.priority) || a.processName.localeCompare(b.processName),
+      ),
       matrix,
       periodicity,
     };
@@ -955,6 +972,23 @@ export class ExecutiveDashboardService {
       }
     });
 
+    const priorityMap: Record<string, number> = {};
+    processes.forEach((p: any) => {
+      const val = p.properties?.processPriority;
+      priorityMap[p.id] = val ? Number(val) : 3;
+    });
+
+    const processList = Array.from(allProcesses).map((id) => {
+      const name = processNames[id];
+      const processName =
+        name &&
+        name !== id &&
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name)
+          ? name
+          : 'Untitled';
+      return { processId: id, processName, priority: priorityMap[id] ?? 3 };
+    });
+
     return {
       stores: Array.from(storeSet).map((sid) => {
         const name = metaMap.get(sid)?.storeName;
@@ -972,16 +1006,9 @@ export class ExecutiveDashboardService {
           department: metaMap.get(sid)?.department || 'Unassigned',
         };
       }),
-      processes: Array.from(allProcesses).map((id) => {
-        const name = processNames[id];
-        const processName =
-          name &&
-          name !== id &&
-          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name)
-            ? name
-            : 'Untitled';
-        return { processId: id, processName };
-      }),
+      processes: processList.sort(
+        (a: any, b: any) => (a.priority - b.priority) || a.processName.localeCompare(b.processName),
+      ),
       snapshot,
     };
   }

@@ -640,9 +640,15 @@ export default function ProcessReport() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={rateBadgeClass(row.complianceRate)}>
-                          {row.complianceRate}%
-                        </Badge>
+                        {row.complianceHidden ? (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Hidden
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className={rateBadgeClass(row.complianceRate)}>
+                            {row.complianceRate}%
+                          </Badge>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

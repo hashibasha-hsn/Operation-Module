@@ -22,6 +22,7 @@ import { getCurrentLocation, distanceMeters } from "@/lib/geo";
 import ManualActionPointDialog from "@/components/action-points/ManualActionPointDialog";
 import {
   createActionPointsFromSubmission,
+  carryForwardActionPoints,
   getQuestionActionPointMode,
   getQuestionAutoTriggers,
 } from "@/lib/actionPointApi";
@@ -112,6 +113,20 @@ export default function ProcessFill() {
       setSubmission(draft);
       setResponses(draft.answers?.responses ?? {});
       setStarted(true);
+      if (process?.properties?.carryForwardActionPoints) {
+        carryForwardActionPoints({
+          submissionId: draft.id,
+          workflowType: "process",
+          workflowId: processId,
+          storeId,
+        })
+          .then((aps) => {
+            if (Array.isArray(aps) && aps.length > 0) {
+              toast.info(`${aps.length} action point(s) carried forward from previous submission`);
+            }
+          })
+          .catch(() => undefined);
+      }
     } catch (error: any) {
       toast.error(error.message || "Could not start process");
     }
@@ -173,18 +188,20 @@ export default function ProcessFill() {
         useCustomDate ? submissionDate : undefined,
         geoTag,
       );
-      await createActionPointsFromSubmission({
-        submissionId: submission.id,
-        workflowType: "process",
-        workflowId: processId,
-        storeId,
-        responses,
-        questions: questions.map((q: any) => ({
-          id: q.id,
-          questionText: q.questionText,
-          options: q.options ?? {},
-        })),
-      }).catch(() => undefined);
+      if (process?.properties?.createActionPointsFromReports) {
+        await createActionPointsFromSubmission({
+          submissionId: submission.id,
+          workflowType: "process",
+          workflowId: processId,
+          storeId,
+          responses,
+          questions: questions.map((q: any) => ({
+            id: q.id,
+            questionText: q.questionText,
+            options: q.options ?? {},
+          })),
+        }).catch(() => undefined);
+      }
       const reviewEnabled = process?.properties?.processWithReview || process?.requiresApproval;
       toast.success(
         reviewEnabled
@@ -443,6 +460,21 @@ export default function ProcessFill() {
                   Discard Draft
                 </Button>
               </div>
+
+              {submission?.status === 'correction' && submission.answers?.correctionNotes && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
+                  <p className="font-semibold text-amber-800">Correction requested</p>
+                  <p className="mt-1 text-amber-900">{submission.answers.correctionNotes}</p>
+                  {submission.answers.correction?.reviewerName && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      Reviewed by: {submission.answers.correction.reviewerName}
+                      {submission.answers.correction.reviewedAt
+                        ? ` · ${new Date(submission.answers.correction.reviewedAt).toLocaleString()}`
+                        : ''}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {autoApNotice && (
                 <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">

@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ActionPoint } from './action-point.entity';
+import { Submission } from '../submissions/submission.entity';
 import { notifyActionPointAssigned } from '../shared/notification-client';
 
 @Injectable()
@@ -9,6 +10,8 @@ export class ActionPointsService {
   constructor(
     @InjectRepository(ActionPoint, 'org')
     private actionPointsRepository: Repository<ActionPoint>,
+    @InjectRepository(Submission, 'org')
+    private readonly submissionRepository: Repository<Submission>,
   ) {}
 
   async create(actionPointData: Partial<ActionPoint>): Promise<ActionPoint> {
@@ -115,6 +118,16 @@ export class ActionPointsService {
     responses: Record<string, string>;
     questions: Array<{ id: string; questionText: string; options?: Record<string, unknown> }>;
   }): Promise<ActionPoint[]> {
+    if (payload.workflowType === 'process' && payload.submissionId) {
+      const submission = await this.submissionRepository.findOne({
+        where: { id: payload.submissionId },
+        relations: ['process'],
+      });
+      if (submission?.process?.properties?.createActionPointsFromReports !== true) {
+        return [];
+      }
+    }
+
     const created: ActionPoint[] = [];
 
     for (const question of payload.questions ?? []) {
@@ -158,6 +171,78 @@ export class ActionPointsService {
         status: 'open',
       });
       created.push(ap);
+    }
+
+    return created;
+  }
+
+  async carryForward(payload: {
+    submissionId: string;
+    workflowType: string;
+    workflowId: string;
+    storeId: string;
+    organizationId: string;
+    createdBy: string;
+  }): Promise<ActionPoint[]> {
+    const previous = await this.submissionRepository.findOne({
+      where: {
+        workflowType: payload.workflowType as any,
+        workflowId: payload.workflowId,
+        storeId: payload.storeId,
+        organizationId: payload.organizationId,
+        status: In(['completed', 'pending_review']) as any,
+      },
+      order: { createdAt: 'DESC' },
+    });
+    if (!previous || previous.id === payload.submissionId) return [];
+
+    const openAps = await this.actionPointsRepository.find({
+      where: {
+        submissionId: previous.id,
+        status: In(['open', 'in_progress', 'on_hold']),
+      },
+    });
+    if (openAps.length === 0) return [];
+
+    const created: ActionPoint[] = [];
+    for (const ap of openAps) {
+      const existing = await this.actionPointsRepository.findOne({
+        where: {
+          submissionId: payload.submissionId,
+          title: ap.title,
+          triggerType: 'carried',
+        },
+      });
+      if (existing) continue;
+
+      const clone = this.actionPointsRepository.create({
+        title: ap.title,
+        description: ap.description,
+        priority: ap.priority,
+        status: ap.status,
+        assignedTo: ap.assignedTo,
+        closureAssignedTo: ap.closureAssignedTo,
+        dueDate: ap.dueDate,
+        triggerType: 'carried',
+        submissionId: payload.submissionId,
+        questionId: ap.questionId,
+        workflowType: ap.workflowType || payload.workflowType,
+        workflowId: ap.workflowId || payload.workflowId,
+        storeId: ap.storeId || payload.storeId,
+        autoTriggerConfig: { carriedFromSubmissionId: previous.id },
+        organizationId: payload.organizationId,
+        createdBy: payload.createdBy,
+      });
+      const saved = await this.actionPointsRepository.save(clone);
+      if (saved.assignedTo) {
+        notifyActionPointAssigned({
+          userId: saved.assignedTo,
+          actionPointId: saved.id,
+          actionPointTitle: saved.title,
+          assignedBy: saved.createdBy,
+        });
+      }
+      created.push(saved);
     }
 
     return created;

@@ -694,7 +694,14 @@ export default function ExecutiveDashboard() {
                             const name = processDisplayName(proc);
                             return (
                               <th key={pid} className="px-3 py-3 text-left text-xs font-medium uppercase whitespace-nowrap" title={name}>
-                                {truncateLabel(name, 18)}
+                                <div className="flex items-center gap-1.5">
+                                  {truncateLabel(name, 18)}
+                                  {proc.priority ? (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                      P{proc.priority}
+                                    </Badge>
+                                  ) : null}
+                                </div>
                               </th>
                             );
                           })}
@@ -765,7 +772,14 @@ export default function ExecutiveDashboard() {
                             const name = processDisplayName(proc);
                             return (
                               <th key={pid} className="px-3 py-3 text-left text-xs font-medium uppercase whitespace-nowrap" title={name}>
-                                {truncateLabel(name, 18)}
+                                <div className="flex items-center gap-1.5">
+                                  {truncateLabel(name, 18)}
+                                  {proc.priority ? (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                      P{proc.priority}
+                                    </Badge>
+                                  ) : null}
+                                </div>
                               </th>
                             );
                           })}
@@ -907,7 +921,12 @@ export default function ExecutiveDashboard() {
                   {(storeDetail.processes || []).map((p: any) => (
                     <div key={p.processId} className="border rounded-lg p-3 flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="font-medium text-sm truncate">{p.processName}</div>
+                        <div className="font-medium text-sm truncate">
+                          {p.processName}
+                          {p.priority ? (
+                            <span className="ml-2 text-xs text-muted-foreground">P{p.priority}</span>
+                          ) : null}
+                        </div>
                         <div className="text-xs text-muted-foreground">{p.processTag}</div>
                       </div>
                       <Badge variant="outline" className={complianceColor(p.compliancePercentage)}>

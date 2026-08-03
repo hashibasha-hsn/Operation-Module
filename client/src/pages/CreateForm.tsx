@@ -366,6 +366,7 @@ export default function CreateForm() {
     trackLocation: false,
     trackVisualMerchandising: false,
     dynamicAssignment: false,
+    assignedDesignations: [],
     carryForwardActionPoints: false,
     createActionPointsFromReports: false,
     processPriority: 'medium',

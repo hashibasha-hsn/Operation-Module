@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, BarChart3, PieChart, TrendingUp, Calendar, ArrowLeft } from "lucide-react";
+import { Download, BarChart3, PieChart, TrendingUp, Calendar, ArrowLeft, Image } from "lucide-react";
 import { Link } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { type DateFilter, exportRowsToCsv, fetchVisualReport } from "@/lib/reportApi";
@@ -22,8 +22,15 @@ export default function VisualReport() {
   const [visualData, setVisualData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [storeNames, setStoreNames] = useState<Record<string, string>>({});
+  const [photoTagFilter, setPhotoTagFilter] = useState<string>("all");
 
   const storeLabel = (id?: string) => (id ? humanLabel(storeNames[id], "—") : "—");
+
+  const photoEntries: any[] = visualData?.photoEntries ?? [];
+  const photoTags = [...new Set(photoEntries.map((p) => p.questionTag).filter(Boolean))] as string[];
+  const filteredPhotos = photoTagFilter === "all"
+    ? photoEntries
+    : photoEntries.filter((p) => p.questionTag === photoTagFilter);
 
   const fetchVisualReportData = async () => {
     setLoading(true);
@@ -101,6 +108,19 @@ export default function VisualReport() {
             <SelectItem value="month">{t("thisMonth")}</SelectItem>
           </SelectContent>
         </Select>
+        {photoTags.length > 0 && (
+          <Select value={photoTagFilter} onValueChange={setPhotoTagFilter}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Photo tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All photo tags</SelectItem>
+              {photoTags.map((tag) => (
+                <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {loading ? (
@@ -108,6 +128,7 @@ export default function VisualReport() {
           <p className="text-muted-foreground">Loading...</p>
         </div>
       ) : visualData ? (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
@@ -287,6 +308,58 @@ export default function VisualReport() {
             </CardContent>
           </Card>
         </div>
+
+        {visualData.visualTrackingEnabled === false /* < 1 tracked process */ ? (
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <Image className="w-4 h-4" />
+                Enable "Track Visual Merchandising Across Stores" in a process's advanced settings to
+                unlock the photo gallery filtered by question tags.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Image className="w-4 h-4" />
+                Photo Gallery (by question tag)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {filteredPhotos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {t("noDataAvailable")} — photo answers from tracked processes will appear here.
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {filteredPhotos.map((entry: any, idx: number) => (
+                    <div key={`${entry.submissionId}-${idx}`} className="border rounded-lg p-3 text-sm">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="font-medium">{entry.processName}</span>
+                        <Badge variant="outline">{entry.questionTag}</Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {storeLabel(entry.storeId)} · {entry.questionText}
+                      </div>
+                      <div className="mt-1 truncate">
+                        {String(entry.photoUrl).startsWith("http") ? (
+                          <a href={entry.photoUrl} target="_blank" rel="noreferrer" className="text-teal-700 underline">
+                            {entry.photoUrl}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground break-all">{entry.photoUrl}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        </>
       ) : (
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">{t("noTasksAvailableDateRange")}</p>
