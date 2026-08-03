@@ -211,7 +211,19 @@ export class ProcessesService {
 
   async remove(id: string): Promise<void> {
     const existing = await this.findOne(id).catch(() => null);
-    await this.processesRepository.delete(id);
+    await this.dataSource.transaction(async (manager) => {
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from('submissions')
+        .where('workflow_type = :workflowType AND workflow_id = :workflowId AND status IN (:...statuses)', {
+          workflowType: 'process',
+          workflowId: id,
+          statuses: ['draft', 'correction'],
+        })
+        .execute();
+      await manager.getRepository(Process).delete(id);
+    });
     if (existing) {
       await this.logProcessAction(existing, 'Delete', existing.updatedBy || existing.createdBy);
     }
