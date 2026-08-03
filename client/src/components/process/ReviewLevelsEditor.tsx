@@ -78,7 +78,7 @@ export default function ReviewLevelsEditor({ config, onChange }: Props) {
               </SelectTrigger>
               <SelectContent>
                 {users.map((user) => (
-                  <SelectItem key={user.id ?? user.userId} value={user.id ?? user.userId}>
+                  <SelectItem key={user.userId ?? user.id} value={user.userId ?? user.id}>
                     {humanLabel(user.name, user.fullName, user.email, "Unknown user")}
                   </SelectItem>
                 ))}
