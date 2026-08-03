@@ -54,6 +54,7 @@ const SIDEBAR_ITEMS = [
   { labelKey: "home", href: "/dashboard", icon: Home },
   { labelKey: "tasks", href: "/tasks", icon: CheckSquare },
   { labelKey: "actionPoints", href: "/action-points", icon: Flag },
+  { labelKey: "approvals", href: "/approvals", icon: ClipboardCheck },
   { labelKey: "learning", href: "/learning", icon: GraduationCap },
   { labelKey: "issueTickets", href: "/tickets", icon: Ticket },
 ];
