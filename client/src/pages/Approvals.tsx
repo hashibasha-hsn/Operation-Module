@@ -38,8 +38,10 @@ import {
   rejectSubmission,
   sendSubmissionForCorrection,
 } from "@/lib/submissionApi";
-import { fetchEntities } from "@/lib/processApi";
-import { buildStoreNameMap, humanLabel } from "@/lib/displayLabels";
+import { fetchEntities, fetchUsers } from "@/lib/processApi";
+import { fetchProcessById } from "@/lib/processSubmission";
+import { fetchAuditById } from "@/lib/auditSubmission";
+import { buildStoreNameMap, buildUserNameMap, humanLabel } from "@/lib/displayLabels";
 
 export default function Approvals() {
   const [activeTab, setActiveTab] = useState("Approvals");
@@ -51,6 +53,9 @@ export default function Approvals() {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [levelFilter, setLevelFilter] = useState("all");
   const [storeNames, setStoreNames] = useState<Record<string, string>>({});
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
+  const [workflowDetail, setWorkflowDetail] = useState<any>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     fetchPendingApprovals()
@@ -66,8 +71,33 @@ export default function Approvals() {
       .catch(() => setStoreNames({}));
   }, []);
 
+  useEffect(() => {
+    fetchUsers(200)
+      .then((users) => setUserNames(buildUserNameMap(users || [])))
+      .catch(() => setUserNames({}));
+  }, []);
+
   const storeLabel = (storeId?: string) =>
     storeId ? humanLabel(storeNames[storeId], "N/A") : "N/A";
+
+  const userLabel = (userId?: string) =>
+    userId ? humanLabel(userNames[userId], "N/A") : "N/A";
+
+  const openDetailDialog = (submission: any) => {
+    setSelectedSubmission(submission);
+    setWorkflowDetail(null);
+    setIsDetailDialogOpen(true);
+    if (!submission?.workflowId) return;
+    setDetailLoading(true);
+    const loader =
+      submission.workflowType === "audit"
+        ? fetchAuditById(submission.workflowId)
+        : fetchProcessById(submission.workflowId);
+    loader
+      .then((detail) => setWorkflowDetail(detail))
+      .catch(() => setWorkflowDetail(null))
+      .finally(() => setDetailLoading(false));
+  };
 
   const handleApprove = async (id: string) => {
     try {
@@ -278,7 +308,7 @@ export default function Approvals() {
                         </div>
                       </TableCell>
                       <TableCell>{storeLabel(submission.storeId)}</TableCell>
-                      <TableCell>{submission.submittedBy || 'N/A'}</TableCell>
+                      <TableCell>{userLabel(submission.submittedBy)}</TableCell>
                       <TableCell>
                         {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : 'N/A'}
                       </TableCell>
@@ -307,10 +337,7 @@ export default function Approvals() {
                       <TableCell>
                         <TableActionsMenu>
                           <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedSubmission(submission);
-                              setIsDetailDialogOpen(true);
-                            }}
+                            onClick={() => openDetailDialog(submission)}
                           >
                             Review
                           </DropdownMenuItem>
@@ -352,7 +379,7 @@ export default function Approvals() {
                     <TableRow key={submission.id}>
                       <TableCell>{submission.process?.title || submission.audit?.title || 'N/A'}</TableCell>
                       <TableCell>{storeLabel(submission.storeId)}</TableCell>
-                      <TableCell>{submission.submittedBy || 'N/A'}</TableCell>
+                      <TableCell>{userLabel(submission.submittedBy)}</TableCell>
                       <TableCell>
                         {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : 'N/A'}
                       </TableCell>
@@ -418,12 +445,18 @@ export default function Approvals() {
                 </div>
                 <div>
                   <Label>Submitted By</Label>
-                  <div className="text-sm mt-1">{selectedSubmission.submittedBy || 'N/A'}</div>
+                  <div className="text-sm mt-1">{userLabel(selectedSubmission.submittedBy)}</div>
+                </div>
+                <div>
+                  <Label>Store</Label>
+                  <div className="text-sm mt-1">{storeLabel(selectedSubmission.storeId)}</div>
                 </div>
                 <div>
                   <Label>Submitted Date</Label>
                   <div className="text-sm mt-1">
-                    {selectedSubmission.submittedAt ? new Date(selectedSubmission.submittedAt).toLocaleString() : 'N/A'}
+                    {selectedSubmission.submittedAt
+                      ? new Date(selectedSubmission.submittedAt).toLocaleString()
+                      : selectedSubmission.answers?.submissionDate || 'N/A'}
                   </div>
                 </div>
                 <div>
@@ -436,22 +469,58 @@ export default function Approvals() {
                         selectedSubmission.status === 'rejected' ? 'secondary' : 'outline'
                       }
                     >
-                      {selectedSubmission.status}
+                      {selectedSubmission.status === "pending_review" ? "Pending review" : selectedSubmission.status}
                     </Badge>
+                  </div>
+                </div>
+                <div>
+                  <Label>Review Level</Label>
+                  <div className="mt-1">
+                    <Badge variant="outline">L{selectedSubmission.currentReviewLevel || 1}</Badge>
                   </div>
                 </div>
               </div>
 
-              {selectedSubmission.answers && (
+              {/* Answers read-only */}
+              {detailLoading ? (
+                <div className="text-sm text-muted-foreground">Loading submission details...</div>
+              ) : workflowDetail ? (
                 <div>
                   <Label>Answers</Label>
-                  <div className="mt-2 space-y-2 border rounded-lg p-4 max-h-64 overflow-y-auto">
-                    {Object.entries(selectedSubmission.answers).map(([key, value]: any) => (
-                      <div key={key} className="border-b pb-2 last:border-0">
-                        <div className="text-sm font-medium">{key}</div>
-                        <div className="text-sm text-muted-foreground">{String(value)}</div>
+                  <div className="mt-2 border rounded-lg">
+                    {(workflowDetail.sections ?? []).map((section: any) => (
+                      <div key={section.id} className="border-b last:border-0">
+                        <div className="px-4 py-3 bg-muted/40 text-sm font-semibold">
+                          {section.title || 'Section'}
+                        </div>
+                        {(section.questions ?? []).map((question: any, qIndex: number) => (
+                          <ReviewAnswerRow
+                            key={question.id}
+                            question={question}
+                            answers={selectedSubmission.answers}
+                            index={qIndex}
+                          />
+                        ))}
                       </div>
                     ))}
+                    {!((workflowDetail.sections ?? []).length > 0) && (
+                      <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                        No questions found for this {selectedSubmission.workflowType}.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  Could not load {selectedSubmission.workflowType} details.
+                </div>
+              )}
+
+              {selectedSubmission.answers?.correctionNotes && (
+                <div>
+                  <Label>Correction Notes</Label>
+                  <div className="mt-2 text-sm rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+                    {selectedSubmission.answers.correctionNotes}
                   </div>
                 </div>
               )}
@@ -467,8 +536,9 @@ export default function Approvals() {
                           {history.action}
                         </Badge>
                         <span className="text-muted-foreground">
-                          {new Date(history.timestamp).toLocaleString()}
+                          {userLabel(history.reviewerId)} · {new Date(history.timestamp).toLocaleString()}
                         </span>
+                        {history.notes && <span className="text-muted-foreground">{history.notes}</span>}
                       </div>
                     ))}
                   </div>
@@ -477,7 +547,7 @@ export default function Approvals() {
             </div>
           )}
           <DialogFooter className="gap-2">
-            {selectedSubmission?.status === 'new' && (
+            {selectedSubmission?.status === 'pending_review' && (
               <>
                 <Button variant="outline" onClick={() => setIsCorrectionDialogOpen(true)}>
                   <X className="w-4 h-4 mr-2" />
@@ -537,6 +607,85 @@ export default function Approvals() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function ReviewAnswerRow({
+  question,
+  answers,
+  index,
+}: {
+  question: any;
+  answers: any;
+  index: number;
+}) {
+  const config = question.options ?? {};
+  const responses = answers?.responses ?? {};
+  const value = responses[question.id];
+  const naValue = responses[`${question.id}:na`];
+  const comment = responses[`${question.id}:comment`];
+  const attachment = responses[`${question.id}:attachment`];
+  const timestamp = responses[`${question.id}:timestamp`];
+
+  const answerText =
+    value != null && value !== ""
+      ? String(value)
+      : naValue === "true"
+        ? "N/A"
+        : "No answer";
+
+  const valueClass =
+    value != null && value !== ""
+      ? "font-medium"
+      : naValue === "true"
+        ? "italic text-muted-foreground"
+        : "italic text-muted-foreground";
+
+  return (
+    <div className="px-4 py-3 border-b last:border-0">
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-sm">
+          <span className="font-medium">{index + 1}. {question.questionText}</span>
+          {question.isRequired && <span className="text-red-500 ml-1">*</span>}
+        </div>
+        {config.questionTag && (
+          <span className="text-xs text-orange-700 shrink-0">
+            Tag: <span className="font-medium">{config.questionTag}</span>
+          </span>
+        )}
+      </div>
+
+      <div className={`mt-1 text-sm ${valueClass}`}>{answerText}</div>
+
+      {config.instructionText && (
+        <p className="mt-1 text-xs text-blue-800 bg-blue-50/60 rounded px-2 py-1">
+          {config.instructionText}
+        </p>
+      )}
+      {config.questionReferenceFile && (
+        <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
+          Reference file: {config.questionReferenceFile}
+        </p>
+      )}
+
+      {comment && (
+        <div className="mt-2 text-sm rounded-md border bg-muted/40 px-3 py-2">
+          <span className="text-xs font-medium text-muted-foreground">Comment:</span> {comment}
+        </div>
+      )}
+
+      {attachment && (
+        <div className="mt-1 text-sm text-muted-foreground flex items-center gap-1">
+          Attachment: {attachment}
+        </div>
+      )}
+
+      {timestamp && (
+        <div className="mt-1 text-xs text-muted-foreground">
+          Timestamp: {new Date(timestamp).toLocaleString()}
+        </div>
+      )}
     </div>
   );
 }
