@@ -44,11 +44,22 @@ async function resolveUserEmail(userId: string): Promise<string | null> {
       { timeout: 3000 },
     );
     const email = response.data?.email?.trim();
-    return email || null;
+    if (email) return email;
   } catch (error) {
-    console.warn('[report-client] failed to resolve user email', userId, error);
-    return null;
+    console.warn('[report-client] failed to resolve user email', userId, String(error));
   }
+  // user-service keyed by `userId`, but clients may store the profile `id`.
+  // Resolve against the full list as a fallback so either identifier works.
+  const users = await fetchAllUsers();
+  const match = users.find(
+    (u) =>
+      u.id === userId ||
+      u.userId === userId ||
+      String(u.email ?? '').toLowerCase() === String(userId).toLowerCase(),
+  );
+  const email = match?.email?.trim();
+  if (!email) console.warn('[report-client] no email for user', userId);
+  return email || null;
 }
 
 async function fetchAllUsers(): Promise<any[]> {
