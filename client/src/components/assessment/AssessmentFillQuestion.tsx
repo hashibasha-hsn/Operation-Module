@@ -32,13 +32,30 @@ export default function AssessmentFillQuestion({
   const options = getOptions(question);
 
   if (question.questionType === "short-answer") {
+    const correct = typeof correctAnswer === "string" ? correctAnswer : "";
     return (
-      <Input
-        value={typeof value === "string" ? value : ""}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Type your answer"
-        disabled={disabled}
-      />
+      <div className="space-y-2">
+        <Input
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Type your answer"
+          disabled={disabled}
+          className={
+            showCorrectAnswer && correct
+              ? correct.trim().toLowerCase().includes(String(value ?? "").trim().toLowerCase())
+                ? "border-green-500 bg-green-50"
+                : String(value ?? "").trim()
+                  ? "border-red-400 bg-red-50"
+                  : ""
+              : ""
+          }
+        />
+        {showCorrectAnswer && correct && (
+          <p className="text-sm text-emerald-600">
+            Correct answer: <span className="font-medium">{correct}</span>
+          </p>
+        )}
+      </div>
     );
   }
 

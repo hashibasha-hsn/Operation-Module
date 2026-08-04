@@ -84,9 +84,20 @@ function scoreMultipleAnswers(question: FlatQuestion, response: unknown): { earn
   return { earned: Math.min(earnedScore / maxScore, 1), max: 1 };
 }
 
-function scoreShortAnswer(_question: FlatQuestion, response: unknown): { earned: number; max: number } {
-  const text = normalizeResponse(response)[0] ?? '';
-  return { earned: text.trim() ? 1 : 0, max: 1 };
+function scoreShortAnswer(question: FlatQuestion, response: unknown): { earned: number; max: number } {
+  const text = (normalizeResponse(response)[0] ?? '').trim();
+  if (!text) return { earned: 0, max: 1 };
+
+  const correct = String((question.options as { correctAnswer?: unknown } | undefined)?.correctAnswer ?? '').trim();
+  if (!correct) return { earned: 1, max: 1 };
+
+  let match = text.toLowerCase().includes(correct.toLowerCase());
+  if (!match) {
+    const looseText = text.replace(/[^a-z0-9]/gi, '');
+    const looseCorrect = correct.replace(/[^a-z0-9]/gi, '');
+    if (looseCorrect && looseText === looseCorrect) match = true;
+  }
+  return { earned: match ? 1 : 0, max: 1 };
 }
 
 export function flattenAssessmentQuestions(sections: unknown): FlatQuestion[] {
@@ -172,6 +183,9 @@ export function scoreAssessmentAnswers(
         const positive = options.filter((item) => (item.score ?? 0) > 0);
         if (positive.length) correctAnswer = positive.map((item) => item.label);
       }
+    } else if (question.questionType === 'short-answer') {
+      const correct = (question.options as { correctAnswer?: unknown } | undefined)?.correctAnswer;
+      if (correct) correctAnswer = String(correct);
     }
 
     questionResults.push({

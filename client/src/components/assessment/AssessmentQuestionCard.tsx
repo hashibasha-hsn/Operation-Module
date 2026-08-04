@@ -187,19 +187,30 @@ export default function AssessmentQuestionCard({
           ) : null}
 
           {element.type === "short-answer" ? (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Validation Type:</span>
-              <select
-                className="rounded border px-2 py-1 text-sm"
-                value={String(config.validationType ?? "text")}
-                onChange={(e) => updateElement({ config: { validationType: e.target.value } })}
-              >
-                <option value="text">Text</option>
-                <option value="alphanumeric">Alphanumeric</option>
-                <option value="number">Number</option>
-                <option value="email">Email</option>
-                <option value="phone">Phone</option>
-              </select>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Validation Type:</span>
+                <select
+                  className="rounded border px-2 py-1 text-sm"
+                  value={String(config.validationType ?? "text")}
+                  onChange={(e) => updateElement({ config: { validationType: e.target.value } })}
+                >
+                  <option value="text">Text</option>
+                  <option value="alphanumeric">Alphanumeric</option>
+                  <option value="number">Number</option>
+                  <option value="email">Email</option>
+                  <option value="phone">Phone</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 text-sm text-muted-foreground">Correct Answer:</span>
+                <Input
+                  value={String(config.correctAnswer ?? "")}
+                  onChange={(e) => updateElement({ config: { correctAnswer: e.target.value } })}
+                  placeholder="Type the correct answer"
+                  className="flex-1"
+                />
+              </div>
             </div>
           ) : null}
 
