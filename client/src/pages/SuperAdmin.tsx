@@ -872,10 +872,10 @@ export default function SuperAdmin() {
                               variant={u.role === "admin" ? "default" : "outline"}
                               size="sm"
                               disabled={u.role === "super_admin" || roleBusy === u.userId}
-                              onClick={() => handleRoleChange(u, "admin")}
+                              onClick={() => handleRoleChange(u, u.role === "admin" ? "super_admin" : "admin")}
                             >
                               {roleBusy === u.userId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                              Make Admin
+                              {u.role === "admin" ? "Mark Admin" : "Make Admin"}
                             </Button>
                             <Button
                               variant={u.role === "admin" ? "destructive" : "outline"}
