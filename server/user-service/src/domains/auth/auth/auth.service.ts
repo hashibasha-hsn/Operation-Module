@@ -419,9 +419,12 @@ export class AuthService {
     }
   }
 
+  private getEmailServiceUrl(): string {
+    return process.env.EMAIL_SERVICE_URL || process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3016';
+  }
+
   private async sendLoginOtpEmail(email: string, otp: string) {
-    const notificationServiceUrl =
-      process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004';
+    const notificationServiceUrl = this.getEmailServiceUrl();
     const response = await fetch(`${notificationServiceUrl}/email/login-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -440,8 +443,7 @@ export class AuthService {
   }
 
   private async sendPasswordResetEmail(email: string, token: string) {
-    const notificationServiceUrl =
-      process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004';
+    const notificationServiceUrl = this.getEmailServiceUrl();
     const response = await fetch(`${notificationServiceUrl}/email/password-reset`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -747,8 +749,7 @@ export class AuthService {
   }
 
   private async sendAccountActivationEmail(email: string, password: string, token: string) {
-    const notificationServiceUrl =
-      process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004';
+    const notificationServiceUrl = this.getEmailServiceUrl();
     const response = await fetch(`${notificationServiceUrl}/email/activation`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
