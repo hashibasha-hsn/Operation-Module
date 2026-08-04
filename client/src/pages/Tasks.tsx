@@ -42,6 +42,8 @@ export default function Tasks() {
   const [auditSubmissions, setAuditSubmissions] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [auditSearchQuery, setAuditSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all-status");
+  const [periodFilter, setPeriodFilter] = useState("all-periods");
 
   const loadAssignedTasks = async () => {
     const userId = getCurrentUserId();
@@ -84,9 +86,34 @@ export default function Tasks() {
     return acc;
   }, {});
 
-  const filteredProcesses = assignedProcesses.filter((process) =>
-    process.title?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredProcesses = assignedProcesses.filter((process) => {
+    if (!process.title?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+
+    if (periodFilter !== "all-periods") {
+      const createdAt = process.createdAt ? new Date(process.createdAt).getTime() : 0;
+      const now = Date.now();
+      const day = 24 * 60 * 60 * 1000;
+      if (periodFilter === "today") {
+        if (!createdAt || now - createdAt > day) return false;
+      } else if (periodFilter === "week") {
+        if (!createdAt || now - createdAt > 7 * day) return false;
+      } else if (periodFilter === "month") {
+        if (!createdAt || now - createdAt > 30 * day) return false;
+      }
+    }
+
+    if (statusFilter !== "all-status") {
+      const submission = processSubmissions.find(
+        (s) => s.workflowId === process.id,
+      );
+      const subStatus = submission?.status;
+      if (statusFilter === "completed" && subStatus !== "completed") return false;
+      if (statusFilter === "pending" && subStatus !== "pending_review") return false;
+      if (statusFilter === "active" && (subStatus === "completed" || subStatus === "pending_review")) return false;
+    }
+
+    return true;
+  });
 
   const filteredAudits = assignedAudits.filter((audit) =>
     audit.title?.toLowerCase().includes(auditSearchQuery.toLowerCase()),
@@ -163,7 +190,7 @@ export default function Tasks() {
               <div className="flex gap-3 w-full md:w-auto">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Select defaultValue="all-status">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger className="w-[140px] border-gray-300">
                         <SelectValue placeholder={t('allStatus')} />
                       </SelectTrigger>
@@ -181,25 +208,7 @@ export default function Tasks() {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Select defaultValue="select-category">
-                      <SelectTrigger className="w-[150px] border-gray-300">
-                        <SelectValue placeholder={t('selectCategory')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="select-category">{t('selectCategory')}</SelectItem>
-                        <SelectItem value="category1">{t('category1')}</SelectItem>
-                        <SelectItem value="category2">{t('category2')}</SelectItem>
-                        <SelectItem value="category3">{t('category3')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t('filterByCategory')}</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Select defaultValue="all-periods">
+                    <Select value={periodFilter} onValueChange={setPeriodFilter}>
                       <SelectTrigger className="w-[120px] border-gray-300">
                         <SelectValue placeholder={t('allPeriods')} />
                       </SelectTrigger>
