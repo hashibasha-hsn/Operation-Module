@@ -37,7 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, FileText, ClipboardCheck, MoreVertical, Edit, Trash2, Copy, Download, QrCode, Link, Filter, Upload } from "lucide-react";
+import { Plus, Search, FileText, ClipboardCheck, MoreVertical, Edit, Trash2, Copy, Download, Filter, Upload } from "lucide-react";
 import { reviewLevelSummary } from "@/lib/reviewConfig";
 
 export default function Workflows() {
@@ -357,14 +357,6 @@ export default function Workflows() {
                               <Download className="w-4 h-4 mr-2" />
                               Download
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <QrCode className="w-4 h-4 mr-2" />
-                              QR Code
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Link className="w-4 h-4 mr-2" />
-                              Public Link
-                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleDelete(process.id, 'process')} className="text-destructive">
                               <Trash2 className="w-4 h-4 mr-2" />
                               Delete
@@ -452,14 +444,6 @@ export default function Workflows() {
                             <DropdownMenuItem>
                               <Download className="w-4 h-4 mr-2" />
                               Download
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <QrCode className="w-4 h-4 mr-2" />
-                              QR Code
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Link className="w-4 h-4 mr-2" />
-                              Public Link
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleDelete(audit.id, 'audit')} className="text-destructive">
                               <Trash2 className="w-4 h-4 mr-2" />
