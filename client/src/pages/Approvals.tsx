@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Check, X, Clock, AlertCircle, Search, Filter, MoreVertical, FileText, ClipboardCheck, ExternalLink } from "lucide-react";
 import { fileNameFromUrl, isUrlValue } from "@/lib/fileUpload";
+import ViewableFileValue from "@/components/process/ViewableFileValue";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import {
@@ -694,7 +695,7 @@ function ReviewAnswerRow({
       )}
       {config.questionReferenceFile && (
         <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
-          Reference file: {config.questionReferenceFile}
+          Reference file: <ViewableFileValue value={String(config.questionReferenceFile)} />
         </p>
       )}
 

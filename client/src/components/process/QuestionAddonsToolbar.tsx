@@ -19,10 +19,14 @@ import {
   FilePlus,
   FileText,
   Info,
+  Loader2,
   MessageSquareMore,
   Paperclip,
   Trash2,
 } from "lucide-react";
+import { uploadSubmissionFile, fileNameFromUrl } from "@/lib/fileUpload";
+import ViewableFileValue from "@/components/process/ViewableFileValue";
+import { toast } from "sonner";
 
 type QuestionAddonsToolbarProps<T extends FormElementWithAddons> = {
   element: T;
@@ -47,6 +51,7 @@ export default function QuestionAddonsToolbar<T extends FormElementWithAddons>({
   const [actionPointOpen, setActionPointOpen] = useState(false);
   const [draftInstruction, setDraftInstruction] = useState("");
   const [draftInstructionFile, setDraftInstructionFile] = useState<string | null>(null);
+  const [attachingFile, setAttachingFile] = useState(false);
 
   const updateConfig = (patch: Partial<QuestionAddonConfig>) => {
     setFormElements(patchElementConfig(formElements, element.id, patch));
@@ -104,12 +109,32 @@ export default function QuestionAddonsToolbar<T extends FormElementWithAddons>({
           ref={referenceInputRef}
           type="file"
           className="hidden"
-          onChange={(event) => {
+          onChange={async (event) => {
             const file = event.target.files?.[0];
             if (!file) return;
-            updateConfig({ attachFile: true, questionReferenceFile: file.name });
+            setAttachingFile(true);
+            try {
+              const url = await uploadSubmissionFile(file);
+              if (!url) {
+                toast.error("Failed to upload reference file");
+                return;
+              }
+              updateConfig({ attachFile: true, questionReferenceFile: url });
+            } catch (error: any) {
+              toast.error(error.message || "Failed to upload reference file");
+            } finally {
+              setAttachingFile(false);
+              event.target.value = "";
+            }
           }}
         />
+
+        {attachingFile && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Uploading…
+          </span>
+        )}
 
         <Tooltip>
           <TooltipTrigger asChild>
@@ -304,7 +329,12 @@ export default function QuestionAddonsToolbar<T extends FormElementWithAddons>({
         <div className="mb-3 flex flex-wrap gap-2 text-xs">
           {config.attachFile && (
             <span className="rounded bg-blue-50 px-2 py-1 text-blue-700">
-              Reference file: {config.questionReferenceFile || "Attached"}
+              Reference file:{" "}
+              {config.questionReferenceFile ? (
+                <ViewableFileValue value={String(config.questionReferenceFile)} />
+              ) : (
+                "Attached"
+              )}
             </span>
           )}
           {config.markNA && <span className="rounded bg-gray-100 px-2 py-1">N/A enabled</span>}
@@ -375,18 +405,38 @@ export default function QuestionAddonsToolbar<T extends FormElementWithAddons>({
                 ref={instructionFileRef}
                 type="file"
                 className="hidden"
-                onChange={(event) => {
+                onChange={async (event) => {
                   const file = event.target.files?.[0];
-                  setDraftInstructionFile(file ? file.name : null);
+                  if (!file) return;
+                  setAttachingFile(true);
+                  try {
+                    const url = await uploadSubmissionFile(file);
+                    if (!url) {
+                      toast.error("Failed to upload instruction file");
+                      return;
+                    }
+                    setDraftInstructionFile(url);
+                  } catch (error: any) {
+                    toast.error(error.message || "Failed to upload instruction file");
+                  } finally {
+                    setAttachingFile(false);
+                    event.target.value = "";
+                  }
                 }}
               />
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => instructionFileRef.current?.click()}>
                   Attach image or file
                 </Button>
+                {attachingFile && (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Uploading…
+                  </span>
+                )}
                 {draftInstructionFile && (
                   <div className="flex items-center gap-2 rounded bg-gray-100 px-2 py-1 text-sm">
-                    {draftInstructionFile}
+                    {fileNameFromUrl(draftInstructionFile)}
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDraftInstructionFile(null)}>
                       <Trash2 className="h-3 w-3" />
                     </Button>

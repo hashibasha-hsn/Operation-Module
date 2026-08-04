@@ -20,6 +20,7 @@ import {
 } from "@/lib/processSubmission";
 import { ArrowLeft, Save, Send, Trash2, AlertCircle, Clock, Paperclip } from "lucide-react";
 import FileAnswerInput from "@/components/FileAnswerInput";
+import ViewableFileValue from "@/components/process/ViewableFileValue";
 import { getCurrentLocation, distanceMeters } from "@/lib/geo";
 import ManualActionPointDialog from "@/components/action-points/ManualActionPointDialog";
 import {
@@ -269,7 +270,7 @@ export default function ProcessFill() {
           <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
             <Paperclip className="h-4 w-4 text-muted-foreground" />
             <span className="font-medium">Reference file:</span>
-            <span className="break-all">{config.questionReferenceFile}</span>
+            <ViewableFileValue value={String(config.questionReferenceFile)} />
           </div>
         )}
 
@@ -278,7 +279,8 @@ export default function ProcessFill() {
             {config.instructionText && <p className="text-blue-900">{config.instructionText}</p>}
             {config.instructionAttachment && (
               <p className="mt-1 flex items-center gap-2 text-blue-700">
-                <Paperclip className="h-3.5 w-3.5" /> {config.instructionAttachment}
+                <Paperclip className="h-3.5 w-3.5" />{" "}
+                <ViewableFileValue value={String(config.instructionAttachment)} />
               </p>
             )}
           </div>
