@@ -1204,7 +1204,7 @@ export class SubmissionsService {
       (process.sections ?? []).forEach((section: any) => {
         (section.questions ?? []).forEach((question: any) => {
           const type = question.questionType || 'text';
-          if (type !== 'photo' && type !== 'file') return;
+          if (type !== 'photo' && type !== 'file' && type !== 'file-upload') return;
           const value = responses?.[question.id];
           if (!value || typeof value !== 'string' || !value.trim()) return;
           photoEntries.push({

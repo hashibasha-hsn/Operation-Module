@@ -1,14 +1,35 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { SubmissionsService } from './submissions.service';
 import { Submission } from './submission.entity';
+import { SupabaseStorageService } from '../noticeboard/supabase-storage.service';
+import { submissionUploadOptions, buildSubmissionFilename } from './submission-upload.config';
 
 @Controller('submissions')
 export class SubmissionsController {
-  constructor(private readonly submissionsService: SubmissionsService) {}
+  constructor(
+    private readonly submissionsService: SubmissionsService,
+    private readonly storageService: SupabaseStorageService,
+  ) {}
 
   @Post()
   create(@Body() createSubmissionDto: Partial<Submission>) {
     return this.submissionsService.create(createSubmissionDto);
+  }
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file', submissionUploadOptions))
+  async uploadAnswerFile(@UploadedFile() file?: any) {
+    if (!file) {
+      return { url: null };
+    }
+    const url = await this.storageService.uploadFile(
+      file.buffer,
+      buildSubmissionFilename(file.originalname),
+      file.mimetype,
+      'submission-files',
+    );
+    return { url };
   }
 
   @Get('process/user')

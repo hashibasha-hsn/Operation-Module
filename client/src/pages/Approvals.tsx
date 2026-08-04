@@ -29,7 +29,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check, X, Clock, AlertCircle, Search, Filter, MoreVertical, FileText, ClipboardCheck } from "lucide-react";
+import { Check, X, Clock, AlertCircle, Search, Filter, MoreVertical, FileText, ClipboardCheck, ExternalLink } from "lucide-react";
+import { fileNameFromUrl, isUrlValue } from "@/lib/fileUpload";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import {
@@ -647,6 +648,8 @@ function ReviewAnswerRow({
         ? "N/A"
         : "No answer";
 
+  const answerUrl = value != null && value !== "" && isUrlValue(value) ? String(value) : null;
+
   const valueClass =
     value != null && value !== ""
       ? "font-medium"
@@ -668,7 +671,21 @@ function ReviewAnswerRow({
         )}
       </div>
 
-      <div className={`mt-1 text-sm ${valueClass}`}>{answerText}</div>
+      <div className={`mt-1 text-sm ${answerUrl ? "" : valueClass}`}>
+        {answerUrl ? (
+          <a
+            href={String(value)}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-sky-600 underline break-all"
+          >
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+            {fileNameFromUrl(String(value))}
+          </a>
+        ) : (
+          <>{answerText}</>
+        )}
+      </div>
 
       {config.instructionText && (
         <p className="mt-1 text-xs text-blue-800 bg-blue-50/60 rounded px-2 py-1">
@@ -689,7 +706,22 @@ function ReviewAnswerRow({
 
       {attachment && (
         <div className="mt-1 text-sm text-muted-foreground flex items-center gap-1">
-          Attachment: {attachment}
+          {isUrlValue(attachment) ? (
+            <>
+              Attachment:{" "}
+              <a
+                href={String(attachment)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-sky-600 underline break-all"
+              >
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                {fileNameFromUrl(String(attachment))}
+              </a>
+            </>
+          ) : (
+            <>Attachment: {attachment}</>
+          )}
         </div>
       )}
 

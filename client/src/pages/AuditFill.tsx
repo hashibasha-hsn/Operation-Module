@@ -23,6 +23,7 @@ import {
   createActionPointsFromSubmission,
 } from "@/lib/actionPointApi";
 import { ArrowLeft, Save, Send, Trash2 } from "lucide-react";
+import FileAnswerInput from "@/components/FileAnswerInput";
 import { getCurrentLocation, distanceMeters } from "@/lib/geo";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -229,6 +230,17 @@ export default function AuditFill() {
     const setValue = (next: string) =>
       setResponses((prev) => ({ ...prev, [question.id]: next }));
 
+    if (question.questionType === "file-upload") {
+      return (
+        <FileAnswerInput
+          value={value}
+          onValueChange={setValue}
+          acceptedTypes={question.options?.acceptedTypes}
+          maxSizeMB={question.options?.maxSizeMB || 10}
+          required={question.isRequired}
+        />
+      );
+    }
     if (question.questionType === "long-answer") {
       return (
         <Textarea value={value} onChange={(e) => setValue(e.target.value)} className="min-h-[100px]" />
@@ -381,6 +393,19 @@ export default function AuditFill() {
                       )}
                     </Label>
                     {renderQuestionInput(question)}
+                    {question.options?.answerAttachment && (
+                      <FileAnswerInput
+                        value={responses[`${question.id}:attachment`] ?? ""}
+                        onValueChange={(url) =>
+                          setResponses((prev) => ({
+                            ...prev,
+                            [`${question.id}:attachment`]: url,
+                          }))
+                        }
+                        label="Answer attachment"
+                        required={question.options?.answerAttachmentRequired}
+                      />
+                    )}
                   </div>
                 ))}
               </div>

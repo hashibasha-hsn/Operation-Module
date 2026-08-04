@@ -419,6 +419,11 @@ export default function CreateForm() {
         : { marks: 5, options: [] };
     } else if (type === 'dropdown') {
       newElement.config = { options: [] };
+    } else if (type === 'file-upload') {
+      newElement.config = {
+        acceptedTypes: 'pdf,xlsx,xls,jpeg,jpg,png,gif,webp,docx,doc,pptx,ppt,csv,txt',
+        maxSizeMB: 10,
+      };
     }
 
     setFormElements([...formElements, newElement]);
@@ -2051,6 +2056,52 @@ export default function CreateForm() {
                                 <option value="email">Email</option>
                                 <option value="phone">Phone</option>
                               </select>
+                            </div>
+                          )}
+
+                          {element.type === 'file-upload' && (
+                            <div className="space-y-4">
+                              <div>
+                                <span className="text-sm font-medium mb-2 block">Accepted file types:</span>
+                                <Input
+                                  value={element.config?.acceptedTypes || ''}
+                                  placeholder="pdf,xlsx,jpeg,jpg"
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, acceptedTypes: e.target.value }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">Comma-separated extensions, e.g. pdf,xlsx,xls,jpeg,jpg,png,gif,webp,docx,doc,pptx,ppt,csv,txt</p>
+                              </div>
+                              <div>
+                                <span className="text-sm font-medium mb-2 block">Max file size (MB):</span>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={50}
+                                  value={element.config?.maxSizeMB || 10}
+                                  onChange={(e) => {
+                                    const newElements = formElements.map(el => {
+                                      if (el.id === element.id) {
+                                        return {
+                                          ...el,
+                                          config: { ...el.config, maxSizeMB: parseInt(e.target.value) || 10 }
+                                        };
+                                      }
+                                      return el;
+                                    });
+                                    setFormElements(newElements);
+                                  }}
+                                />
+                              </div>
                             </div>
                           )}
 

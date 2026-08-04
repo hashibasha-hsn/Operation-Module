@@ -19,6 +19,7 @@ import {
   submitProcessSubmission,
 } from "@/lib/processSubmission";
 import { ArrowLeft, Save, Send, Trash2, AlertCircle, Clock, Paperclip } from "lucide-react";
+import FileAnswerInput from "@/components/FileAnswerInput";
 import { getCurrentLocation, distanceMeters } from "@/lib/geo";
 import ManualActionPointDialog from "@/components/action-points/ManualActionPointDialog";
 import {
@@ -326,21 +327,12 @@ export default function ProcessFill() {
         )}
 
         {config.answerAttachment && (
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">
-              Answer attachment{config.answerAttachmentRequired ? " (required)" : ""}
-            </Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="file"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleAddonChange(question, "attachment", file.name);
-                }}
-              />
-              {attachmentName && <span className="text-xs text-muted-foreground">{attachmentName}</span>}
-            </div>
-          </div>
+          <FileAnswerInput
+            value={attachmentName}
+            onValueChange={(url) => handleAddonChange(question, "attachment", url)}
+            label="Answer attachment"
+            required={config.answerAttachmentRequired}
+          />
         )}
       </div>
     );
@@ -362,6 +354,17 @@ export default function ProcessFill() {
   const renderQuestionInput = (question: any) => {
     const value = responses[question.id] ?? "";
     const setValue = (next: string) => handleAnswerChange(question, next);
+    if (question.questionType === "file-upload") {
+      return (
+        <FileAnswerInput
+          value={value}
+          onValueChange={setValue}
+          acceptedTypes={question.options?.acceptedTypes}
+          maxSizeMB={question.options?.maxSizeMB || 10}
+          required={question.isRequired}
+        />
+      );
+    }
     if (question.questionType === "long-answer") {
       return (
         <Textarea value={value} onChange={(e) => setValue(e.target.value)} className="min-h-[100px]" />

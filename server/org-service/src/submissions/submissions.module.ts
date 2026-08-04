@@ -6,11 +6,12 @@ import { Submission } from './submission.entity';
 import { ProcessesModule } from '../processes/processes.module';
 import { AuditsModule } from '../audits/audits.module';
 import { EntitiesModule } from '../entities/entities.module';
+import { SupabaseStorageService } from '../noticeboard/supabase-storage.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Submission], 'org'), ProcessesModule, AuditsModule, EntitiesModule],
   controllers: [SubmissionsController],
-  providers: [SubmissionsService],
+  providers: [SubmissionsService, SupabaseStorageService],
   exports: [SubmissionsService],
 })
 export class SubmissionsModule {}
