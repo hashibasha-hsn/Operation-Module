@@ -470,7 +470,16 @@ export class SubmissionsService {
     const nextLevel = level + 1;
     const nextReviewer = getReviewerForLevel(config, nextLevel);
     if (!nextReviewer) {
-      throw new Error(`Level ${nextLevel} reviewer is not assigned`);
+      // No assignee for the next level (legacy or edited config): complete the review.
+      const result = await this.update(id, {
+        status: 'completed',
+        currentReviewLevel: level,
+        currentReviewerId: null,
+        reviewHistory,
+      });
+      await this.notifySubmitter(submission, 'completed', level);
+      await this.maybeSendSubmissionReport(submission, 'after-review');
+      return result;
     }
 
     const result = await this.update(id, {
