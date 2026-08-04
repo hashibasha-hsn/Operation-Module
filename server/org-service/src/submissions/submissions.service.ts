@@ -832,6 +832,39 @@ export class SubmissionsService {
     return await query.orderBy('submission.createdAt', 'DESC').getMany();
   }
 
+  async getWorkflowDetail(
+    workflowId: string,
+    workflowType: string,
+    organizationId: string,
+  ): Promise<any> {
+    let workflow: any = null;
+    if (workflowType === 'audit') {
+      workflow = await this.auditsService.findOneWithSections(workflowId);
+    } else {
+      try {
+        workflow = await this.processesService.findOne(workflowId);
+      } catch {
+        workflow = null;
+      }
+    }
+
+    if (!workflow) {
+      throw new Error('Workflow not found');
+    }
+
+    const submissions = await this.submissionsRepository
+      .createQueryBuilder('submission')
+      .where('submission.workflowId = :workflowId', { workflowId })
+      .andWhere('submission.organizationId = :organizationId', { organizationId })
+      .orderBy('submission.createdAt', 'DESC')
+      .getMany();
+
+    return {
+      workflow,
+      submissions,
+    };
+  }
+
   async getStoreReport(storeId: string, organizationId: string, startDate?: Date, endDate?: Date): Promise<Submission[]> {
     const query = this.submissionsRepository.createQueryBuilder('submission')
       .leftJoinAndSelect('submission.process', 'process')

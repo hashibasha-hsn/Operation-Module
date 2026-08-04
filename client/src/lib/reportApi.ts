@@ -91,6 +91,12 @@ export async function fetchMyReport(
   return orgGet<any[]>(`/submissions/reports/my-report`, params);
 }
 
+export async function fetchWorkflowDetail(workflowId: string, workflowType: string) {
+  const { organizationId } = getReportContext();
+  const params = new URLSearchParams({ workflowId, workflowType, organizationId });
+  return orgGet<any>(`/submissions/reports/workflow-detail`, params);
+}
+
 export async function fetchStoreReport(storeId: string, dateFilter: DateFilter = 'all') {
   const { organizationId } = getReportContext();
   const params = withDateParams(

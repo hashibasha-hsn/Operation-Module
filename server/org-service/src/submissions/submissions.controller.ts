@@ -224,6 +224,19 @@ export class SubmissionsController {
     return this.submissionsService.getExpiredSubmissions(organizationId);
   }
 
+  @Get('reports/workflow-detail')
+  getWorkflowDetail(
+    @Query('workflowId') workflowId: string,
+    @Query('workflowType') workflowType: string,
+    @Query('organizationId') organizationId: string,
+  ) {
+    return this.submissionsService.getWorkflowDetail(
+      workflowId,
+      workflowType || 'process',
+      organizationId,
+    );
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.submissionsService.findOne(id);
