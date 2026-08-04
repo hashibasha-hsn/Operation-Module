@@ -33,6 +33,7 @@ import {
 const LANGUAGE_API = import.meta.env.VITE_LANGUAGE_API || "/api/language";
 const EMAIL_API = import.meta.env.VITE_NOTIFICATION_API || "/api/notification";
 const USER_API = import.meta.env.VITE_USER_API || "/api/user";
+const ORG_API = import.meta.env.VITE_ORG_API || "/api/org";
 
 type LanguageEntry = {
   id: number;
@@ -116,6 +117,7 @@ export default function SuperAdmin() {
   const [emailTheme, setEmailTheme] = useState<Record<string, string>>({});
   const [emailThemeLoading, setEmailThemeLoading] = useState(false);
   const [emailThemeSaving, setEmailThemeSaving] = useState(false);
+  const [emailThemeLogoUploading, setEmailThemeLogoUploading] = useState(false);
 
   // ------- Admins tab -------
   const [admins, setAdmins] = useState<AdminUser[]>([]);
@@ -301,6 +303,28 @@ export default function SuperAdmin() {
 
   const handleEmailThemeChange = (key: string, value: string) => {
     setEmailTheme((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleEmailThemeLogoUpload = async (file: File) => {
+    setEmailThemeLogoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${ORG_API}/courses/content/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.message || "Failed to upload logo");
+      }
+      handleEmailThemeChange("logoUrl", data.url);
+      toast.success("Logo uploaded — will appear in outgoing emails");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to upload logo");
+    } finally {
+      setEmailThemeLogoUploading(false);
+    }
   };
 
   const handleSaveEmailTheme = async () => {
@@ -771,20 +795,18 @@ export default function SuperAdmin() {
                   <Label className="text-sm">Logo (upload from your PC or paste a URL)</Label>
                   <div className="flex flex-wrap items-center gap-2">
                     <label className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-input px-3 h-9 text-sm font-medium hover:bg-accent">
-                      <Upload className="w-4 h-4" /> Upload logo
+                      <Upload className="w-4 h-4" />{" "}
+                      {emailThemeLogoUploading ? "Uploading..." : "Upload logo"}
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/svg+xml,image/webp"
                         className="hidden"
+                        disabled={emailThemeLogoUploading}
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           e.target.value = "";
                           if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = () =>
-                            handleEmailThemeChange("logoUrl", String(reader.result || ""));
-                          reader.onerror = () => toast.error("Failed to read the selected image");
-                          reader.readAsDataURL(file);
+                          handleEmailThemeLogoUpload(file);
                         }}
                       />
                     </label>

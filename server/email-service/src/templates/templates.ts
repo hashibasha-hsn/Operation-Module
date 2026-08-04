@@ -8,7 +8,9 @@ export interface EmailTemplate {
 
 function shell(theme: ResolvedEmailTheme, title: string, bodyHtml: string, footerText?: string): string {
   const headerGradient = `linear-gradient(135deg, ${theme.headerGradientStart} 0%, ${theme.headerGradientEnd} 100%)`;
-  const brandHtml = theme.logoUrl
+  const logoIsUsable =
+    theme.logoUrl && /^https?:\/\//i.test(theme.logoUrl.trim()) && !theme.logoUrl.trim().startsWith('data:');
+  const brandHtml = logoIsUsable
     ? `<img src="${theme.logoUrl}" alt="${theme.brandName}" style="max-height: 44px; max-width: 180px; display: block;" />`
     : `<h1 style="color: #ffffff; font-size: 22px; margin: 0;">${title}</h1>`;
   return `
