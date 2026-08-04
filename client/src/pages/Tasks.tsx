@@ -107,10 +107,14 @@ export default function Tasks() {
   );
 
   const inProgressProcessDrafts = processSubmissions.filter(
-    (item) => item.status === "draft" || item.status === "correction",
+    (item) =>
+      (item.status === "draft" || item.status === "correction") &&
+      Boolean(processTitleById[item.workflowId]),
   );
   const inProgressAuditDrafts = auditSubmissions.filter(
-    (item) => item.status === "draft" || item.status === "correction",
+    (item) =>
+      (item.status === "draft" || item.status === "correction") &&
+      Boolean(auditTitleById[item.workflowId]),
   );
 
   useEffect(() => {
