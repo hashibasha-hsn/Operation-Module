@@ -356,7 +356,19 @@ export class AuditsService {
 
   async remove(id: string): Promise<void> {
     const existing = await this.findOne(id).catch(() => null);
-    await this.auditsRepository.delete(id);
+    await this.dataSource.transaction(async (manager) => {
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from('submissions')
+        .where('workflow_type = :workflowType AND workflow_id = :workflowId AND status IN (:...statuses)', {
+          workflowType: 'audit',
+          workflowId: id,
+          statuses: ['draft', 'correction', 'pending_review'],
+        })
+        .execute();
+      await manager.getRepository(Audit).delete(id);
+    });
     if (existing) {
       await this.logAuditAction(existing, 'Delete', existing.updatedBy || existing.createdBy);
     }

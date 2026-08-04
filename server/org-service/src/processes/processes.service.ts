@@ -277,7 +277,7 @@ export class ProcessesService {
         .where('workflow_type = :workflowType AND workflow_id = :workflowId AND status IN (:...statuses)', {
           workflowType: 'process',
           workflowId: id,
-          statuses: ['draft', 'correction'],
+          statuses: ['draft', 'correction', 'pending_review'],
         })
         .execute();
       await manager.getRepository(Process).delete(id);
