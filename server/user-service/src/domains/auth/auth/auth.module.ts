@@ -8,6 +8,7 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { UsersModule as ProfileUsersModule } from '../../../users/users.module';
 import { SessionsModule } from '../sessions/sessions.module';
+import { LoginAttemptsModule } from '../login-attempts/login-attempts.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { PasswordPolicySettings } from './password-policy-settings.entity';
@@ -18,6 +19,7 @@ import { PasswordPolicyService } from './password-policy.service';
     UsersModule,
     ProfileUsersModule,
     SessionsModule,
+    LoginAttemptsModule,
     TypeOrmModule.forFeature([PasswordPolicySettings], 'auth'),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

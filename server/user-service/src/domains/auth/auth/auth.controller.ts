@@ -33,9 +33,21 @@ export class AuthController {
     @Request() req?: any,
   ) {
     const ipAddress = req?.ip || req?.connection?.remoteAddress;
+    const email = body.email?.trim().toLowerCase() ?? '';
+
+    const blocked = await this.authService.isLoginBlocked(email, ipAddress);
+    if (blocked > 0) {
+      const hours = Math.max(1, Math.round(blocked / (60 * 60 * 1000)));
+      throw new UnauthorizedException(
+        `Too many failed login attempts. Account locked. Please try again after ${hours} hour(s).`,
+      );
+    }
+
     const user = await this.authService.validateUser(
-      body.email?.trim().toLowerCase() ?? '',
+      email,
       body.password?.trim() ?? '',
+      ipAddress,
+      userAgent,
     );
     
     if (!user) {

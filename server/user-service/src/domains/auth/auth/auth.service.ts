@@ -9,6 +9,8 @@ import { User } from '../users/user.entity';
 import { UsersService as ProfileUsersService } from '../../../users/users.service';
 import { assertPasswordValid } from './password.util';
 import { PasswordPolicyService } from './password-policy.service';
+import { LoginAttemptService } from '../login-attempts/login-attempts.service';
+import { LoginPolicyService } from '../login-attempts/login-policy.service';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +23,8 @@ export class AuthService {
     private readonly sessionsService: SessionsService,
     private readonly jwtService: JwtService,
     private readonly passwordPolicyService: PasswordPolicyService,
+    private readonly loginAttemptService: LoginAttemptService,
+    private readonly loginPolicyService: LoginPolicyService,
     @Optional() @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientProxy,
     private readonly profileUsersService: ProfileUsersService,
   ) {}
@@ -58,7 +62,7 @@ export class AuthService {
     }
   }
 
-  async validateUser(email: string, password: string): Promise<any> {
+  async validateUser(email: string, password: string, ipAddress?: string, userAgent?: string): Promise<any> {
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !password) {
       return null;
@@ -104,11 +108,13 @@ export class AuthService {
     }
     
     if (!user) {
+      await this.recordFailedAttempt(normalizedEmail, undefined, 'user_not_found', ipAddress, userAgent);
       return null;
     }
 
     // Pending accounts (created but not activated) cannot sign in yet.
     if (user.verificationStatus === 'PENDING') {
+      await this.recordFailedAttempt(normalizedEmail, user.id, 'pending_account', ipAddress, userAgent);
       throw new UnauthorizedException(
         'Your account is not activated yet. Please click the activation link sent to your email.',
       );
@@ -119,6 +125,7 @@ export class AuthService {
       const bcrypt = require('bcrypt');
       const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
       if (!isPasswordValid) {
+        await this.recordFailedAttempt(normalizedEmail, user.id, 'invalid_credentials', ipAddress, userAgent);
         return null;
       }
       return user;
@@ -128,10 +135,55 @@ export class AuthService {
     const bcrypt = require('bcrypt');
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
+      await this.recordFailedAttempt(normalizedEmail, user.id, 'invalid_credentials', ipAddress, userAgent);
       return null;
     }
 
     return user;
+  }
+
+  private async recordFailedAttempt(
+    email: string,
+    userId: string | undefined,
+    reason: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    try {
+      await this.loginAttemptService.record({
+        email,
+        userId,
+        success: false,
+        reason,
+        ipAddress,
+        userAgent,
+      });
+    } catch (error: any) {
+      console.error('Failed to record failed login attempt (non-blocking):', error?.message);
+    }
+  }
+
+  /**
+   * Brute-force guard: block when the same email or IP has too many recent failures.
+   * Threshold + lockout duration are driven by the persisted LoginPolicySettings.
+   * Returns the remaining lockout minutes when blocked, otherwise 0.
+   */
+  async isLoginBlocked(email: string, ipAddress?: string): Promise<number> {
+    const policy = await this.loginPolicyService.getPolicy();
+    const windowMs = policy.lockoutHours * 60 * 60 * 1000;
+    const since = new Date(Date.now() - windowMs);
+    const maxFailures = policy.maxFailedAttempts;
+    const normalized = email?.trim().toLowerCase() ?? '';
+
+    const emailFailures = normalized
+      ? await this.loginAttemptService.countFailedForEmail(normalized, since)
+      : 0;
+    if (emailFailures >= maxFailures) return windowMs;
+    if (ipAddress) {
+      const ipFailures = await this.loginAttemptService.countFailedForIp(ipAddress, since);
+      if (ipFailures >= maxFailures) return windowMs;
+    }
+    return 0;
   }
 
   async login(user: any, ipAddress?: string, userAgent?: string, rememberMe = true) {
@@ -186,6 +238,19 @@ export class AuthService {
       token: refreshToken,
       expiresAt: refreshExpiresAt,
     });
+
+    // Record successful login attempt for monitoring.
+    try {
+      await this.loginAttemptService.record({
+        email: user.email,
+        userId: user.id,
+        success: true,
+        ipAddress,
+        userAgent,
+      });
+    } catch (error: any) {
+      console.error('Failed to record login attempt (non-blocking):', error?.message);
+    }
 
     // Emit Kafka event for login (fire and forget, don't await)
     if (this.kafkaClient) {
@@ -260,11 +325,13 @@ export class AuthService {
 
     if (user.twoFactorOtpExpiresAt.getTime() < Date.now()) {
       await this.usersService.clearTwoFactorOtp(user.id);
+      await this.recordFailedAttempt(user.email, user.id, 'otp_expired', ipAddress, userAgent);
       throw new UnauthorizedException('OTP expired');
     }
 
     const validOtp = await bcrypt.compare(otp?.trim() ?? '', user.twoFactorOtpHash);
     if (!validOtp) {
+      await this.recordFailedAttempt(user.email, user.id, 'invalid_otp', ipAddress, userAgent);
       throw new UnauthorizedException('Invalid OTP');
     }
 

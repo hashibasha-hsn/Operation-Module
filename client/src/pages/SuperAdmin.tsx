@@ -32,6 +32,7 @@ import {
 
 const LANGUAGE_API = import.meta.env.VITE_LANGUAGE_API || "/api/language";
 const EMAIL_API = import.meta.env.VITE_NOTIFICATION_API || "/api/notification";
+const USER_API = import.meta.env.VITE_USER_API || "/api/user";
 
 type LanguageEntry = {
   id: number;
@@ -48,6 +49,30 @@ type AdminUser = {
   designation?: string;
   role?: string;
   isActive?: boolean;
+};
+
+type LoginAttemptRecord = {
+  id: string;
+  email: string;
+  userId?: string | null;
+  success: boolean;
+  reason?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+};
+
+type LoginStats = {
+  total: number;
+  success: number;
+  failed: number;
+  today: { success: number; failed: number };
+};
+
+type LoginPolicy = {
+  id: string;
+  maxFailedAttempts: number;
+  lockoutHours: number;
 };
 
 const THEME_FIELDS: { key: string; label: string; placeholder: string }[] = [
@@ -96,6 +121,17 @@ export default function SuperAdmin() {
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [adminsLoading, setAdminsLoading] = useState(false);
   const [roleBusy, setRoleBusy] = useState<string | null>(null);
+
+  // ------- Login Security tab -------
+  const [loginAttempts, setLoginAttempts] = useState<LoginAttemptRecord[]>([]);
+  const [loginAttemptsTotal, setLoginAttemptsTotal] = useState(0);
+  const [loginStats, setLoginStats] = useState<LoginStats | null>(null);
+  const [loginPolicy, setLoginPolicy] = useState<LoginPolicy | null>(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginEmailFilter, setLoginEmailFilter] = useState("");
+  const [loginResultFilter, setLoginResultFilter] = useState("");
+  const [loginPage, setLoginPage] = useState(1);
+  const [loginPolicySaving, setLoginPolicySaving] = useState(false);
 
   const loadEntries = useCallback(async () => {
     setLoadingEntries(true);
@@ -162,6 +198,80 @@ export default function SuperAdmin() {
   useEffect(() => {
     loadAdmins();
   }, [loadAdmins]);
+
+  const loadLoginAttempts = useCallback(async () => {
+    setLoginLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(loginPage), limit: "25" });
+      if (loginEmailFilter.trim()) params.set("email", loginEmailFilter.trim());
+      if (loginResultFilter) params.set("success", loginResultFilter);
+      const res = await fetch(`${USER_API}/auth/login-attempts?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to load login attempts");
+      const data = await res.json();
+      setLoginAttempts(Array.isArray(data?.items) ? data.items : []);
+      setLoginAttemptsTotal(Number(data?.total || 0));
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to load login attempts");
+    } finally {
+      setLoginLoading(false);
+    }
+  }, [loginEmailFilter, loginResultFilter, loginPage]);
+
+  const loadLoginStats = useCallback(async () => {
+    try {
+      const res = await fetch(`${USER_API}/auth/login-attempts/stats`);
+      if (!res.ok) throw new Error("Failed to load login stats");
+      setLoginStats(await res.json());
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to load login stats");
+    }
+  }, []);
+
+  const loadLoginPolicy = useCallback(async () => {
+    try {
+      const res = await fetch(`${USER_API}/auth/login-attempts/policy`);
+      if (!res.ok) throw new Error("Failed to load login policy");
+      const policy = await res.json();
+      setLoginPolicy({
+        id: policy?.id || "",
+        maxFailedAttempts: Number(policy?.maxFailedAttempts || 5),
+        lockoutHours: Number(policy?.lockoutHours || 24),
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to load login policy");
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLoginAttempts();
+    loadLoginStats();
+    loadLoginPolicy();
+  }, [loadLoginAttempts, loadLoginStats, loadLoginPolicy]);
+
+  const handleSaveLoginPolicy = async () => {
+    if (!loginPolicy) return;
+    setLoginPolicySaving(true);
+    try {
+      const res = await fetch(`${USER_API}/auth/login-attempts/policy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maxFailedAttempts: Number(loginPolicy.maxFailedAttempts),
+          lockoutHours: Number(loginPolicy.lockoutHours),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || "Failed to save login policy");
+      }
+      setLoginPolicy(await res.json());
+      toast.success("Login lockout policy saved");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to save login policy");
+    } finally {
+      setLoginPolicySaving(false);
+    }
+  };
 
   const loadEmailTheme = useCallback(async () => {
     setEmailThemeLoading(true);
@@ -449,6 +559,9 @@ export default function SuperAdmin() {
           </TabsTrigger>
           <TabsTrigger value="admins" className="gap-2">
             <Users className="w-4 h-4" /> Admins
+          </TabsTrigger>
+          <TabsTrigger value="login-security" className="gap-2">
+            <Shield className="w-4 h-4" /> Login Security
           </TabsTrigger>
         </TabsList>
 
@@ -898,6 +1011,225 @@ export default function SuperAdmin() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ---------------- LOGIN SECURITY TAB ---------------- */}
+        <TabsContent value="login-security" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Attempts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{loginStats?.total ?? "—"}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Successful Logins
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-emerald-600">
+                  {loginStats?.success ?? "—"}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Failed Attempts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{loginStats?.failed ?? "—"}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Today
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  <span className="text-emerald-600">{loginStats?.today?.success ?? 0}</span>
+                  <span className="mx-1 text-muted-foreground">/</span>
+                  <span className="text-red-600">{loginStats?.today?.failed ?? 0}</span>
+                </div>
+                <div className="text-xs text-muted-foreground">success / failed</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" /> Login Lockout Policy
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                After the configured number of failed login attempts, the account is locked and the
+                user cannot try to login again until the lockout period passes.
+              </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Max failed attempts</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={loginPolicy?.maxFailedAttempts ?? 5}
+                    onChange={(e) =>
+                      setLoginPolicy((prev) =>
+                        prev ? { ...prev, maxFailedAttempts: Number(e.target.value) } : prev,
+                      )
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Lockout period (hours)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={720}
+                    value={loginPolicy?.lockoutHours ?? 24}
+                    onChange={(e) =>
+                      setLoginPolicy((prev) =>
+                        prev ? { ...prev, lockoutHours: Number(e.target.value) } : prev,
+                      )
+                    }
+                  />
+                </div>
+              </div>
+              <Button
+                onClick={handleSaveLoginPolicy}
+                disabled={loginPolicySaving || !loginPolicy}
+              >
+                {loginPolicySaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Policy
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5" /> Login Attempts
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    placeholder="Filter by email…"
+                    value={loginEmailFilter}
+                    onChange={(e) => {
+                      setLoginEmailFilter(e.target.value);
+                      setLoginPage(1);
+                    }}
+                  />
+                </div>
+                <select
+                  className="h-9 rounded-md border bg-background px-3 text-sm"
+                  value={loginResultFilter}
+                  onChange={(e) => {
+                    setLoginResultFilter(e.target.value);
+                    setLoginPage(1);
+                  }}
+                >
+                  <option value="">All results</option>
+                  <option value="true">Successful</option>
+                  <option value="false">Failed</option>
+                </select>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    loadLoginAttempts();
+                    loadLoginStats();
+                  }}
+                  disabled={loginLoading}
+                >
+                  <RefreshCcw className="w-4 h-4" /> Refresh
+                </Button>
+              </div>
+
+              <div className="rounded-lg border overflow-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background">
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Result</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>IP Address</TableHead>
+                      <TableHead>Time</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loginAttempts.map((a) => (
+                      <TableRow key={a.id}>
+                        <TableCell>{a.email || "—"}</TableCell>
+                        <TableCell>
+                          {a.success ? (
+                            <Badge className="bg-emerald-600 hover:bg-emerald-600">Success</Badge>
+                          ) : (
+                            <Badge className="bg-red-600 hover:bg-red-600">Failed</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>{a.reason || "—"}</TableCell>
+                        <TableCell>{a.ipAddress || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {a.createdAt ? new Date(a.createdAt).toLocaleString() : "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {loginAttempts.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                          {loginLoading ? "Loading…" : "No login attempts found"}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {loginAttemptsTotal} total attempt(s)
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={loginPage <= 1 || loginLoading}
+                    onClick={() => setLoginPage((p) => Math.max(1, p - 1))}
+                  >
+                    Prev
+                  </Button>
+                  <span className="text-sm text-muted-foreground">Page {loginPage}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={loginPage * 25 >= loginAttemptsTotal || loginLoading}
+                    onClick={() => setLoginPage((p) => p + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
