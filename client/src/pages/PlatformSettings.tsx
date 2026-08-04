@@ -24,10 +24,17 @@ import {
   Bell,
   Webhook,
   Save,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getStoredUser, getOrganizationId } from '@/lib/authStorage';
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  getSnapshotConfig,
+  saveSnapshotConfig,
+  sendSnapshotEmail,
+  sendSnapshotTestEmail,
+} from "@/lib/snapshotEmail";
 
 const PLATFORM_KEY = (orgId: string) => `platform-settings:${orgId}`;
 
@@ -50,10 +57,14 @@ export default function PlatformSettings() {
 
   const [additionalSettings, setAdditionalSettings] = useState({
     googleSheetEmail: "",
+    snapshotEmailEnabled: false,
     snapshotEmailFrequency: "daily",
     snapshotEmailRecipients: "",
     snapshotEmailTime: "09:00",
   });
+
+  const [snapshotSaving, setSnapshotSaving] = useState(false);
+  const [snapshotSending, setSnapshotSending] = useState(false);
 
   const [webhookSettings, setWebhookSettings] = useState({
     processWebhookEnabled: false,
@@ -85,6 +96,80 @@ export default function PlatformSettings() {
       // ignore corrupt storage
     }
   }, [orgId]);
+
+  useEffect(() => {
+    if (!orgId) return;
+    (async () => {
+      try {
+        const config = await getSnapshotConfig(orgId);
+        setAdditionalSettings((prev) => ({
+          ...prev,
+          snapshotEmailEnabled: config.enabled ?? false,
+          snapshotEmailFrequency: config.frequency || "daily",
+          snapshotEmailRecipients: config.recipients || "",
+          snapshotEmailTime: config.timeOfDay || "09:00",
+        }));
+      } catch {
+        // snapshot config unavailable — fall back to local values
+      }
+    })();
+  }, [orgId]);
+
+  const handleSaveSnapshotSettings = async () => {
+    if (!orgId) return;
+    setSnapshotSaving(true);
+    try {
+      const config = await saveSnapshotConfig(orgId, {
+        enabled: additionalSettings.snapshotEmailEnabled,
+        frequency: additionalSettings.snapshotEmailFrequency,
+        timeOfDay: additionalSettings.snapshotEmailTime,
+        recipients: additionalSettings.snapshotEmailRecipients,
+      });
+      setAdditionalSettings((prev) => ({
+        ...prev,
+        snapshotEmailEnabled: config.enabled ?? prev.snapshotEmailEnabled,
+        snapshotEmailFrequency: config.frequency || prev.snapshotEmailFrequency,
+        snapshotEmailRecipients: config.recipients || prev.snapshotEmailRecipients,
+        snapshotEmailTime: config.timeOfDay || prev.snapshotEmailTime,
+      }));
+      toast.success(t('snapshotEmailSettingsSaved'));
+    } catch (error: any) {
+      toast.error(error?.message || t('failedToSavePlatformSettings'));
+    } finally {
+      setSnapshotSaving(false);
+    }
+  };
+
+  const handleSendSnapshotNow = async () => {
+    if (!orgId) return;
+    setSnapshotSending(true);
+    try {
+      const result = await sendSnapshotEmail(orgId);
+      toast.success(t('snapshotEmailSent', { count: result?.sentTo?.length ?? 0 }));
+    } catch (error: any) {
+      toast.error(error?.message || t('snapshotEmailSendFailed'));
+    } finally {
+      setSnapshotSending(false);
+    }
+  };
+
+  const handleSendSnapshotTest = async () => {
+    if (!orgId) return;
+    const to = additionalSettings.snapshotEmailRecipients.trim();
+    if (!to) {
+      toast.error(t('snapshotTestNoRecipient'));
+      return;
+    }
+    setSnapshotSending(true);
+    try {
+      const result = await sendSnapshotTestEmail(orgId, to);
+      toast.success(t('snapshotTestEmailSent', { to: result?.sentTo?.[0] ?? to }));
+    } catch (error: any) {
+      toast.error(error?.message || t('snapshotEmailSendFailed'));
+    } finally {
+      setSnapshotSending(false);
+    }
+  };
 
   const handleSave = () => {
     try {
@@ -333,6 +418,20 @@ export default function PlatformSettings() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>{t('enableSnapshotEmails')}</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {t('enableSnapshotEmailsDesc')}
+                  </p>
+                </div>
+                <Switch
+                  checked={additionalSettings.snapshotEmailEnabled}
+                  onCheckedChange={(checked) =>
+                    setAdditionalSettings({ ...additionalSettings, snapshotEmailEnabled: checked })
+                  }
+                />
+              </div>
               <div className="grid gap-2">
                 <Label>{t('emailFrequency')}</Label>
                 <Select
@@ -371,6 +470,38 @@ export default function PlatformSettings() {
                   }
                   rows={3}
                 />
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-2"
+                  disabled={snapshotSaving}
+                  onClick={handleSaveSnapshotSettings}
+                >
+                  <Save className="w-4 h-4" />
+                  {snapshotSaving ? t('saving') : t('saveSnapshotSettings')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={snapshotSending}
+                  onClick={handleSendSnapshotNow}
+                >
+                  <Send className="w-4 h-4" />
+                  {snapshotSending ? t('sending') : t('sendSnapshotNow')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={snapshotSending}
+                  onClick={handleSendSnapshotTest}
+                >
+                  <Mail className="w-4 h-4" />
+                  {snapshotSending ? t('sending') : t('sendSnapshotTest')}
+                </Button>
               </div>
             </CardContent>
           </Card>

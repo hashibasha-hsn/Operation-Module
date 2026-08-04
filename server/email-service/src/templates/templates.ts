@@ -290,3 +290,96 @@ export function submissionReportEmail(
   ].join('\n');
   return { subject, html, text };
 }
+
+export function snapshotEmail(
+  theme: ResolvedEmailTheme,
+  input: {
+    dateLabel: string;
+    organizationName?: string;
+    stores: Array<{ storeName: string; region?: string; average: number }>;
+    processes: Array<{ processName: string; completionPercentage: number }>;
+    snapshotUrl?: string;
+  },
+): EmailTemplate {
+  const subject = `Operations snapshot — ${input.dateLabel}`;
+
+  const storeRows = input.stores
+    .map((store) => {
+      const pct = Math.round(store.average || 0);
+      const color = pct >= 80 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626';
+      return `<tr>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #f1f5f9;">${store.storeName || 'Unnamed store'}</td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #f1f5f9; color: #64748b;">${store.region || '—'}</td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600; color: ${color};">${pct}%</td>
+      </tr>`;
+    })
+    .join('\n');
+
+  const processRows = input.processes
+    .map((p) => {
+      const pct = Math.round(p.completionPercentage || 0);
+      const color = pct >= 80 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626';
+      return `<tr>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #f1f5f9;">${p.processName || 'Untitled'}</td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600; color: ${color};">${pct}%</td>
+      </tr>`;
+    })
+    .join('\n');
+
+  const orgName = input.organizationName ? `<strong>${input.organizationName}</strong> — ` : '';
+  const viewButton = input.snapshotUrl
+    ? `<p style="text-align: center; margin: 28px 0;">${buttonHtml(theme, input.snapshotUrl, 'View live snapshot')}</p>`
+    : '';
+
+  const html = shell(
+    theme,
+    'Operations snapshot',
+    `
+    <p>Hello,</p>
+    <p>${orgName}here is the operations snapshot for <strong>${input.dateLabel}</strong>.</p>
+
+    ${input.stores.length > 0 ? `
+      <h3 style="margin: 24px 0 8px; font-size: 15px;">Store compliance</h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <thead>
+          <tr style="background: #f8fafc; text-align: left;">
+            <th style="padding: 8px 12px;">Store</th>
+            <th style="padding: 8px 12px;">Region</th>
+            <th style="padding: 8px 12px; text-align: right;">Completion</th>
+          </tr>
+        </thead>
+        <tbody>${storeRows}</tbody>
+      </table>
+    ` : '<p>No stores have data for this period.</p>'}
+
+    ${input.processes.length > 0 ? `
+      <h3 style="margin: 24px 0 8px; font-size: 15px;">Process completion</h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <thead>
+          <tr style="background: #f8fafc; text-align: left;">
+            <th style="padding: 8px 12px;">Process</th>
+            <th style="padding: 8px 12px; text-align: right;">Completion</th>
+          </tr>
+        </thead>
+        <tbody>${processRows}</tbody>
+      </table>
+    ` : '<p>No process data for this period.</p>'}
+
+    ${viewButton}
+    `,
+  );
+
+  const text = [
+    `Operations snapshot — ${input.dateLabel}`,
+    '',
+    ...(input.organizationName ? [`Organization: ${input.organizationName}`, ''] : []),
+    'Store compliance:',
+    ...input.stores.map((s) => `  ${s.storeName || 'Unnamed store'} (${s.region || '—'}): ${Math.round(s.average || 0)}%`),
+    '',
+    'Process completion:',
+    ...input.processes.map((p) => `  ${p.processName || 'Untitled'}: ${Math.round(p.completionPercentage || 0)}%`),
+    ...(input.snapshotUrl ? ['', `View live snapshot: ${input.snapshotUrl}`] : []),
+  ].join('\n');
+
+  return { subject, html, text };
+}

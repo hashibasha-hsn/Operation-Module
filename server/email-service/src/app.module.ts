@@ -3,10 +3,9 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailConfigModule } from './email-config/email-config.module';
 import { EmailController } from './email.controller';
-import { EmailService } from './email.service';
 import { HealthController } from './health.controller';
-import { GraphEmailProvider } from './providers/graph.provider';
-import { SmtpEmailProvider } from './providers/smtp.provider';
+import { EmailCoreModule } from './providers/email-core.module';
+import { SnapshotEmailModule } from './snapshot-email/snapshot-email.module';
 
 @Module({
   imports: [
@@ -29,8 +28,9 @@ import { SmtpEmailProvider } from './providers/smtp.provider';
       synchronize: true,
     }),
     EmailConfigModule,
+    EmailCoreModule,
+    SnapshotEmailModule,
   ],
   controllers: [EmailController, HealthController],
-  providers: [EmailService, GraphEmailProvider, SmtpEmailProvider],
 })
 export class AppModule {}

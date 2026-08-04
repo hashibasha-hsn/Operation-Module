@@ -22,6 +22,10 @@ export class EmailService {
     private readonly smtpProvider: SmtpEmailProvider,
   ) {}
 
+  async getResolvedConfig() {
+    return this.emailConfigService.getResolvedConfig();
+  }
+
   async send(input: SendMailInput): Promise<SendMailResult> {
     const config = await this.emailConfigService.getResolvedConfig();
     const provider =
