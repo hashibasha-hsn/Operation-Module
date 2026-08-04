@@ -642,6 +642,18 @@ function ReviewAnswerRow({
   const attachment = responses[`${question.id}:attachment`];
   const timestamp = responses[`${question.id}:timestamp`];
 
+  const parsedArray =
+    typeof value === "string" && value.startsWith("[") && value.endsWith("]")
+      ? (() => {
+          try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed.map((item) => String(item)) : null;
+          } catch {
+            return null;
+          }
+        })()
+      : null;
+
   const answerText =
     value != null && value !== ""
       ? String(value)
@@ -683,6 +695,12 @@ function ReviewAnswerRow({
             <ExternalLink className="h-3.5 w-3.5 shrink-0" />
             {fileNameFromUrl(String(value))}
           </a>
+        ) : parsedArray && parsedArray.length > 0 ? (
+          <ul className="list-disc pl-5 space-y-0.5">
+            {parsedArray.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
         ) : (
           <>{answerText}</>
         )}

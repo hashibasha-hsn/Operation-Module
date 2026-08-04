@@ -24,6 +24,7 @@ import {
 } from "@/lib/actionPointApi";
 import { ArrowLeft, Save, Send, Trash2 } from "lucide-react";
 import FileAnswerInput from "@/components/FileAnswerInput";
+import MultipleAnswersInput from "@/components/MultipleAnswersInput";
 import { getCurrentLocation, distanceMeters } from "@/lib/geo";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -244,6 +245,15 @@ export default function AuditFill() {
     if (question.questionType === "long-answer") {
       return (
         <Textarea value={value} onChange={(e) => setValue(e.target.value)} className="min-h-[100px]" />
+      );
+    }
+    if (question.questionType === "multiple-answers") {
+      return (
+        <MultipleAnswersInput
+          value={value}
+          onValueChange={setValue}
+          options={question.options?.options ?? []}
+        />
       );
     }
     if (question.questionType === "single-answer" || question.questionType === "dropdown") {

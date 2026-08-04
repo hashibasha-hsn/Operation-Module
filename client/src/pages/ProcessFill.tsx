@@ -21,6 +21,7 @@ import {
 import { ArrowLeft, Save, Send, Trash2, AlertCircle, Clock, Paperclip } from "lucide-react";
 import FileAnswerInput from "@/components/FileAnswerInput";
 import ViewableFileValue from "@/components/process/ViewableFileValue";
+import MultipleAnswersInput from "@/components/MultipleAnswersInput";
 import { getCurrentLocation, distanceMeters } from "@/lib/geo";
 import ManualActionPointDialog from "@/components/action-points/ManualActionPointDialog";
 import {
@@ -370,6 +371,15 @@ export default function ProcessFill() {
     if (question.questionType === "long-answer") {
       return (
         <Textarea value={value} onChange={(e) => setValue(e.target.value)} className="min-h-[100px]" />
+      );
+    }
+    if (question.questionType === "multiple-answers") {
+      return (
+        <MultipleAnswersInput
+          value={value}
+          onValueChange={setValue}
+          options={question.options?.options ?? []}
+        />
       );
     }
     if (question.questionType === "single-answer" || question.questionType === "dropdown") {
