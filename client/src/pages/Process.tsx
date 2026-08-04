@@ -209,7 +209,6 @@ export default function Process() {
       <TableHead className="font-semibold text-muted-foreground">{t('stores')}</TableHead>
       <TableHead className="font-semibold text-muted-foreground">{t('users')}</TableHead>
       <TableHead className="font-semibold text-muted-foreground">{t('assignees')}</TableHead>
-      <TableHead className="font-semibold text-muted-foreground">{t('urlQr')}</TableHead>
       <TableHead className="font-semibold text-muted-foreground">{t('status')}</TableHead>
       <TableHead className="font-semibold text-muted-foreground">{t('schedule')}</TableHead>
       <TableHead className="font-semibold text-muted-foreground">{t('actions')}</TableHead>
@@ -301,7 +300,6 @@ export default function Process() {
       <TableCell>{audit.storeIds?.length || 0}</TableCell>
       <TableCell>{audit.assigneeIds?.length || 0}</TableCell>
       <TableCell>{audit.assigneeIds?.length || 0}</TableCell>
-      <TableCell>{audit.status === "published" ? t('available') : "-"}</TableCell>
       <TableCell>
         <Badge variant={audit.status === "draft" ? "secondary" : "default"}>
           {t(audit.status)}
@@ -344,7 +342,6 @@ export default function Process() {
       <TableCell>{process.storeIds?.length || 0}</TableCell>
       <TableCell>{process.assigneeIds?.length || 0}</TableCell>
       <TableCell>{process.assigneeIds?.length || 0}</TableCell>
-      <TableCell>{process.status === "published" ? t('available') : "-"}</TableCell>
       <TableCell>
         <Badge variant={process.status === "draft" ? "secondary" : "default"}>
           {t(process.status)}
