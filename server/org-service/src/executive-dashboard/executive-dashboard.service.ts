@@ -646,7 +646,9 @@ export class ExecutiveDashboardService {
           processTag: submission.process?.processTag || submission.audit?.processTag || 'Uncategorized',
           priority: submission.process?.properties?.processPriority
             ? Number(submission.process.properties.processPriority)
-            : 3,
+            : submission.audit?.properties?.processPriority
+              ? Number(submission.audit.properties.processPriority)
+              : 3,
           expected: 1,
           submitted: 0,
           compliant: 0,
@@ -976,6 +978,10 @@ export class ExecutiveDashboardService {
     processes.forEach((p: any) => {
       const val = p.properties?.processPriority;
       priorityMap[p.id] = val ? Number(val) : 3;
+    });
+    audits.forEach((a: any) => {
+      const val = a.properties?.processPriority;
+      priorityMap[a.id] = val ? Number(val) : 3;
     });
 
     const processList = Array.from(allProcesses).map((id) => {

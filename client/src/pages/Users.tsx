@@ -81,6 +81,7 @@ import {
   autoAssignUserToProcesses,
   fetchPublishedProcesses,
 } from "@/lib/processSubmission";
+import { autoAssignUserToAudits } from "@/lib/auditApi";
 import UserHierarchyTree from "@/components/users/UserHierarchyTree";
 import UserHierarchyDetails from "@/components/users/UserHierarchyDetails";
 import HybridAssigneePanel from "@/components/users/HybridAssigneePanel";
@@ -807,6 +808,19 @@ export default function UsersPage() {
           }
         } catch (error) {
           console.error('Failed to auto-assign processes to user:', error);
+        }
+
+        try {
+          const autoAssignAudits = await autoAssignUserToAudits({
+            userId: userData.userId,
+            designation: formData.designation,
+            storeId: formData.entityId,
+          });
+          if (autoAssignAudits?.matched > 0) {
+            toast.success(`${autoAssignAudits.matched} audit(s) auto-assigned by dynamic assignment`);
+          }
+        } catch (error) {
+          console.error('Failed to auto-assign audits to user:', error);
         }
 
         setFormData({

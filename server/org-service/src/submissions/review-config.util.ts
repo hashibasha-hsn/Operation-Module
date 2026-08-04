@@ -24,10 +24,10 @@ export function getReviewConfigFromAudit(audit: Audit | null | undefined): Revie
   if (!audit) return { enabled: false, levels: 0, assignees: {} };
   const props = (audit.properties ?? {}) as Record<string, unknown>;
   const rc = (props.reviewConfig ?? {}) as Record<string, unknown>;
-  const levels = Number(rc.levels ?? audit.reviewLevels ?? 1);
-  const enabled = audit.requiresApproval !== false && levels > 0;
+  const processWithReview = Boolean(props.processWithReview || audit.requiresApproval);
+  const levels = Number(rc.levels ?? audit.reviewLevels ?? (processWithReview ? 1 : 0));
   return {
-    enabled,
+    enabled: processWithReview && levels > 0,
     levels,
     assignees: (rc.assignees as Record<string, string>) ?? {},
   };

@@ -104,6 +104,22 @@ export async function fetchAssignedAudits(userId: string, storeId?: string) {
   return response.json();
 }
 
+export async function autoAssignUserToAudits(payload: {
+  userId: string;
+  designation?: string;
+  storeId?: string;
+}) {
+  const response = await fetch(`${ORG_API}/audits/auto-assign-user`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, organizationId: getOrganizationId() }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to auto-assign audits to user');
+  }
+  return response.json();
+}
+
 export async function loadAuditIntoDraft(id: string): Promise<AuditDraftState> {
   const audit = await fetchAuditWithSections(id);
   const draft = apiAuditToDraft({

@@ -168,7 +168,6 @@ export function buildAuditDraftPayload(draft: AuditDraftState, organizationId = 
     passThreshold: draft.passThreshold ?? 70,
     reviewLevels: draft.properties?.reviewConfig?.levels ?? draft.reviewLevels ?? 1,
     scoringConfig: draft.scoringConfig ?? {},
-    requiresApproval: true,
     sections: draft.sections.map((section, index) => ({
       title: section.title,
       description: section.description ?? '',

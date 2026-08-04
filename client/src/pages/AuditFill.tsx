@@ -18,6 +18,10 @@ import {
   startAuditSubmission,
   submitAuditSubmission,
 } from "@/lib/auditSubmission";
+import {
+  carryForwardActionPoints,
+  createActionPointsFromSubmission,
+} from "@/lib/actionPointApi";
 import { ArrowLeft, Save, Send, Trash2 } from "lucide-react";
 import { getCurrentLocation, distanceMeters } from "@/lib/geo";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -104,6 +108,20 @@ export default function AuditFill() {
       setSubmission(draft);
       setResponses(draft.answers?.responses ?? {});
       setStarted(true);
+      if (audit?.properties?.carryForwardActionPoints) {
+        carryForwardActionPoints({
+          submissionId: draft.id,
+          workflowType: "audit",
+          workflowId: auditId,
+          storeId,
+        })
+          .then((aps) => {
+            if (Array.isArray(aps) && aps.length > 0) {
+              toast.info(`${aps.length} action point(s) carried forward from previous submission`);
+            }
+          })
+          .catch(() => undefined);
+      }
     } catch (error: any) {
       toast.error(error.message || t('couldNotStartAudit'));
     }
@@ -165,6 +183,20 @@ export default function AuditFill() {
         useCustomDate ? submissionDate : undefined,
         geoTag,
       );
+      if (audit?.properties?.createActionPointsFromReports) {
+        await createActionPointsFromSubmission({
+          submissionId: submission.id,
+          workflowType: "audit",
+          workflowId: auditId,
+          storeId,
+          responses,
+          questions: questions.map((q: any) => ({
+            id: q.id,
+            questionText: q.questionText,
+            options: q.options ?? {},
+          })),
+        }).catch(() => undefined);
+      }
       const reviewEnabled = audit?.properties?.processWithReview || audit?.requiresApproval;
       toast.success(
         reviewEnabled

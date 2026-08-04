@@ -48,6 +48,16 @@ export class AuditsController {
     return this.auditsService.assignUserToAudits(body.userId, body.auditIds ?? []);
   }
 
+  @Post('auto-assign-user')
+  autoAssignUserToAudits(@Body() body: {
+    userId: string;
+    designation?: string;
+    storeId?: string;
+    organizationId?: string;
+  }) {
+    return this.auditsService.autoAssignUserToAudits(body);
+  }
+
   @Post('sections')
   createSection(@Body() createSectionDto: Partial<AuditSection>) {
     return this.auditsService.createSection(createSectionDto);

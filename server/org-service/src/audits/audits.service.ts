@@ -171,6 +171,51 @@ export class AuditsService {
     }
   }
 
+  async autoAssignUserToAudits(body: {
+    userId: string;
+    designation?: string;
+    storeId?: string;
+    organizationId?: string;
+  }): Promise<{ matched: number; auditIds: string[] }> {
+    const orgId = body.organizationId ?? 'default-org';
+    const published = await this.auditsRepository.find({
+      where: { organizationId: orgId, status: 'published', isActive: true },
+    });
+
+    const matches: Audit[] = [];
+    for (const audit of published) {
+      const props = (audit.properties ?? {}) as Record<string, unknown>;
+      if (props.dynamicAssignment !== true) continue;
+
+      const storeIds = audit.storeIds ?? [];
+      const storeMatch = storeIds.length === 0 || (body.storeId ? storeIds.includes(body.storeId) : false);
+      if (!storeMatch) continue;
+
+      const designations: string[] = ((props.assignedDesignations as string[]) ?? []).filter(Boolean);
+      const designationMatch =
+        designations.length === 0 ||
+        (body.designation
+          ? designations.some((d) => String(d).trim().toLowerCase() === body.designation!.trim().toLowerCase())
+          : false);
+      if (!designationMatch) continue;
+
+      matches.push(audit);
+    }
+
+    for (const audit of matches) {
+      const assigneeIds = [...new Set([...(audit.assigneeIds ?? []), body.userId])];
+      await this.auditsRepository.update(audit.id, { assigneeIds });
+      notifyAuditAssigned({
+        userId: body.userId,
+        auditId: audit.id,
+        auditTitle: audit.title,
+        assignedBy: body.userId,
+      });
+    }
+
+    return { matched: matches.length, auditIds: matches.map((a) => a.id) };
+  }
+
   async createAuditSetup(data: {
     title: string;
     description: string;

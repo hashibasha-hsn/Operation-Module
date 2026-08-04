@@ -126,6 +126,14 @@ export class ActionPointsService {
       if (submission?.process?.properties?.createActionPointsFromReports !== true) {
         return [];
       }
+    } else if (payload.workflowType === 'audit' && payload.submissionId) {
+      const submission = await this.submissionRepository.findOne({
+        where: { id: payload.submissionId },
+        relations: ['audit'],
+      });
+      if (submission?.audit?.properties?.createActionPointsFromReports !== true) {
+        return [];
+      }
     }
 
     const created: ActionPoint[] = [];

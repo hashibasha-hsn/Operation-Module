@@ -33,7 +33,7 @@ export default function AuditSettings() {
   useEffect(() => {
     const draft = loadAuditDraft();
     setAuditDraft(draft);
-    setProperties(mergeProcessProperties({ ...draft.properties, processWithReview: true }));
+    setProperties(mergeProcessProperties({ ...draft.properties, processWithReview: draft.properties?.processWithReview ?? true }));
     setPassThreshold(draft.passThreshold ?? 70);
     setReviewLevels(draft.reviewLevels ?? 1);
 
