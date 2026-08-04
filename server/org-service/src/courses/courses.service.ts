@@ -310,7 +310,6 @@ export class CoursesService {
 
     if (completed && progress.status !== 'completed') {
       const settings = (course.content as any)?.certificateSettings ?? null;
-      const expiresAt = this.computeCertificateExpiry(settings);
       await this.courseCertificateRepository.save(
         this.courseCertificateRepository.create({
           courseId: course.id,
@@ -319,7 +318,7 @@ export class CoursesService {
           organizationId: progress.organizationId,
           score: percentage,
           issuedAt: new Date(),
-          expiresAt,
+          expiresAt: null,
           settings,
         }),
       );
@@ -344,21 +343,6 @@ export class CoursesService {
       relations: ['course'],
       order: { createdAt: 'DESC' },
     });
-  }
-
-  private computeCertificateExpiry(settings: any): Date | null {
-    if (!settings || settings.validityType === 'none') return null;
-    if (settings.validityType === 'fixed' && settings.fixedExpiryDate) {
-      return new Date(settings.fixedExpiryDate);
-    }
-    const duration = settings.validityDuration ?? '1 year';
-    const expiry = new Date();
-    if (duration.includes('month')) {
-      expiry.setMonth(expiry.getMonth() + (parseInt(duration, 10) || 1));
-    } else if (duration.includes('year')) {
-      expiry.setFullYear(expiry.getFullYear() + (parseInt(duration, 10) || 1));
-    }
-    return expiry;
   }
 
   // Learning Report methods

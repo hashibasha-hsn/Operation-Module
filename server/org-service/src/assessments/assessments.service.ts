@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Assessment } from './assessment.entity';
 import { AssessmentResult } from './assessment-result.entity';
+import { AssessmentCertificate } from './assessment-certificate.entity';
 import { SaveAssessmentDraftDto } from './save-assessment-draft.dto';
 import {
   applyPassingScore,
@@ -22,6 +23,8 @@ export class AssessmentsService {
     private assessmentsRepository: Repository<Assessment>,
     @InjectRepository(AssessmentResult, 'org')
     private assessmentResultsRepository: Repository<AssessmentResult>,
+    @InjectRepository(AssessmentCertificate, 'org')
+    private assessmentCertificatesRepository: Repository<AssessmentCertificate>,
   ) {}
 
   // Assessment methods
@@ -408,6 +411,18 @@ export class AssessmentsService {
     const updated = await this.findResultById(id);
 
     if (passed && assessment.generateCertificate) {
+      await this.assessmentCertificatesRepository.save(
+        this.assessmentCertificatesRepository.create({
+          assessmentId: assessment.id,
+          userId,
+          resultId: updated.id,
+          organizationId: assessment.organizationId,
+          score: scoring.percentage,
+          issuedAt: completedAt,
+          settings: assessment.certificateSettings ?? null,
+        }),
+      );
+
       void notifyCertificateIssued({
         userId,
         itemTitle: assessment.title,
@@ -440,6 +455,17 @@ export class AssessmentsService {
   async findResultsByAssessment(assessmentId: string): Promise<AssessmentResult[]> {
     return await this.assessmentResultsRepository.find({
       where: { assessmentId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findUserCertificates(
+    userId: string,
+    organizationId: string,
+  ): Promise<AssessmentCertificate[]> {
+    return await this.assessmentCertificatesRepository.find({
+      where: { userId, organizationId },
+      relations: ['assessment'],
       order: { createdAt: 'DESC' },
     });
   }

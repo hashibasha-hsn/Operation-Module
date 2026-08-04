@@ -128,6 +128,36 @@ export async function fetchAssignedAssessments(userId: string, storeId?: string)
   return response.json();
 }
 
+export interface AssessmentCertificateRecord {
+  id: string;
+  assessmentId: string;
+  assessment: { id: string; title: string } | null;
+  score: number;
+  issuedAt: string | null;
+  settings: Record<string, unknown> | null;
+  createdAt: string | null;
+}
+
+export async function fetchUserAssessmentCertificates(userId: string): Promise<AssessmentCertificateRecord[]> {
+  const params = new URLSearchParams({
+    organizationId: getOrganizationId(),
+  });
+  const response = await fetch(
+    `${ORG_API}/assessments/certificates/user/${encodeURIComponent(userId)}?${params}`,
+  );
+  if (!response.ok) return [];
+  const data = await response.json();
+  return (Array.isArray(data) ? data : []).map((row: any) => ({
+    id: row.id,
+    assessmentId: row.assessmentId,
+    assessment: row.assessment ?? null,
+    score: Number(row.score ?? 0),
+    issuedAt: row.issuedAt ?? null,
+    settings: row.settings ?? null,
+    createdAt: row.createdAt ?? null,
+  }));
+}
+
 export {
   fetchUsers,
 } from './processApi';

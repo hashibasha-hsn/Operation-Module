@@ -34,6 +34,8 @@ import PasswordChangeForm from "@/components/PasswordChangeForm";
 import { fetchTwoFactorSettings, updateTwoFactorSettings } from "@/lib/twoFactorApi";
 import { fetchUserCertificates, type CourseCertificateRecord } from "@/lib/courseApi";
 import { downloadCourseCertificate } from "@/lib/courseCertificate";
+import { fetchUserAssessmentCertificates, type AssessmentCertificateRecord } from "@/lib/assessmentApi";
+import { downloadAssessmentCertificate } from "@/lib/assessmentCertificate";
 import { getCurrentUserDisplayName } from "@/lib/processSubmission";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { GATEWAY } from "@/lib/apiConfig";
@@ -52,6 +54,15 @@ type ManagerOption = {
   userId: string;
   name: string;
   email?: string;
+};
+
+type ProfileCertificate = {
+  id: string;
+  kind: 'course' | 'assessment';
+  title: string;
+  score: number;
+  issuedAt: string | null;
+  settings: Record<string, unknown> | null;
 };
 
 type ProfileForm = {
@@ -107,7 +118,7 @@ export default function ProfileSettings() {
   });
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [isSavingTwoFactor, setIsSavingTwoFactor] = useState(false);
-  const [certificates, setCertificates] = useState<CourseCertificateRecord[]>([]);
+  const [certificates, setCertificates] = useState<ProfileCertificate[]>([]);
   const [loadingCertificates, setLoadingCertificates] = useState(false);
 
   const tabs = ["My Profile", "Change Password"];
@@ -121,8 +132,34 @@ export default function ProfileSettings() {
 
   useEffect(() => {
     if (!setupMode && currentUserId) {
-      void fetchUserCertificates(currentUserId)
-        .then(setCertificates)
+      setLoadingCertificates(true);
+      Promise.all([
+        fetchUserCertificates(currentUserId),
+        fetchUserAssessmentCertificates(currentUserId),
+      ])
+        .then(([courseCerts, assessmentCerts]) => {
+          const merged: ProfileCertificate[] = [
+            ...courseCerts.map((cert: CourseCertificateRecord) => ({
+              id: cert.id,
+              kind: 'course' as const,
+              title: cert.course?.title ?? t('courseCertificate'),
+              score: cert.score ?? 100,
+              issuedAt: cert.issuedAt,
+              settings: cert.settings as Record<string, unknown> | null,
+            })),
+            ...assessmentCerts.map((cert: AssessmentCertificateRecord) => ({
+              id: cert.id,
+              kind: 'assessment' as const,
+              title: cert.assessment?.title ?? t('assessmentCertificate'),
+              score: cert.score ?? 100,
+              issuedAt: cert.issuedAt,
+              settings: cert.settings as Record<string, unknown> | null,
+            })),
+          ].sort(
+            (a, b) => new Date(b.issuedAt ?? 0).getTime() - new Date(a.issuedAt ?? 0).getTime(),
+          );
+          setCertificates(merged);
+        })
         .catch(() => setCertificates([]))
         .finally(() => setLoadingCertificates(false));
     }
@@ -397,12 +434,23 @@ export default function ProfileSettings() {
     profileData.entityId.trim() &&
     !isSavingProfile;
 
-  const handleDownloadCertificate = (cert: CourseCertificateRecord) => {
+  const handleDownloadCertificate = (cert: ProfileCertificate) => {
+    const completedAt = cert.issuedAt ? new Date(cert.issuedAt) : new Date();
+    if (cert.kind === 'assessment') {
+      downloadAssessmentCertificate({
+        userName: getCurrentUserDisplayName() || "",
+        assessmentTitle: cert.title,
+        percentage: cert.score,
+        completedAt,
+        settings: (cert.settings ?? {}) as Parameters<typeof downloadAssessmentCertificate>[0]['settings'],
+      });
+      return;
+    }
     downloadCourseCertificate({
-      userName: getCurrentUserDisplayName() || cert.course?.name || "",
-      courseTitle: cert.course?.title ?? "Course",
+      userName: getCurrentUserDisplayName() || "",
+      courseTitle: cert.title,
       score: cert.score ?? 100,
-      completedAt: cert.issuedAt ? new Date(cert.issuedAt) : new Date(),
+      completedAt,
       settings: cert.settings as Record<string, any> | undefined,
     });
   };
@@ -791,15 +839,12 @@ export default function ProfileSettings() {
                         >
                           <div className="min-w-0 space-y-1">
                             <p className="font-medium truncate">
-                              {cert.course?.title ?? t('courseCertificate')}
+                              {cert.title}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {t('scoreLabel')} {cert.score ?? 100}%
                               {cert.issuedAt
                                 ? ` · ${t('issuedOn')} ${new Date(cert.issuedAt).toLocaleDateString()}`
-                                : ""}
-                              {cert.expiresAt
-                                ? ` · ${t('expiresOn')} ${new Date(cert.expiresAt).toLocaleDateString()}`
                                 : ""}
                             </p>
                           </div>

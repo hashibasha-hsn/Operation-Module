@@ -173,6 +173,14 @@ export class AssessmentsController {
     return this.assessmentsService.deleteAssessmentSubmission(submissionId);
   }
 
+  @Get('certificates/user/:userId')
+  findUserCertificates(
+    @Param('userId') userId: string,
+    @Query('organizationId') organizationId: string,
+  ) {
+    return this.assessmentsService.findUserCertificates(userId, organizationId || 'default-org');
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.assessmentsService.findOne(id);
