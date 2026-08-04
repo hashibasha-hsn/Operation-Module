@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
 import { BusinessEntity } from './entity.entity';
@@ -78,6 +78,63 @@ export class EntitiesService {
     return await this.entitiesRepository.find({
       where: { storeStatus, organizationId },
     });
+  }
+
+  async bulkCreate(
+    rows: Partial<BusinessEntity>[],
+    organizationId: string,
+  ): Promise<{ created: number; failed: number; errors: string[] }> {
+    if (!rows.length) {
+      throw new BadRequestException('No valid rows found in the uploaded file');
+    }
+
+    const created: BusinessEntity[] = [];
+    const errors: string[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNum = i + 2; // offset for header row (1-based)
+      const storeName = String(row.storeName || '').trim();
+
+      if (!storeName) {
+        errors.push(`Row ${rowNum}: store name is required`);
+        continue;
+      }
+
+      if (row.entityId) {
+        const trimmed = String(row.entityId).trim();
+        const existing = await this.findByEntityId(trimmed);
+        if (existing) {
+          errors.push(`Row ${rowNum}: Entity ID "${trimmed}" already exists`);
+          continue;
+        }
+      }
+
+      try {
+        const entity = this.entitiesRepository.create({
+          ...row,
+          storeName,
+          entityId: row.entityId ? String(row.entityId).trim() : undefined,
+          area: row.area ? String(row.area).trim() : undefined,
+          city: row.city ? String(row.city).trim() : undefined,
+          region: row.region ? String(row.region).trim() : undefined,
+          storeStatus: row.storeStatus ? String(row.storeStatus).trim() : 'Functional',
+          organizationId,
+        });
+        created.push(await this.entitiesRepository.save(entity));
+      } catch (error) {
+        if (error instanceof QueryFailedError) {
+          const message = String(error.message || '');
+          if (message.includes('duplicate key') || message.includes('unique constraint')) {
+            errors.push(`Row ${rowNum}: Entity ID already exists`);
+            continue;
+          }
+        }
+        throw error;
+      }
+    }
+
+    return { created: created.length, failed: errors.length, errors };
   }
 
   async update(id: string, entityData: Partial<BusinessEntity>): Promise<BusinessEntity> {
