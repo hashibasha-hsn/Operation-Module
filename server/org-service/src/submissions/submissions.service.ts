@@ -671,11 +671,14 @@ export class SubmissionsService {
   async findUserProcessSubmissions(userId: string, organizationId: string) {
     return this.submissionsRepository
       .createQueryBuilder('submission')
-      .leftJoinAndSelect('submission.process', 'process')
+      .leftJoinAndSelect(
+        'submission.process',
+        'process',
+        'CAST(process.id AS text) = submission.workflowId',
+      )
       .where('submission.organizationId = :organizationId', { organizationId })
       .andWhere('submission.submittedBy = :userId', { userId })
       .andWhere('submission.workflowType = :workflowType', { workflowType: 'process' })
-      .andWhere('process.id IS NOT NULL')
       .orderBy('submission.updatedAt', 'DESC')
       .getMany();
   }
@@ -783,11 +786,14 @@ export class SubmissionsService {
   async findUserAuditSubmissions(userId: string, organizationId: string) {
     return this.submissionsRepository
       .createQueryBuilder('submission')
-      .leftJoinAndSelect('submission.audit', 'audit')
+      .leftJoinAndSelect(
+        'submission.audit',
+        'audit',
+        'CAST(audit.id AS text) = submission.workflowId',
+      )
       .where('submission.organizationId = :organizationId', { organizationId })
       .andWhere('submission.submittedBy = :userId', { userId })
       .andWhere('submission.workflowType = :workflowType', { workflowType: 'audit' })
-      .andWhere('audit.id IS NOT NULL')
       .orderBy('submission.updatedAt', 'DESC')
       .getMany();
   }

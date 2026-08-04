@@ -83,6 +83,11 @@ export default function Tasks() {
     return acc;
   }, {});
 
+  const processTitleById = assignedProcesses.reduce((acc: Record<string, string>, process) => {
+    acc[process.id] = process.title;
+    return acc;
+  }, {});
+
   const draftByAuditId = auditSubmissions.reduce((acc: Record<string, any>, item) => {
     if (item.status === "draft") acc[item.workflowId] = item;
     return acc;
@@ -282,7 +287,9 @@ export default function Tasks() {
                     <Card key={draft.id} className="border-border">
                       <CardContent className="p-4 flex items-center justify-between gap-3">
                         <div>
-                          <p className="font-medium">{draft.process?.title ?? t('processTab')}</p>
+                          <p className="font-medium">
+                            {draft.process?.title || processTitleById[draft.workflowId] || t('processTab')}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {draft.status === "correction" ? t("correction") : t("draftSaved")}
                           </p>

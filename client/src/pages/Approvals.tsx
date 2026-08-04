@@ -440,7 +440,10 @@ export default function Approvals() {
                 <div>
                   <Label>Workflow</Label>
                   <div className="text-sm mt-1">
-                    {selectedSubmission.process?.title || selectedSubmission.audit?.title || 'N/A'}
+                    {workflowDetail?.title ||
+                      selectedSubmission.process?.title ||
+                      selectedSubmission.audit?.title ||
+                      'N/A'}
                   </div>
                 </div>
                 <div>
