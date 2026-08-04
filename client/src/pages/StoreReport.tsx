@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TableActionsMenu } from "@/components/ui/table-actions-menu";
+import WorkflowDetailSheet from "@/components/report/WorkflowDetailSheet";
 import { Search, Download, Filter, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -28,6 +29,7 @@ import {
   exportRowsToCsv,
   fetchEntities,
   fetchStoreReport,
+  fetchWorkflowDetail,
 } from "@/lib/reportApi";
 import { fetchUsers } from "@/lib/processApi";
 import { buildUserNameMap, humanLabel } from "@/lib/displayLabels";
@@ -42,9 +44,26 @@ export default function StoreReport() {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [userNames, setUserNames] = useState<Record<string, string>>({});
+  const [detailData, setDetailData] = useState<any>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [storeNames, setStoreNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetchEntities().then(setStores).catch(() => setStores([]));
+    fetchEntities()
+      .then((entities) => {
+        setStores(entities);
+        const map: Record<string, string> = {};
+        (entities || []).forEach((entity: any) => {
+          const label = humanLabel(entity.storeName, entity.entityName, entity.name, "Unnamed store");
+          map[entity.id] = label;
+          if (entity.entityId) map[entity.entityId] = label;
+        });
+        setStoreNames(map);
+      })
+      .catch(() => {
+        setStores([]);
+        setStoreNames({});
+      });
     fetchUsers(1000)
       .then((users) => setUserNames(buildUserNameMap(users || [])))
       .catch(() => setUserNames({}));
@@ -54,6 +73,25 @@ export default function StoreReport() {
     id ? humanLabel(userNames[id], "Unknown user") : "N/A";
   const storeOptionLabel = (s: any) =>
     humanLabel(s.storeName, s.entityName, s.name, "Unnamed store");
+  const storeLabel = (storeId?: string) =>
+    storeId ? humanLabel(storeNames[storeId], "N/A") : "N/A";
+
+  const handleView = async (submission: any) => {
+    setDetailData(null);
+    setLoadingDetail(true);
+    try {
+      const data = await fetchWorkflowDetail(
+        submission.workflowId,
+        submission.workflowType || "process",
+      );
+      setDetailData(data);
+    } catch (error) {
+      console.error("Error fetching workflow detail:", error);
+      setDetailData({ workflow: null, submissions: [] });
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
 
   useEffect(() => {
     if (storeId) fetchStoreReportData();
@@ -232,7 +270,9 @@ export default function StoreReport() {
                       </TableCell>
                       <TableCell>
                         <TableActionsMenu>
-                          <DropdownMenuItem>View</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleView(submission)}>
+                            View
+                          </DropdownMenuItem>
                         </TableActionsMenu>
                       </TableCell>
                     </TableRow>
@@ -243,6 +283,15 @@ export default function StoreReport() {
           )}
         </CardContent>
       </Card>
+
+      <WorkflowDetailSheet
+        open={Boolean(detailData)}
+        onClose={() => setDetailData(null)}
+        detailData={detailData}
+        loading={loadingDetail}
+        storeLabel={storeLabel}
+        userLabel={userLabel}
+      />
     </div>
   );
 }

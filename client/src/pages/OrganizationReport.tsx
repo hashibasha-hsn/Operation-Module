@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TableActionsMenu } from "@/components/ui/table-actions-menu";
+import WorkflowDetailSheet from "@/components/report/WorkflowDetailSheet";
 import { Search, Download, Filter, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -28,6 +29,7 @@ import {
   exportRowsToCsv,
   fetchOrganizationReport,
   fetchEntities,
+  fetchWorkflowDetail,
 } from "@/lib/reportApi";
 import { fetchUsers } from "@/lib/processApi";
 import { buildStoreNameMap, buildUserNameMap, humanLabel } from "@/lib/displayLabels";
@@ -41,6 +43,8 @@ export default function OrganizationReport() {
   const [loading, setLoading] = useState(true);
   const [storeNames, setStoreNames] = useState<Record<string, string>>({});
   const [userNames, setUserNames] = useState<Record<string, string>>({});
+  const [detailData, setDetailData] = useState<any>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   useEffect(() => {
     fetchEntities()
@@ -55,6 +59,23 @@ export default function OrganizationReport() {
     storeId ? humanLabel(storeNames[storeId], "N/A") : "N/A";
   const userLabel = (id?: string) =>
     id ? humanLabel(userNames[id], "Unknown user") : "N/A";
+
+  const handleView = async (submission: any) => {
+    setDetailData(null);
+    setLoadingDetail(true);
+    try {
+      const data = await fetchWorkflowDetail(
+        submission.workflowId,
+        submission.workflowType || "process",
+      );
+      setDetailData(data);
+    } catch (error) {
+      console.error("Error fetching workflow detail:", error);
+      setDetailData({ workflow: null, submissions: [] });
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
 
   const fetchOrganizationReportData = async () => {
     setLoading(true);
@@ -269,7 +290,9 @@ export default function OrganizationReport() {
                       </TableCell>
                       <TableCell>
                         <TableActionsMenu>
-                          <DropdownMenuItem>View</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleView(submission)}>
+                            View
+                          </DropdownMenuItem>
                         </TableActionsMenu>
                       </TableCell>
                     </TableRow>
@@ -280,6 +303,15 @@ export default function OrganizationReport() {
           )}
         </CardContent>
       </Card>
+
+      <WorkflowDetailSheet
+        open={Boolean(detailData)}
+        onClose={() => setDetailData(null)}
+        detailData={detailData}
+        loading={loadingDetail}
+        storeLabel={storeLabel}
+        userLabel={userLabel}
+      />
     </div>
   );
 }
