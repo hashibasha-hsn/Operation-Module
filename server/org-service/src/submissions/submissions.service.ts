@@ -2,6 +2,8 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, In } from 'typeorm';
 import { Submission } from './submission.entity';
+import { Process } from '../processes/process.entity';
+import { Audit } from '../audits/audit.entity';
 import { ProcessesService } from '../processes/processes.service';
 import { AuditsService } from '../audits/audits.service';
 import { EntitiesService } from '../entities/entities.service';
@@ -31,11 +33,65 @@ export class SubmissionsService {
   constructor(
     @InjectRepository(Submission, 'org')
     private submissionsRepository: Repository<Submission>,
+    @InjectRepository(Process, 'org')
+    private processesRepository: Repository<Process>,
+    @InjectRepository(Audit, 'org')
+    private auditsRepository: Repository<Audit>,
     private readonly processesService: ProcessesService,
     private readonly auditsService: AuditsService,
     private readonly entitiesService: EntitiesService,
     private readonly auditLogsService: AuditLogClient,
   ) {}
+
+  /**
+   * The submissions table stores the workflow reference in workflowId/workflowType,
+   * while the process/audit relation join columns (processId/auditId) are never
+   * populated. Attach lightweight { title } / { title, processTag } objects so the
+   * UI can render workflow names without relying on the broken relations.
+   */
+  private async withWorkflowTitles(submissions: Submission[]): Promise<any[]> {
+    if (!submissions.length) return [];
+
+    const processIds = [...new Set(
+      submissions.filter((s) => s.workflowType !== 'audit').map((s) => s.workflowId),
+    )];
+    const auditIds = [...new Set(
+      submissions.filter((s) => s.workflowType === 'audit').map((s) => s.workflowId),
+    )];
+
+    const [processes, audits] = await Promise.all([
+      processIds.length
+        ? this.processesRepository
+            .createQueryBuilder('p')
+            .where('CAST(p.id AS text) IN (:...processIds)', { processIds })
+            .select(['p.id', 'p.title', 'p.processTag'])
+            .getMany()
+        : Promise.resolve([]),
+      auditIds.length
+        ? this.auditsRepository
+            .createQueryBuilder('a')
+            .where('CAST(a.id AS text) IN (:...auditIds)', { auditIds })
+            .select(['a.id', 'a.title'])
+            .getMany()
+        : Promise.resolve([]),
+    ]);
+
+    const processMap = new Map(processes.map((p) => [String(p.id), p]));
+    const auditMap = new Map(audits.map((a) => [String(a.id), a]));
+
+    return submissions.map((s) => {
+      if (s.workflowType === 'audit') {
+        const audit = auditMap.get(String(s.workflowId));
+        return { ...s, process: null, audit: audit ? { title: audit.title } : null };
+      }
+      const process = processMap.get(String(s.workflowId));
+      return {
+        ...s,
+        process: process ? { title: process.title, processTag: process.processTag } : null,
+        audit: null,
+      };
+    });
+  }
 
   private async logFormAction(
     submission: Submission,
@@ -77,16 +133,16 @@ export class SubmissionsService {
     });
   }
 
-  async findPendingApprovals(userId: string, organizationId: string): Promise<Submission[]> {
-    return await this.submissionsRepository.find({
+  async findPendingApprovals(userId: string, organizationId: string): Promise<any[]> {
+    const submissions = await this.submissionsRepository.find({
       where: {
         organizationId,
         status: 'pending_review',
         currentReviewerId: userId,
       },
-      relations: ['process', 'audit'],
       order: { submittedAt: 'DESC', createdAt: 'DESC' },
     });
+    return this.withWorkflowTitles(submissions);
   }
 
   private getReviewConfigForSubmission(submission: Submission): Promise<ReviewConfig> {
@@ -829,7 +885,9 @@ export class SubmissionsService {
       query.andWhere('submission.createdAt <= :endDate', { endDate });
     }
 
-    return await query.orderBy('submission.createdAt', 'DESC').getMany();
+    return this.withWorkflowTitles(
+      await query.orderBy('submission.createdAt', 'DESC').getMany(),
+    );
   }
 
   async getWorkflowDetail(
@@ -881,7 +939,9 @@ export class SubmissionsService {
       query.andWhere('submission.createdAt <= :endDate', { endDate });
     }
 
-    return await query.orderBy('submission.createdAt', 'DESC').getMany();
+    return this.withWorkflowTitles(
+      await query.orderBy('submission.createdAt', 'DESC').getMany(),
+    );
   }
 
   async getProcessReport(
@@ -943,7 +1003,9 @@ export class SubmissionsService {
       );
     }
 
-    const submissions = await query.orderBy('submission.createdAt', 'DESC').getMany();
+    const submissions = await this.withWorkflowTitles(
+      await query.orderBy('submission.createdAt', 'DESC').getMany(),
+    );
 
     // Load process(es) for expected counts
     let processes: any[] = [];
@@ -1280,16 +1342,16 @@ export class SubmissionsService {
     };
   }
 
-  async getExpiredSubmissions(organizationId: string): Promise<Submission[]> {
+  async getExpiredSubmissions(organizationId: string): Promise<any[]> {
     const now = new Date();
-    return await this.submissionsRepository.find({
+    const submissions = await this.submissionsRepository.find({
       where: {
         organizationId,
         dueDate: LessThan(now) as any,
         status: In(['new', 'correction']) as any,
       },
-      relations: ['process'],
       order: { dueDate: 'ASC' },
     });
+    return this.withWorkflowTitles(submissions);
   }
 }
