@@ -514,17 +514,21 @@ export default function Approvals() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-muted rounded-full h-2">
-                            <div
-                              className="bg-primary h-2 rounded-full"
-                              style={{
-                                width: `${(submission.currentReviewLevel / 3) * 100}%`
-                              }}
-                            />
+                        {submission.currentReviewLevel > 0 && submission.reviewLevels > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-muted rounded-full h-2">
+                              <div
+                                className="bg-primary h-2 rounded-full"
+                                style={{
+                                  width: `${Math.min((submission.currentReviewLevel / submission.reviewLevels) * 100, 100)}%`
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm">L{submission.currentReviewLevel}/{submission.reviewLevels}</span>
                           </div>
-                          <span className="text-sm">L{submission.currentReviewLevel || 1}/3</span>
-                        </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {submission.reviewHistory && submission.reviewHistory.length > 0 ? (

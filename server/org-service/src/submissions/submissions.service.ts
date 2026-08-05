@@ -64,14 +64,14 @@ export class SubmissionsService {
         ? this.processesRepository
             .createQueryBuilder('p')
             .where('CAST(p.id AS text) IN (:...processIds)', { processIds })
-            .select(['p.id', 'p.title', 'p.processTag'])
+            .select(['p.id', 'p.title', 'p.processTag', 'p.properties', 'p.requiresApproval'])
             .getMany()
         : Promise.resolve([]),
       auditIds.length
         ? this.auditsRepository
             .createQueryBuilder('a')
             .where('CAST(a.id AS text) IN (:...auditIds)', { auditIds })
-            .select(['a.id', 'a.title'])
+            .select(['a.id', 'a.title', 'a.reviewLevels', 'a.properties', 'a.requiresApproval'])
             .getMany()
         : Promise.resolve([]),
     ]);
@@ -82,13 +82,32 @@ export class SubmissionsService {
     return submissions.map((s) => {
       if (s.workflowType === 'audit') {
         const audit = auditMap.get(String(s.workflowId));
-        return { ...s, process: null, audit: audit ? { title: audit.title } : null };
+        const reviewLevels = audit
+          ? Number(
+              ((audit.properties?.reviewConfig ?? {}) as Record<string, unknown>)?.levels ??
+                audit.reviewLevels ??
+                (audit.requiresApproval ? 1 : 0),
+            )
+          : 0;
+        return {
+          ...s,
+          process: null,
+          audit: audit ? { title: audit.title } : null,
+          reviewLevels: Math.max(reviewLevels, 0),
+        };
       }
       const process = processMap.get(String(s.workflowId));
+      const reviewLevels = process
+        ? Number(
+            ((process.properties?.reviewConfig ?? {}) as Record<string, unknown>)?.levels ??
+              (process.requiresApproval ? 1 : 0),
+          )
+        : 0;
       return {
         ...s,
         process: process ? { title: process.title, processTag: process.processTag } : null,
         audit: null,
+        reviewLevels: Math.max(reviewLevels, 0),
       };
     });
   }
