@@ -20,9 +20,10 @@ import {
   type AssessmentDraftState,
 } from "@/lib/assessmentDraft";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { fetchUsers } from "@/lib/processApi";
 
-type AssignOption = { id: string; label: string };
-type AssignBy = "store" | "designation" | "profile";
+type AssignOption = { id: string; label: string; searchText?: string; designation?: string; profiles?: string[] };
+type AssignBy = "store" | "designation" | "profile" | "user";
 
 export default function AssessmentCreation() {
   const [, navigate] = useLocation();
@@ -36,6 +37,8 @@ export default function AssessmentCreation() {
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
   const [selectedDesignationNames, setSelectedDesignationNames] = useState<string[]>([]);
   const [selectedProfileIds, setSelectedProfileIds] = useState<string[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [userOptions, setUserOptions] = useState<AssignOption[]>([]);
   const [search, setSearch] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -45,17 +48,31 @@ export default function AssessmentCreation() {
     setSelectedStoreIds(loaded.storeIds ?? []);
     setSelectedDesignationNames(loaded.designationNames ?? []);
     setSelectedProfileIds(loaded.assigneeProfileIds ?? []);
+    setSelectedUserIds(loaded.assigneeIds ?? []);
     if (loaded.assignBy) setAssignBy(loaded.assignBy);
 
     let cancelled = false;
 
     const loadAssignmentOptions = async () => {
-      const [entityRows, designationRows, profileRows] = await Promise.all([
+      const [entityRows, designationRows, profileRows, userRows] = await Promise.all([
         fetchEntities(),
         fetchDesignations(),
         fetchAssigneeProfiles(),
+        fetchUsers(1000),
       ]);
       if (cancelled) return;
+
+      const profileNameByUserId = new Map<string, string[]>();
+      (Array.isArray(profileRows) ? profileRows : []).forEach((profile: any) => {
+        const pname = profile.profileName || profile.name || String(profile.id);
+        (Array.isArray(profile.users) ? profile.users : []).forEach((u: any) => {
+          const uid = String(u.userId ?? u.id ?? "");
+          if (!uid) return;
+          const list = profileNameByUserId.get(uid) || [];
+          if (!list.includes(pname)) list.push(pname);
+          profileNameByUserId.set(uid, list);
+        });
+      });
 
       setStores(
         (Array.isArray(entityRows) ? entityRows : []).map((entity: any) => ({
@@ -75,6 +92,23 @@ export default function AssessmentCreation() {
           label: row.profileName || row.name || String(row.id),
         })),
       );
+      setUserOptions(
+        (Array.isArray(userRows) ? userRows : [])
+          .map((u: any) => {
+            const uid = String(u.userId ?? u.id ?? "");
+            const name = u.name || u.fullName || u.email || uid;
+            const designation = u.designation || "";
+            const profiles = profileNameByUserId.get(uid) || [];
+            return {
+              id: uid,
+              label: name,
+              designation,
+              profiles,
+              searchText: [name, designation, ...profiles].join(" ").toLowerCase(),
+            };
+          })
+          .filter((option) => option.id),
+      );
     };
 
     loadAssignmentOptions().catch(() => {
@@ -91,6 +125,7 @@ export default function AssessmentCreation() {
           setSelectedStoreIds(saved.storeIds ?? []);
           setSelectedDesignationNames(saved.designationNames ?? []);
           setSelectedProfileIds(saved.assigneeProfileIds ?? []);
+          setSelectedUserIds(saved.assigneeIds ?? []);
         })
         .catch((error: any) => {
           if (!cancelled) toast.error(error.message || "Could not sync assessment draft");
@@ -110,16 +145,23 @@ export default function AssessmentCreation() {
     names.includes(name) ? names.filter((item) => item !== name) : [...names, name];
 
   const currentOptions =
-    assignBy === "store" ? stores : assignBy === "designation" ? designations : profiles;
+    assignBy === "store"
+      ? stores
+      : assignBy === "designation"
+        ? designations
+        : assignBy === "profile"
+          ? profiles
+          : userOptions;
 
   const filteredOptions = currentOptions.filter((option) =>
-    option.label.toLowerCase().includes(search.toLowerCase()),
+    (option.searchText ?? option.label).toLowerCase().includes(search.toLowerCase()),
   );
 
   const isSelected = (option: AssignOption) => {
     if (assignBy === "store") return selectedStoreIds.includes(option.id);
     if (assignBy === "designation") return selectedDesignationNames.includes(option.label);
-    return selectedProfileIds.includes(option.id);
+    if (assignBy === "profile") return selectedProfileIds.includes(option.id);
+    return selectedUserIds.includes(option.id);
   };
 
   const toggleOption = (option: AssignOption) => {
@@ -135,15 +177,22 @@ export default function AssessmentCreation() {
       persistLocal({ designationNames: next });
       return;
     }
-    const next = toggleId(selectedProfileIds, option.id);
-    setSelectedProfileIds(next);
-    persistLocal({ profileIds: next });
+    if (assignBy === "profile") {
+      const next = toggleId(selectedProfileIds, option.id);
+      setSelectedProfileIds(next);
+      persistLocal({ profileIds: next });
+      return;
+    }
+    const next = toggleId(selectedUserIds, option.id);
+    setSelectedUserIds(next);
+    persistLocal({ userIds: next });
   };
 
   const persistLocal = (patch: {
     storeIds?: string[];
     designationNames?: string[];
     profileIds?: string[];
+    userIds?: string[];
   }) => {
     if (!draft) return;
     const updated = {
@@ -152,6 +201,7 @@ export default function AssessmentCreation() {
       storeIds: patch.storeIds ?? selectedStoreIds,
       designationNames: patch.designationNames ?? selectedDesignationNames,
       assigneeProfileIds: patch.profileIds ?? selectedProfileIds,
+      assigneeIds: assignBy === "user" ? (patch.userIds ?? selectedUserIds) : draft.assigneeIds,
     };
     setDraft(updated);
     saveAssessmentDraftLocal(updated);
@@ -160,7 +210,8 @@ export default function AssessmentCreation() {
   const hasAssignment = () => {
     if (assignBy === "store") return selectedStoreIds.length > 0;
     if (assignBy === "designation") return selectedDesignationNames.length > 0;
-    return selectedProfileIds.length > 0;
+    if (assignBy === "profile") return selectedProfileIds.length > 0;
+    return selectedUserIds.length > 0;
   };
 
   const buildDraftPayload = (): AssessmentDraftState => ({
@@ -169,7 +220,7 @@ export default function AssessmentCreation() {
     storeIds: selectedStoreIds,
     designationNames: selectedDesignationNames,
     assigneeProfileIds: selectedProfileIds,
-    assigneeIds: [],
+    assigneeIds: assignBy === "user" ? selectedUserIds : [],
   });
 
   const handleSave = async () => {
@@ -190,7 +241,7 @@ export default function AssessmentCreation() {
       setDraft(synced);
       await assignAssessment(synced.id!, {
         storeIds: selectedStoreIds,
-        assigneeIds: [],
+        assigneeIds: assignBy === "user" ? selectedUserIds : [],
         assigneeProfiles: {
           assignBy,
           profileIds: selectedProfileIds,
@@ -224,7 +275,7 @@ export default function AssessmentCreation() {
       const synced = await ensureAssessmentDraftSaved(payload);
       await assignAssessment(synced.id!, {
         storeIds: selectedStoreIds,
-        assigneeIds: [],
+        assigneeIds: assignBy === "user" ? selectedUserIds : [],
         assigneeProfiles: {
           assignBy,
           profileIds: selectedProfileIds,
@@ -245,6 +296,7 @@ export default function AssessmentCreation() {
     { key: "store", label: t("byStore") },
     { key: "designation", label: t("byDesignation") },
     { key: "profile", label: t("byAssigneeProfile") },
+    { key: "user", label: t("byUser") },
   ];
 
   return (
@@ -290,7 +342,9 @@ export default function AssessmentCreation() {
                   ? t("searchStores")
                   : assignBy === "designation"
                     ? t("searchDesignations")
-                    : t("searchAssigneeProfiles")
+                    : assignBy === "profile"
+                      ? t("searchAssigneeProfiles")
+                      : t("searchUsers")
               }
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -305,12 +359,19 @@ export default function AssessmentCreation() {
                   key={option.id}
                   type="button"
                   onClick={() => toggleOption(option)}
-                  className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm ${
+                  className={`flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm ${
                     isSelected(option) ? "border-sky-500 bg-sky-50" : ""
                   }`}
                 >
-                  <span>{option.label}</span>
-                  {isSelected(option) && <Check className="h-4 w-4 text-sky-600" />}
+                  <span className="min-w-0">
+                    <span className="block truncate">{option.label}</span>
+                    {assignBy === "user" && (option.designation || option.profiles?.length) && (
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {[option.designation, ...(option.profiles ?? [])].filter(Boolean).join(" · ")}
+                      </span>
+                    )}
+                  </span>
+                  {isSelected(option) && <Check className="h-4 w-4 shrink-0 text-sky-600" />}
                 </button>
               ))
             )}

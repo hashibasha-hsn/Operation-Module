@@ -60,7 +60,7 @@ export type AssessmentDraftState = {
   certificateSettings?: AssessmentCertificateSettings;
   assigneeIds?: string[];
   storeIds?: string[];
-  assignBy?: 'store' | 'designation' | 'profile';
+  assignBy?: 'store' | 'designation' | 'profile' | 'user';
   assigneeProfileIds?: string[];
   designationNames?: string[];
 };
