@@ -29,14 +29,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check, X, Clock, AlertCircle, Search, Filter, MoreVertical, FileText, ClipboardCheck, ExternalLink } from "lucide-react";
+import { Check, X, Clock, AlertCircle, Search, Filter, MoreVertical, FileText, ClipboardCheck, ExternalLink, Eye, CheckCircle2, GitPullRequest, Send } from "lucide-react";
 import { fileNameFromUrl, isUrlValue } from "@/lib/fileUpload";
 import ViewableFileValue from "@/components/process/ViewableFileValue";
+import ReviewTimelineDialog from "@/components/report/ReviewTimelineDialog";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import {
   approveSubmission,
   fetchPendingApprovals,
+  fetchReviewQueue,
   fetchSubmissionStatusCounts,
   rejectSubmission,
   sendSubmissionForCorrection,
@@ -59,6 +61,8 @@ export default function Approvals() {
   const [userNames, setUserNames] = useState<Record<string, string>>({});
   const [workflowDetail, setWorkflowDetail] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [reviewQueue, setReviewQueue] = useState<any[]>([]);
+  const [viewSubmission, setViewSubmission] = useState<any>(null);
   const [statusCounts, setStatusCounts] = useState<{
     total: number;
     pending: number;
@@ -70,6 +74,9 @@ export default function Approvals() {
     fetchPendingApprovals()
       .then(setSubmissions)
       .catch(() => setSubmissions([]));
+    fetchReviewQueue()
+      .then(setReviewQueue)
+      .catch(() => setReviewQueue([]));
   }, []);
 
   useEffect(() => {
@@ -121,6 +128,7 @@ export default function Approvals() {
 
   const refreshSubmissions = () => {
     fetchPendingApprovals().then(setSubmissions);
+    fetchReviewQueue().then(setReviewQueue);
     fetchSubmissionStatusCounts()
       .then(setStatusCounts)
       .catch(() => undefined);
@@ -178,6 +186,16 @@ export default function Approvals() {
   };
 
   const filteredSubmissions = submissions.filter((s: any) => {
+    const matchesLevel =
+      levelFilter === "all" || String(s.currentReviewLevel || 1) === levelFilter;
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "pending" && s.status === "pending_review") ||
+      s.status === statusFilter;
+    return matchesLevel && matchesStatus;
+  });
+
+  const filteredReviewQueue = reviewQueue.filter((s: any) => {
     const matchesLevel =
       levelFilter === "all" || String(s.currentReviewLevel || 1) === levelFilter;
     const matchesStatus =
@@ -392,17 +410,18 @@ export default function Approvals() {
                   <TableHead>Current Status</TableHead>
                   <TableHead>Progress</TableHead>
                   <TableHead>Last Action</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {submissions.length === 0 ? (
+                {filteredReviewQueue.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       No workflow status available
                     </TableCell>
                   </TableRow>
                 ) : (
-                  submissions.map((submission: any) => (
+                  filteredReviewQueue.map((submission: any) => (
                     <TableRow key={submission.id}>
                       <TableCell>{submission.process?.title || submission.audit?.title || 'N/A'}</TableCell>
                       <TableCell>{storeLabel(submission.storeId)}</TableCell>
@@ -442,6 +461,12 @@ export default function Approvals() {
                         ) : (
                           <span className="text-muted-foreground">No actions</span>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" className="gap-1" onClick={() => setViewSubmission(submission)}>
+                          <Eye className="w-3.5 h-3.5" />
+                          View
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -646,6 +671,14 @@ export default function Approvals() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReviewTimelineDialog
+        submission={viewSubmission}
+        open={!!viewSubmission}
+        onClose={() => setViewSubmission(null)}
+        userNames={userNames}
+        storeNames={storeNames}
+      />
     </div>
   );
 }

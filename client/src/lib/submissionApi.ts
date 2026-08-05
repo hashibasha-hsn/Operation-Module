@@ -19,10 +19,19 @@ export async function fetchPendingApprovals() {
   return response.json();
 }
 
-export async function fetchSubmissionStatusCounts() {
-  const { organizationId } = getSubmissionContext();
+export async function fetchReviewQueue() {
+  const { organizationId, userId } = getSubmissionContext();
   const response = await fetch(
-    `${ORG_API}/submissions/reports/status-counts?organizationId=${encodeURIComponent(organizationId)}`,
+    `${ORG_API}/submissions/review-queue?userId=${encodeURIComponent(userId)}&organizationId=${encodeURIComponent(organizationId)}`,
+  );
+  if (!response.ok) throw new Error('Failed to load review queue');
+  return response.json();
+}
+
+export async function fetchSubmissionStatusCounts() {
+  const { organizationId, userId } = getSubmissionContext();
+  const response = await fetch(
+    `${ORG_API}/submissions/reports/status-counts?organizationId=${encodeURIComponent(organizationId)}&userId=${encodeURIComponent(userId)}`,
   );
   if (!response.ok) throw new Error('Failed to load submission status counts');
   return response.json();

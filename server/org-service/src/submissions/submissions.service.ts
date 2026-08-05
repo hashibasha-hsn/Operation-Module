@@ -145,7 +145,10 @@ export class SubmissionsService {
     return this.withWorkflowTitles(submissions);
   }
 
-  async getStatusCounts(organizationId: string): Promise<{
+  async getStatusCounts(
+    organizationId: string,
+    userId: string,
+  ): Promise<{
     total: number;
     pending: number;
     correction: number;
@@ -156,6 +159,17 @@ export class SubmissionsService {
       .select('submission.status', 'status')
       .addSelect('COUNT(*)', 'count')
       .where('submission.organizationId = :organizationId', { organizationId })
+      .andWhere(
+        `(
+          submission.currentReviewerId = :userId
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements(COALESCE(submission.reviewHistory::jsonb, '[]'::jsonb)) historyEntry
+            WHERE historyEntry->>'reviewerId' = :userId
+          )
+        )`,
+        { userId },
+      )
       .groupBy('submission.status')
       .getRawMany<{ status: string; count: string }>();
 
@@ -170,6 +184,31 @@ export class SubmissionsService {
       correction: byStatus['correction'] ?? 0,
       completed: byStatus['completed'] ?? 0,
     };
+  }
+
+  /**
+   * All submissions that came to this user for review (currently assigned as the
+   * reviewer, or acted on by the user at some point). Used by the Workflow Status tab.
+   */
+  async getReviewQueue(userId: string, organizationId: string): Promise<any[]> {
+    const submissions = await this.submissionsRepository
+      .createQueryBuilder('submission')
+      .where('submission.organizationId = :organizationId', { organizationId })
+      .andWhere(
+        `(
+          submission.currentReviewerId = :userId
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements(COALESCE(submission.reviewHistory::jsonb, '[]'::jsonb)) historyEntry
+            WHERE historyEntry->>'reviewerId' = :userId
+          )
+        )`,
+        { userId },
+      )
+      .orderBy('submission.createdAt', 'DESC')
+      .getMany();
+
+    return this.withWorkflowTitles(submissions);
   }
 
   private getReviewConfigForSubmission(submission: Submission): Promise<ReviewConfig> {
