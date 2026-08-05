@@ -19,6 +19,15 @@ export async function fetchPendingApprovals() {
   return response.json();
 }
 
+export async function fetchSubmissionStatusCounts() {
+  const { organizationId } = getSubmissionContext();
+  const response = await fetch(
+    `${ORG_API}/submissions/reports/status-counts?organizationId=${encodeURIComponent(organizationId)}`,
+  );
+  if (!response.ok) throw new Error('Failed to load submission status counts');
+  return response.json();
+}
+
 export async function approveSubmission(id: string) {
   const { userId } = getSubmissionContext();
   const response = await fetch(`${ORG_API}/submissions/${id}/approve`, {

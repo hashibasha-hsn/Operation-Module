@@ -37,6 +37,7 @@ import { TableActionsMenu } from "@/components/ui/table-actions-menu";
 import {
   approveSubmission,
   fetchPendingApprovals,
+  fetchSubmissionStatusCounts,
   rejectSubmission,
   sendSubmissionForCorrection,
 } from "@/lib/submissionApi";
@@ -58,11 +59,23 @@ export default function Approvals() {
   const [userNames, setUserNames] = useState<Record<string, string>>({});
   const [workflowDetail, setWorkflowDetail] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [statusCounts, setStatusCounts] = useState<{
+    total: number;
+    pending: number;
+    correction: number;
+    completed: number;
+  }>({ total: 0, pending: 0, correction: 0, completed: 0 });
 
   useEffect(() => {
     fetchPendingApprovals()
       .then(setSubmissions)
       .catch(() => setSubmissions([]));
+  }, []);
+
+  useEffect(() => {
+    fetchSubmissionStatusCounts()
+      .then(setStatusCounts)
+      .catch(() => setStatusCounts({ total: 0, pending: 0, correction: 0, completed: 0 }));
   }, []);
 
   useEffect(() => {
@@ -106,10 +119,17 @@ export default function Approvals() {
       .finally(() => setDetailLoading(false));
   };
 
+  const refreshSubmissions = () => {
+    fetchPendingApprovals().then(setSubmissions);
+    fetchSubmissionStatusCounts()
+      .then(setStatusCounts)
+      .catch(() => undefined);
+  };
+
   const handleApprove = async (id: string) => {
     try {
       await approveSubmission(id);
-      fetchPendingApprovals().then(setSubmissions);
+      refreshSubmissions();
       setIsDetailDialogOpen(false);
     } catch (err: any) {
       console.error('Error approving submission:', err);
@@ -125,7 +145,7 @@ export default function Approvals() {
       setCorrectionNotes("");
       setIsCorrectionDialogOpen(false);
       setIsDetailDialogOpen(false);
-      fetchPendingApprovals().then(setSubmissions);
+      refreshSubmissions();
     } catch (err) {
       console.error('Error sending correction:', err);
     }
@@ -137,7 +157,7 @@ export default function Approvals() {
 
     try {
       await rejectSubmission(id, reason);
-      fetchPendingApprovals().then(setSubmissions);
+      refreshSubmissions();
       setIsDetailDialogOpen(false);
     } catch (err) {
       console.error('Error rejecting submission:', err);
@@ -242,7 +262,7 @@ export default function Approvals() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Submissions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{submissions.length}</div>
+            <div className="text-2xl font-bold">{statusCounts.total}</div>
           </CardContent>
         </Card>
         <Card>
@@ -251,7 +271,7 @@ export default function Approvals() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {submissions.filter((s: any) => s.status === "pending_review").length}
+              {statusCounts.pending}
             </div>
           </CardContent>
         </Card>
@@ -261,7 +281,7 @@ export default function Approvals() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {submissions.filter((s: any) => s.status === 'correction').length}
+              {statusCounts.correction}
             </div>
           </CardContent>
         </Card>
@@ -271,7 +291,7 @@ export default function Approvals() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {submissions.filter((s: any) => s.status === 'completed').length}
+              {statusCounts.completed}
             </div>
           </CardContent>
         </Card>

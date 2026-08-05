@@ -145,6 +145,33 @@ export class SubmissionsService {
     return this.withWorkflowTitles(submissions);
   }
 
+  async getStatusCounts(organizationId: string): Promise<{
+    total: number;
+    pending: number;
+    correction: number;
+    completed: number;
+  }> {
+    const rows = await this.submissionsRepository
+      .createQueryBuilder('submission')
+      .select('submission.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('submission.organizationId = :organizationId', { organizationId })
+      .groupBy('submission.status')
+      .getRawMany<{ status: string; count: string }>();
+
+    const byStatus: Record<string, number> = {};
+    rows.forEach((row) => {
+      byStatus[row.status] = Number(row.count);
+    });
+
+    return {
+      total: Object.values(byStatus).reduce((sum, n) => sum + n, 0),
+      pending: byStatus['pending_review'] ?? 0,
+      correction: byStatus['correction'] ?? 0,
+      completed: byStatus['completed'] ?? 0,
+    };
+  }
+
   private getReviewConfigForSubmission(submission: Submission): Promise<ReviewConfig> {
     if (submission.workflowType === 'audit') {
       return this.auditsService.findOne(submission.workflowId).then(getReviewConfigFromAudit);

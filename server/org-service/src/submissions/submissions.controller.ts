@@ -149,6 +149,11 @@ export class SubmissionsController {
     return this.submissionsService.findPendingApprovals(userId, organizationId);
   }
 
+  @Get('reports/status-counts')
+  getStatusCounts(@Query('organizationId') organizationId: string) {
+    return this.submissionsService.getStatusCounts(organizationId);
+  }
+
   // Report endpoints (must stay before @Get(':id'))
   @Get('reports/my-report')
   getMyReport(
