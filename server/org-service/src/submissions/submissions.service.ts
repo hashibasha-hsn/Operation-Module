@@ -164,7 +164,7 @@ export class SubmissionsService {
           submission.currentReviewerId = :userId
           OR EXISTS (
             SELECT 1
-            FROM jsonb_array_elements(COALESCE(submission.reviewHistory::jsonb, '[]'::jsonb)) historyEntry
+            FROM jsonb_array_elements(COALESCE(submission.review_history::jsonb, '[]'::jsonb)) historyEntry
             WHERE historyEntry->>'reviewerId' = :userId
           )
         )`,
@@ -199,7 +199,7 @@ export class SubmissionsService {
           submission.currentReviewerId = :userId
           OR EXISTS (
             SELECT 1
-            FROM jsonb_array_elements(COALESCE(submission.reviewHistory::jsonb, '[]'::jsonb)) historyEntry
+            FROM jsonb_array_elements(COALESCE(submission.review_history::jsonb, '[]'::jsonb)) historyEntry
             WHERE historyEntry->>'reviewerId' = :userId
           )
         )`,
