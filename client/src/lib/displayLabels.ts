@@ -73,3 +73,25 @@ export function buildUserNameMap(
     ['name', 'fullName', 'email', 'employeeId'],
   );
 }
+
+/** Display names for removed (soft-deleted) user profiles, marked as deleted. */
+export function buildRemovedUserNameMap(
+  users: Array<Record<string, unknown>>,
+  deletedSuffix = " (deleted)",
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const row of users || []) {
+    const id = row.userId || row.id;
+    if (!id || typeof id !== 'string') continue;
+    const label = humanLabel(
+      row.name,
+      row.fullName,
+      row.email,
+      row.employeeId,
+      '—',
+    );
+    if (label === '—') continue;
+    map[id] = `${label}${deletedSuffix}`;
+  }
+  return map;
+}

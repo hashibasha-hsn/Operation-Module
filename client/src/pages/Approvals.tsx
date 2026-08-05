@@ -40,10 +40,10 @@ import {
   rejectSubmission,
   sendSubmissionForCorrection,
 } from "@/lib/submissionApi";
-import { fetchEntities, fetchUsers } from "@/lib/processApi";
+import { fetchEntities, fetchUsers, fetchRemovedUsers } from "@/lib/processApi";
 import { fetchProcessById } from "@/lib/processSubmission";
 import { fetchAuditById } from "@/lib/auditSubmission";
-import { buildStoreNameMap, buildUserNameMap, humanLabel } from "@/lib/displayLabels";
+import { buildStoreNameMap, buildUserNameMap, buildRemovedUserNameMap, humanLabel } from "@/lib/displayLabels";
 
 export default function Approvals() {
   const [activeTab, setActiveTab] = useState("Approvals");
@@ -74,8 +74,13 @@ export default function Approvals() {
   }, []);
 
   useEffect(() => {
-    fetchUsers(200)
-      .then((users) => setUserNames(buildUserNameMap(users || [])))
+    Promise.all([fetchUsers(200), fetchRemovedUsers()])
+      .then(([users, removed]) =>
+        setUserNames({
+          ...buildUserNameMap(users || []),
+          ...buildRemovedUserNameMap(removed || []),
+        }),
+      )
       .catch(() => setUserNames({}));
   }, []);
 

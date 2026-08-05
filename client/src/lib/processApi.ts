@@ -94,6 +94,15 @@ export async function fetchUsers(limit = 50) {
   return data?.users ?? (Array.isArray(data) ? data : []);
 }
 
+export async function fetchRemovedUsers() {
+  const response = await fetch(`${USER_API}/users/removed`);
+  if (!response.ok) {
+    return [];
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data : data?.users ?? [];
+}
+
 export function getUserDisplayName(user: Record<string, unknown>): string {
   return humanLabel(
     user.name,
