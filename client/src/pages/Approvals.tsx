@@ -29,12 +29,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check, X, Clock, AlertCircle, Search, Filter, MoreVertical, FileText, ClipboardCheck, ExternalLink, Eye, CheckCircle2, GitPullRequest, Send, Loader2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Check, X, Clock, AlertCircle, Search, MoreVertical, FileText, ClipboardCheck, ExternalLink, Eye, CheckCircle2, GitPullRequest, Send, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { fileNameFromUrl, isUrlValue } from "@/lib/fileUpload";
 import ViewableFileValue from "@/components/process/ViewableFileValue";
 import ReviewTimelineDialog from "@/components/report/ReviewTimelineDialog";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TableActionsMenu } from "@/components/ui/table-actions-menu";
+import { type DateFilter, resolveReportDateRange } from "@/lib/reportApi";
 import {
   approveSubmission,
   fetchPendingApprovals,
@@ -55,8 +58,12 @@ export default function Approvals() {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isCorrectionDialogOpen, setIsCorrectionDialogOpen] = useState(false);
   const [correctionNotes, setCorrectionNotes] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending");
-  const [levelFilter, setLevelFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [dateStart, setDateStart] = useState<Date | undefined>();
+  const [dateEnd, setDateEnd] = useState<Date | undefined>();
+  const [dateDraftStart, setDateDraftStart] = useState<Date | undefined>();
+  const [dateDraftEnd, setDateDraftEnd] = useState<Date | undefined>();
+  const [dateCalendarOpen, setDateCalendarOpen] = useState(false);
   const [storeNames, setStoreNames] = useState<Record<string, string>>({});
   const [userNames, setUserNames] = useState<Record<string, string>>({});
   const [workflowDetail, setWorkflowDetail] = useState<any>(null);
@@ -198,25 +205,25 @@ export default function Approvals() {
     return `${days} days`;
   };
 
-  const filteredSubmissions = submissions.filter((s: any) => {
-    const matchesLevel =
-      levelFilter === "all" || String(s.currentReviewLevel || 1) === levelFilter;
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "pending" && s.status === "pending_review") ||
-      s.status === statusFilter;
-    return matchesLevel && matchesStatus;
+  const { startDate: filterStart, endDate: filterEnd } = resolveReportDateRange({
+    dateFilter,
+    startDate: dateFilter === "custom" ? dateStart?.toISOString().slice(0, 10) : undefined,
+    endDate: dateFilter === "custom" ? dateEnd?.toISOString().slice(0, 10) : undefined,
   });
 
-  const filteredReviewQueue = reviewQueue.filter((s: any) => {
-    const matchesLevel =
-      levelFilter === "all" || String(s.currentReviewLevel || 1) === levelFilter;
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "pending" && s.status === "pending_review") ||
-      s.status === statusFilter;
-    return matchesLevel && matchesStatus;
-  });
+  const matchesDate = (s: any) => {
+    if (!filterStart && !filterEnd) return true;
+    const ts = new Date(s.submittedAt || s.createdAt);
+    if (isNaN(ts.getTime())) return false;
+    const day = ts.toISOString().slice(0, 10);
+    if (filterStart && day < filterStart) return false;
+    if (filterEnd && day > filterEnd) return false;
+    return true;
+  };
+
+  const filteredSubmissions = submissions.filter(matchesDate);
+
+  const filteredReviewQueue = reviewQueue.filter(matchesDate);
 
   return (
     <div className="p-6 space-y-6">
@@ -254,33 +261,89 @@ export default function Approvals() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex items-center gap-4">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+      <div className="flex items-center gap-4 flex-wrap">
+        <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DateFilter)}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder="Date Range" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="correction">Correction</SelectItem>
+            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="today">Today</SelectItem>
+            <SelectItem value="week">Last 7 Days</SelectItem>
+            <SelectItem value="month">Last 30 Days</SelectItem>
+            {dateFilter === "custom" && <SelectItem value="custom">Custom</SelectItem>}
           </SelectContent>
         </Select>
-        <Select value={levelFilter} onValueChange={setLevelFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Review Level" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Levels</SelectItem>
-            <SelectItem value="1">Level 1</SelectItem>
-            <SelectItem value="2">Level 2</SelectItem>
-            <SelectItem value="3">Level 3</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" className="gap-2">
-          <Filter className="w-4 h-4" />
-          More Filters
-        </Button>
+        <Popover
+          open={dateCalendarOpen}
+          onOpenChange={(open) => {
+            setDateCalendarOpen(open);
+            if (open) {
+              setDateDraftStart(dateStart);
+              setDateDraftEnd(dateEnd);
+            }
+          }}
+        >
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`gap-2 ${dateFilter === "custom" ? "border-primary" : ""}`}
+            >
+              <CalendarIcon className="h-3.5 w-3.5" />
+              {dateFilter === "custom" && (dateStart || dateEnd)
+                ? `${dateStart ? dateStart.toLocaleDateString() : "?"}${
+                    dateEnd ? ` – ${dateEnd.toLocaleDateString()}` : ""
+                  }`
+                : "Custom"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-4" align="start">
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">From</p>
+                <Calendar mode="single" selected={dateDraftStart} onSelect={setDateDraftStart} initialFocus />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">To</p>
+                <Calendar mode="single" selected={dateDraftEnd} onSelect={setDateDraftEnd} />
+              </div>
+            </div>
+            {dateDraftStart &&
+              dateDraftEnd &&
+              dateDraftStart.getTime() > dateDraftEnd.getTime() && (
+                <p className="text-xs text-destructive mt-2">From date must be on or before To date.</p>
+              )}
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDateDraftStart(undefined);
+                  setDateDraftEnd(undefined);
+                  setDateStart(undefined);
+                  setDateEnd(undefined);
+                  setDateFilter("all");
+                  setDateCalendarOpen(false);
+                }}
+              >
+                Clear
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  if (dateDraftStart && dateDraftEnd && dateDraftStart.getTime() > dateDraftEnd.getTime()) return;
+                  setDateStart(dateDraftStart);
+                  setDateEnd(dateDraftEnd);
+                  setDateFilter("custom");
+                  setDateCalendarOpen(false);
+                }}
+              >
+                Apply
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
         <Button variant="outline" className="gap-2">
           Bulk Approval
         </Button>
