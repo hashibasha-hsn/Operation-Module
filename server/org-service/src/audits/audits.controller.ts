@@ -160,4 +160,9 @@ export class AuditsController {
   archive(@Param('id') id: string) {
     return this.auditsService.archive(id);
   }
+
+  @Post(':id/child')
+  createChild(@Param('id') id: string, @Body() body: { createdBy?: string }) {
+    return this.auditsService.createChild(id, body?.createdBy);
+  }
 }

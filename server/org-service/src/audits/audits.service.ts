@@ -22,6 +22,19 @@ export class AuditsService {
     private readonly auditLogClient: AuditLogClient,
   ) {}
 
+  private async recordStatus(audit: Audit, status: string, actor?: string | null) {
+    const history = audit.statusHistory || [];
+    const last = history[history.length - 1];
+    if (last && last.status === status) return history;
+    const entry = {
+      status,
+      actor: actor || audit.updatedBy || audit.createdBy || null,
+      timestamp: new Date(),
+    };
+    history.push(entry);
+    return history.slice(-200);
+  }
+
   private async logAuditAction(
     audit: Partial<Audit> | null | undefined,
     operation: string,
@@ -84,10 +97,14 @@ export class AuditsService {
         if (!existing) {
           throw new NotFoundException(`Audit ${dto.id} not found`);
         }
+        auditPayload.statusHistory = await this.recordStatus(existing, 'draft', dto.createdBy);
         await auditRepo.update(dto.id, auditPayload);
         await sectionRepo.delete({ auditId: dto.id });
         audit = await auditRepo.findOne({ where: { id: dto.id } });
       } else {
+        auditPayload.statusHistory = [
+          { status: 'draft', actor: dto.createdBy ?? null, timestamp: new Date() },
+        ];
         audit = await auditRepo.save(auditRepo.create(auditPayload));
       }
 
@@ -299,7 +316,10 @@ export class AuditsService {
   }
 
   async create(auditData: Partial<Audit>): Promise<Audit> {
-    const audit = this.auditsRepository.create(auditData);
+    const audit = this.auditsRepository.create({
+      statusHistory: [{ status: 'draft', actor: auditData.createdBy || null, timestamp: new Date() }],
+      ...auditData,
+    });
     const saved = await this.auditsRepository.save(audit);
     await this.logAuditAction(saved, 'Create', auditData.createdBy);
     return saved;
@@ -344,6 +364,14 @@ export class AuditsService {
   }
 
   async update(id: string, auditData: Partial<Audit>): Promise<Audit> {
+    const existing = await this.findOne(id).catch(() => null);
+    if (existing && auditData.status && auditData.status !== existing.status) {
+      auditData.statusHistory = await this.recordStatus(
+        existing,
+        auditData.status,
+        auditData.updatedBy || auditData.createdBy,
+      );
+    }
     await this.auditsRepository.update(id, auditData);
     const updated = await this.findOne(id);
     await this.logAuditAction(
@@ -375,17 +403,79 @@ export class AuditsService {
   }
 
   async publish(id: string): Promise<Audit> {
-    await this.auditsRepository.update(id, { status: 'published' });
+    const existing = await this.findOne(id);
+    await this.auditsRepository.update(id, {
+      status: 'published',
+      statusHistory: await this.recordStatus(
+        existing,
+        'published',
+        existing.updatedBy || existing.createdBy,
+      ),
+    });
     const published = await this.findOne(id);
     await this.logAuditAction(published, 'Publish', published.updatedBy || published.createdBy);
     return published;
   }
 
   async archive(id: string): Promise<Audit> {
-    await this.auditsRepository.update(id, { status: 'archived' });
+    const existing = await this.findOne(id);
+    await this.auditsRepository.update(id, {
+      status: 'archived',
+      statusHistory: await this.recordStatus(
+        existing,
+        'archived',
+        existing.updatedBy || existing.createdBy,
+      ),
+    });
     const archived = await this.findOne(id);
     await this.logAuditAction(archived, 'Archive', archived.updatedBy || archived.createdBy);
     return archived;
+  }
+
+  async createChild(id: string, actor?: string): Promise<Audit> {
+    const parent = await this.findOneWithSections(id) as Audit & { sections?: any[] };
+    if (!parent) {
+      throw new NotFoundException(`Audit ${id} not found`);
+    }
+    const child = await this.saveDraft({
+      id: undefined as any,
+      title: `${parent.title} (Child)`,
+      description: parent.description ?? '',
+      processTags: parent.processTags ?? [],
+      processTag: parent.processTag ?? null,
+      organizationId: parent.organizationId,
+      properties: parent.properties ?? null,
+      frequency: parent.frequency ?? null,
+      frequencyConfig: parent.frequencyConfig ?? null,
+      reminderConfig: parent.reminderConfig ?? null,
+      scoringConfig: parent.scoringConfig ?? null,
+      passThreshold: parent.passThreshold ?? null,
+      reviewLevels: parent.reviewLevels ?? 1,
+      requiresApproval: parent.requiresApproval ?? true,
+      assigneeIds: parent.assigneeIds ?? [],
+      storeIds: parent.storeIds ?? [],
+      createdBy: actor || parent.createdBy,
+      sections: (parent.sections ?? []).map((section: any) => ({
+        title: section.title,
+        description: section.description,
+        displayOrder: section.displayOrder,
+        maxScore: section.maxScore,
+        weight: section.weight,
+        questions: (section.questions ?? []).map((question: any) => ({
+          questionText: question.questionText,
+          questionType: question.questionType,
+          options: question.options,
+          isRequired: question.isRequired,
+          validationRules: question.validationRules,
+          displayOrder: question.displayOrder,
+          isCritical: question.isCritical,
+          maxScore: question.maxScore,
+          weight: question.weight,
+        })),
+      })),
+    } as any);
+    await this.auditsRepository.update(child.id, { parentId: parent.id });
+    return await this.findOne(child.id);
   }
 
   // Section methods

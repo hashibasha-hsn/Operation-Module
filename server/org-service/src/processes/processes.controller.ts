@@ -71,6 +71,11 @@ export class ProcessesController {
     return this.processesService.remove(id);
   }
 
+  @Post(':id/child')
+  createChild(@Param('id') id: string, @Body() body: { createdBy?: string }) {
+    return this.processesService.createChild(id, body?.createdBy);
+  }
+
   @Put(':id/publish')
   publish(@Param('id') id: string) {
     return this.processesService.publish(id);

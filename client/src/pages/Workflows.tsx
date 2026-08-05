@@ -37,7 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, FileText, ClipboardCheck, MoreVertical, Edit, Trash2, Copy, Download, Filter, Upload } from "lucide-react";
+import { Plus, Search, FileText, ClipboardCheck, MoreVertical, Edit, Trash2, Copy, Download, Filter, Upload, History, GitBranch, Save } from "lucide-react";
 import { reviewLevelSummary } from "@/lib/reviewConfig";
 
 export default function Workflows() {
@@ -46,6 +46,10 @@ export default function Workflows() {
   const [audits, setAudits] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [editItem, setEditItem] = useState<any>(null);
+  const [timelineItem, setTimelineItem] = useState<any>(null);
+  const [childBusyId, setChildBusyId] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     fetchProcesses();
@@ -127,6 +131,8 @@ export default function Workflows() {
         id: undefined,
         createdAt: undefined,
         updatedAt: undefined,
+        parentId: null,
+        statusHistory: undefined,
       };
 
       await fetch(`${GATEWAY}/api/org/${endpoint}`, {
@@ -143,6 +149,70 @@ export default function Workflows() {
     } catch (err) {
       console.error('Error duplicating workflow:', err);
     }
+  };
+
+  const openEdit = (item: any, type: 'process' | 'audit') => {
+    setEditItem({
+      id: item.id,
+      type,
+      title: item.title,
+      description: item.description || '',
+      status: item.status,
+      frequency: item.frequency || '',
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editItem?.title?.trim()) return;
+    setEditSaving(true);
+    try {
+      const endpoint = editItem.type === 'process' ? 'processes' : 'audits';
+      await fetch(`${GATEWAY}/api/org/${endpoint}/${editItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editItem.title.trim(),
+          description: editItem.description,
+          status: editItem.status,
+          frequency: editItem.frequency || null,
+        }),
+      });
+      if (editItem.type === 'process') {
+        fetchProcesses();
+      } else {
+        fetchAudits();
+      }
+      setEditItem(null);
+    } catch (err) {
+      console.error('Error editing workflow:', err);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const handleAddChild = async (item: any, type: 'process' | 'audit') => {
+    setChildBusyId(item.id);
+    try {
+      const endpoint = type === 'process' ? 'processes' : 'audits';
+      await fetch(`${GATEWAY}/api/org/${endpoint}/${item.id}/child`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (type === 'process') {
+        fetchProcesses();
+      } else {
+        fetchAudits();
+      }
+    } catch (err) {
+      console.error('Error creating child workflow:', err);
+    } finally {
+      setChildBusyId(null);
+    }
+  };
+
+  const openTimeline = (item: any) => {
+    setTimelineItem(item);
   };
 
   const filteredProcesses = processes.filter((p: any) => {
@@ -345,13 +415,24 @@ export default function Workflows() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEdit(process, 'process')}>
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openTimeline(process)}>
+                              <History className="w-4 h-4 mr-2" />
+                              Status Timeline
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleDuplicate(process.id, 'process')}>
                               <Copy className="w-4 h-4 mr-2" />
                               Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleAddChild(process, 'process')}
+                              disabled={childBusyId === process.id}
+                            >
+                              <GitBranch className="w-4 h-4 mr-2" />
+                              {childBusyId === process.id ? "Adding child..." : "Add child"}
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Download className="w-4 h-4 mr-2" />
@@ -433,13 +514,24 @@ export default function Workflows() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEdit(audit, 'audit')}>
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openTimeline(audit)}>
+                              <History className="w-4 h-4 mr-2" />
+                              Status Timeline
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleDuplicate(audit.id, 'audit')}>
                               <Copy className="w-4 h-4 mr-2" />
                               Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleAddChild(audit, 'audit')}
+                              disabled={childBusyId === audit.id}
+                            >
+                              <GitBranch className="w-4 h-4 mr-2" />
+                              {childBusyId === audit.id ? "Adding child..." : "Add child"}
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Download className="w-4 h-4 mr-2" />
@@ -474,6 +566,95 @@ export default function Workflows() {
           <p>Completed submissions coming soon</p>
         </div>
       )}
+
+      <Dialog open={!!editItem} onOpenChange={(open) => !open && setEditItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit {editItem?.type === 'audit' ? 'Audit' : 'Process'}</DialogTitle>
+            <DialogDescription>
+              Update the title, description, and status of this workflow.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                value={editItem?.title || ''}
+                onChange={(e) => setEditItem((prev: any) => ({ ...prev, title: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Input
+                id="edit-description"
+                value={editItem?.description || ''}
+                onChange={(e) => setEditItem((prev: any) => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-status">Status</Label>
+              <Select
+                value={editItem?.status || 'draft'}
+                onValueChange={(value) => setEditItem((prev: any) => ({ ...prev, status: value }))}
+              >
+                <SelectTrigger id="edit-status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={editSaving}>
+              <Save className="w-4 h-4 mr-2" />
+              {editSaving ? 'Saving...' : 'Save changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!timelineItem} onOpenChange={(open) => !open && setTimelineItem(null)}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Status Timeline</DialogTitle>
+            <DialogDescription>
+              {timelineItem?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            {(timelineItem?.statusHistory?.length ?? 0) > 0 ? (
+              <div className="relative space-y-0">
+                {timelineItem.statusHistory.map((entry: any, index: number) => (
+                  <div key={index} className="flex gap-3 pb-5">
+                    <div className="flex flex-col items-center">
+                      <div className="w-3 h-3 rounded-full bg-primary mt-1.5" />
+                      {index < timelineItem.statusHistory.length - 1 && (
+                        <div className="w-px flex-1 bg-border" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <Badge variant={entry.status === 'published' ? 'default' : entry.status === 'archived' ? 'destructive' : 'secondary'}>
+                        {entry.status}
+                      </Badge>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {entry.actor ? `${entry.actor} · ` : ''}{entry.timestamp ? new Date(entry.timestamp).toLocaleString() : ''}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No status changes recorded yet.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

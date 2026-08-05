@@ -21,6 +21,16 @@ export class Process {
   @Column({ default: 'draft' })
   status: string; // 'draft', 'published', 'archived'
 
+  @Column({ type: 'json', nullable: true })
+  statusHistory: Array<{
+    status: string;
+    actor?: string | null;
+    timestamp: Date;
+  }>; // Timeline of status changes
+
+  @Column({ nullable: true })
+  parentId: string; // For child workflows (hierarchy)
+
   @Column({ nullable: true, length: 50 })
   frequency: string; // 'daily', 'weekly', 'monthly', 'custom'
 

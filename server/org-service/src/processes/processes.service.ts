@@ -23,6 +23,19 @@ export class ProcessesService {
     private readonly auditLogClient: AuditLogClient,
   ) {}
 
+  private async recordStatus(process: Process, status: string, actor?: string | null) {
+    const history = process.statusHistory || [];
+    const last = history[history.length - 1];
+    if (last && last.status === status) return history;
+    const entry = {
+      status,
+      actor: actor || process.updatedBy || process.createdBy || null,
+      timestamp: new Date(),
+    };
+    history.push(entry);
+    return history.slice(-200);
+  }
+
   private async logProcessAction(
     process: Partial<Process> | null | undefined,
     operation: string,
@@ -52,6 +65,7 @@ export class ProcessesService {
   async create(processData: Partial<Process>): Promise<Process> {
     const process = this.processesRepository.create({
       status: 'draft',
+      statusHistory: [{ status: 'draft', actor: processData.createdBy || null, timestamp: new Date() }],
       ...processData,
     });
     const saved = await this.processesRepository.save(process);
@@ -97,11 +111,19 @@ export class ProcessesService {
         if (!existing.createdBy && dto.createdBy) {
           processPayload.createdBy = dto.createdBy;
         }
+        processPayload.statusHistory = await this.recordStatus(
+          existing as Process,
+          'draft',
+          dto.createdBy,
+        );
         await processRepo.update(dto.id, processPayload);
         await sectionRepo.delete({ processId: dto.id });
         process = await processRepo.findOne({ where: { id: dto.id } });
       } else {
         processPayload.createdBy = dto.createdBy ?? null;
+        processPayload.statusHistory = [
+          { status: 'draft', actor: dto.createdBy ?? null, timestamp: new Date() },
+        ];
         process = await processRepo.save(processRepo.create(processPayload));
       }
 
@@ -261,6 +283,14 @@ export class ProcessesService {
   }
 
   async update(id: string, processData: Partial<Process>): Promise<Process> {
+    const existing = await this.findOne(id).catch(() => null);
+    if (existing && processData.status && processData.status !== existing.status) {
+      processData.statusHistory = await this.recordStatus(
+        existing,
+        processData.status,
+        processData.updatedBy || processData.createdBy,
+      );
+    }
     await this.processesRepository.update(id, processData);
     const updated = await this.findOne(id);
     await this.logProcessAction(updated, 'Update', processData.updatedBy || processData.createdBy);
@@ -316,14 +346,65 @@ export class ProcessesService {
     if (!process.title?.trim()) {
       throw new Error('Process title is required before publish');
     }
-    await this.processesRepository.update(id, { status: 'published', isActive: true });
+    await this.processesRepository.update(id, {
+      status: 'published',
+      isActive: true,
+      statusHistory: await this.recordStatus(
+        process,
+        'published',
+        process.updatedBy || process.createdBy,
+      ),
+    });
     const published = await this.findOne(id);
     await this.logProcessAction(published, 'Publish', published.updatedBy || published.createdBy);
     return published;
   }
 
   async archive(id: string): Promise<Process> {
-    return await this.update(id, { status: 'archived' });
+    const existing = await this.findOne(id);
+    await this.processesRepository.update(id, {
+      status: 'archived',
+      statusHistory: await this.recordStatus(
+        existing,
+        'archived',
+        existing.updatedBy || existing.createdBy,
+      ),
+    });
+    return await this.findOne(id);
+  }
+
+  async createChild(id: string, actor?: string): Promise<Process> {
+    const parent = await this.findOne(id);
+    const child = await this.saveDraft({
+      id: undefined as any,
+      title: `${parent.title} (Child)`,
+      description: parent.description ?? '',
+      processTags: parent.processTags ?? [],
+      organizationId: parent.organizationId,
+      properties: parent.properties ?? null,
+      frequency: parent.frequency ?? null,
+      frequencyConfig: parent.frequencyConfig ?? null,
+      reminderConfig: parent.reminderConfig ?? null,
+      requiresApproval: parent.requiresApproval ?? false,
+      assigneeIds: parent.assigneeIds ?? [],
+      storeIds: parent.storeIds ?? [],
+      createdBy: actor || parent.createdBy,
+      sections: (parent.sections ?? []).map((section) => ({
+        title: section.title,
+        description: section.description,
+        displayOrder: section.displayOrder,
+        questions: (section.questions ?? []).map((question) => ({
+          questionText: question.questionText,
+          questionType: question.questionType,
+          options: question.options,
+          isRequired: question.isRequired,
+          validationRules: question.validationRules,
+          displayOrder: question.displayOrder,
+        })),
+      })),
+    } as any);
+    await this.processesRepository.update(child.id, { parentId: parent.id });
+    return await this.findOne(child.id);
   }
 
   async createSection(sectionData: Partial<ProcessSection>): Promise<ProcessSection> {
