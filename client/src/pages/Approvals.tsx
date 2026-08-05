@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check, X, Clock, AlertCircle, Search, Filter, MoreVertical, FileText, ClipboardCheck, ExternalLink, Eye, CheckCircle2, GitPullRequest, Send } from "lucide-react";
+import { Check, X, Clock, AlertCircle, Search, Filter, MoreVertical, FileText, ClipboardCheck, ExternalLink, Eye, CheckCircle2, GitPullRequest, Send, Loader2 } from "lucide-react";
 import { fileNameFromUrl, isUrlValue } from "@/lib/fileUpload";
 import ViewableFileValue from "@/components/process/ViewableFileValue";
 import ReviewTimelineDialog from "@/components/report/ReviewTimelineDialog";
@@ -63,6 +63,7 @@ export default function Approvals() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [reviewQueue, setReviewQueue] = useState<any[]>([]);
   const [viewSubmission, setViewSubmission] = useState<any>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [statusCounts, setStatusCounts] = useState<{
     total: number;
     pending: number;
@@ -135,6 +136,8 @@ export default function Approvals() {
   };
 
   const handleApprove = async (id: string) => {
+    if (actionLoading) return;
+    setActionLoading("approve");
     try {
       await approveSubmission(id);
       refreshSubmissions();
@@ -142,12 +145,16 @@ export default function Approvals() {
     } catch (err: any) {
       console.error('Error approving submission:', err);
       alert(err.message || 'Approve failed');
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleSendCorrection = async () => {
     if (!selectedSubmission) return;
+    if (actionLoading) return;
 
+    setActionLoading("correction");
     try {
       await sendSubmissionForCorrection(selectedSubmission.id, correctionNotes);
       setCorrectionNotes("");
@@ -156,19 +163,25 @@ export default function Approvals() {
       refreshSubmissions();
     } catch (err) {
       console.error('Error sending correction:', err);
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleReject = async (id: string) => {
+    if (actionLoading) return;
     const reason = prompt("Please provide rejection reason:");
     if (!reason) return;
 
+    setActionLoading("reject");
     try {
       await rejectSubmission(id, reason);
       refreshSubmissions();
       setIsDetailDialogOpen(false);
     } catch (err) {
       console.error('Error rejecting submission:', err);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -618,12 +631,20 @@ export default function Approvals() {
                   <X className="w-4 h-4 mr-2" />
                   Send for Correction
                 </Button>
-                <Button variant="destructive" onClick={() => handleReject(selectedSubmission.id)}>
-                  <X className="w-4 h-4 mr-2" />
+                <Button variant="destructive" disabled={!!actionLoading} onClick={() => handleReject(selectedSubmission.id)}>
+                  {actionLoading === "reject" ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <X className="w-4 h-4 mr-2" />
+                  )}
                   Reject
                 </Button>
-                <Button onClick={() => handleApprove(selectedSubmission.id)}>
-                  <Check className="w-4 h-4 mr-2" />
+                <Button disabled={!!actionLoading} onClick={() => handleApprove(selectedSubmission.id)}>
+                  {actionLoading === "approve" ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4 mr-2" />
+                  )}
                   Approve
                 </Button>
               </>
@@ -662,10 +683,15 @@ export default function Approvals() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCorrectionDialogOpen(false)}>
+            <Button variant="outline" disabled={!!actionLoading} onClick={() => setIsCorrectionDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSendCorrection}>
+            <Button disabled={!!actionLoading} onClick={handleSendCorrection}>
+              {actionLoading === "correction" ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
               Send Correction
             </Button>
           </DialogFooter>
