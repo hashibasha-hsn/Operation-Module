@@ -104,7 +104,9 @@ export default function Entities() {
     area: "",
     entityId: "",
     city: "",
+    region: "",
     staff: "",
+    storeStatus: "Functional",
     status: true,
     latitude: "0.00000000",
     longitude: "0.00000000",
@@ -262,7 +264,9 @@ export default function Entities() {
       area: entity.area,
       entityId: entity.entityId,
       city: entity.city,
+      region: entity.region || "",
       staff: entity.staff?.toString() || "",
+      storeStatus: entity.storeStatus || "Functional",
       status: entity.status,
       latitude: entity.latitude?.toString() || "0.00000000",
       longitude: entity.longitude?.toString() || "0.00000000",
@@ -294,7 +298,9 @@ export default function Entities() {
         area: "",
         entityId: "",
         city: "",
+        region: "",
         staff: "",
+        storeStatus: "Functional",
         status: true,
         latitude: "0.00000000",
         longitude: "0.00000000",
@@ -747,6 +753,15 @@ export default function Entities() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
+                      <Label htmlFor="edit-region">{t('region')}</Label>
+                      <Input
+                        id="edit-region"
+                        value={entityFormData.region}
+                        onChange={(e) => setEntityFormData({ ...entityFormData, region: e.target.value })}
+                        placeholder={t('selectRegion')}
+                      />
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="edit-staff">{t('staff')}</Label>
                       <Input
                         id="edit-staff"
@@ -756,6 +771,21 @@ export default function Entities() {
                         placeholder={t('enterStaffCount')}
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-storeStatus">{t('storeStatus')}</Label>
+                    <Select
+                      value={entityFormData.storeStatus}
+                      onValueChange={(value) => setEntityFormData({ ...entityFormData, storeStatus: value })}
+                    >
+                      <SelectTrigger id="edit-storeStatus">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Functional">{t('functional')}</SelectItem>
+                        <SelectItem value="Non-Functional">{t('nonFunctional')}</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-status">{t('status')}</Label>
