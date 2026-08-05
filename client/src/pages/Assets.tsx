@@ -369,6 +369,10 @@ export default function Assets() {
   };
 
   const downloadTemplate = () => {
+    if (!selectedTableId) {
+      toast.error("Please select an asset table first");
+      return;
+    }
     const headers = ["assetName", "customAssetId", "status", "condition", "storeId", "userId", "expiryDate", "renewalDate"];
     const fieldHeaders = activeTableFields.map((f: any) => `field.${f.fieldName}`);
     const worksheet = XLSX.utils.json_to_sheet([
