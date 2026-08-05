@@ -344,9 +344,6 @@ export default function Approvals() {
             </div>
           </PopoverContent>
         </Popover>
-        <Button variant="outline" className="gap-2">
-          Bulk Approval
-        </Button>
       </div>
 
       {/* Summary Cards */}
