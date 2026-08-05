@@ -710,7 +710,7 @@ export default function Assets() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-2">
           <Package className="w-8 h-8 text-primary" />
           <div>
@@ -718,7 +718,7 @@ export default function Assets() {
             <p className="text-muted-foreground mt-1">{t("trackAndManage")}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" className="gap-2" onClick={() => void loadData()}>
             <RefreshCw className="w-4 h-4" />
             Refresh
