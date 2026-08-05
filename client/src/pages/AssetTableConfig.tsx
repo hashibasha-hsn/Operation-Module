@@ -436,7 +436,7 @@ export default function AssetTableConfig() {
                           )}
                         </>
                       )}
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                           <Switch
                             checked={newField.isRequired}
@@ -446,7 +446,7 @@ export default function AssetTableConfig() {
                           />
                           <span className="text-sm">Required</span>
                         </div>
-                        <Button onClick={handleAddField}>
+                        <Button className="shrink-0" onClick={handleAddField}>
                           <Plus className="w-4 h-4 mr-1" />
                           Add
                         </Button>
