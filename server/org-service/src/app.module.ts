@@ -18,6 +18,7 @@ import { AssessmentsModule } from './assessments/assessments.module';
 import { ExecutiveDashboardModule } from './executive-dashboard/executive-dashboard.module';
 import { BIDashboardModule } from './bi-dashboard/bi-dashboard.module';
 import { NoticeboardModule } from './noticeboard/noticeboard.module';
+import { CommunicationModule } from './communication/communication.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { SaLocationsModule } from './domains/location/sa-locations/sa-locations.module';
 import { LocationsModule as GeoLocationsModule } from './domains/location/locations/locations.module';
@@ -45,6 +46,7 @@ const ORG_ENTITY_FOLDERS = [
   'assessments',
   'bi-dashboard',
   'noticeboard',
+  'communication',
   'attendance',
   'ui-settings',
 ];
@@ -169,6 +171,7 @@ async function buildConnection(
     BIDashboardModule,
     ExecutiveDashboardModule,
     NoticeboardModule,
+    CommunicationModule,
     AttendanceModule,
     TranslationsModule,
     UiSettingsModule,

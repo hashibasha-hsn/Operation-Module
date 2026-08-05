@@ -46,6 +46,7 @@ import AdminSetup from "./pages/AdminSetup";
 import FeaturePermissions from "./pages/FeaturePermissions";
 import Workflows from "./pages/Workflows";
 import Approvals from "./pages/Approvals";
+import Communication from "./pages/Communication";
 import ActionPoints from "./pages/ActionPoints";
 import Tickets from "./pages/Tickets";
 import StoreHealth from "./pages/StoreHealth";
@@ -140,6 +141,7 @@ function Router() {
       <Route path={"/feature-permissions"} component={() => <Layout><FeaturePermissions /></Layout>} />
       <Route path={"/workflows"} component={() => <Layout><Workflows /></Layout>} />
       <Route path={"/approvals"} component={() => <Layout><Approvals /></Layout>} />
+      <Route path={"/communication"} component={() => <Layout><Communication /></Layout>} />
       <Route path={"/action-points"} component={() => <Layout><ActionPoints /></Layout>} />
       <Route path={"/tickets"} component={() => <Layout><Tickets /></Layout>} />
       <Route path={"/ticket-setup"} component={() => <Layout><TicketSetup /></Layout>} />

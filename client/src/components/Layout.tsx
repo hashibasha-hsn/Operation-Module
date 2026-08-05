@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   ClipboardCheck,
   Package,
+  MessageSquare,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ const SIDEBAR_ITEMS = [
   { labelKey: "tasks", href: "/tasks", icon: CheckSquare },
   { labelKey: "actionPoints", href: "/action-points", icon: Flag },
   { labelKey: "approvals", href: "/approvals", icon: ClipboardCheck },
+  { labelKey: "chat", href: "/communication", icon: MessageSquare },
   { labelKey: "learning", href: "/learning", icon: GraduationCap },
   { labelKey: "assetsManagement", href: "/assets", icon: Package },
   { labelKey: "issueTickets", href: "/tickets", icon: Ticket },

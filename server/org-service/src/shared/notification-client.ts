@@ -7,6 +7,9 @@ export const ACTION_POINT_ASSIGNED_TYPE = 'action_point_assigned';
 export const TICKET_ASSIGNED_TYPE = 'ticket_assigned';
 export const REVIEW_REQUESTED_TYPE = 'review_requested';
 export const REVIEW_RESOLVED_TYPE = 'review_resolved';
+export const MESSAGE_RECEIVED_TYPE = 'message_received';
+export const CHANNEL_MENTION_TYPE = 'channel_mention';
+export const CHANNEL_INVITE_TYPE = 'channel_invite';
 
 const NOTIFICATION_SERVICE_URL =
   process.env.NOTIFICATION_SERVICE_URL || process.env.USER_SERVICE_URL || 'http://localhost:3002';
@@ -328,5 +331,71 @@ export async function notifyReviewResolved(input: {
     },
     deliveryMethod: 'IN_APP',
     priority: input.outcome === 'rejected' ? 'HIGH' : 'NORMAL',
+  });
+}
+
+export async function notifyMessageReceived(input: {
+  userId: string;
+  conversationId: string;
+  conversationName: string;
+  senderName: string;
+  body?: string;
+}): Promise<void> {
+  const preview = input.body ? `: ${input.body.slice(0, 120)}` : '';
+  await sendUserNotification({
+    userId: input.userId,
+    type: MESSAGE_RECEIVED_TYPE,
+    title: input.conversationName,
+    content: `${input.senderName}${preview}`,
+    data: {
+      conversationId: input.conversationId,
+      senderName: input.senderName,
+      link: `/communication?conv=${input.conversationId}`,
+    },
+    deliveryMethod: 'IN_APP',
+    priority: 'NORMAL',
+  });
+}
+
+export async function notifyChannelMention(input: {
+  userId: string;
+  conversationId: string;
+  conversationName: string;
+  senderName: string;
+  body?: string;
+}): Promise<void> {
+  await sendUserNotification({
+    userId: input.userId,
+    type: CHANNEL_MENTION_TYPE,
+    title: `Mentioned in ${input.conversationName}`,
+    content: `${input.senderName} mentioned you${input.body ? `: ${input.body.slice(0, 120)}` : ''}`,
+    data: {
+      conversationId: input.conversationId,
+      senderName: input.senderName,
+      link: `/communication?conv=${input.conversationId}`,
+    },
+    deliveryMethod: 'IN_APP',
+    priority: 'NORMAL',
+  });
+}
+
+export async function notifyChannelInvite(input: {
+  userId: string;
+  conversationId: string;
+  conversationName: string;
+  invitedByName: string;
+}): Promise<void> {
+  await sendUserNotification({
+    userId: input.userId,
+    type: CHANNEL_INVITE_TYPE,
+    title: `Added to ${input.conversationName}`,
+    content: `${input.invitedByName} added you to the channel "${input.conversationName}".`,
+    data: {
+      conversationId: input.conversationId,
+      invitedByName: input.invitedByName,
+      link: `/communication?conv=${input.conversationId}`,
+    },
+    deliveryMethod: 'IN_APP',
+    priority: 'NORMAL',
   });
 }
