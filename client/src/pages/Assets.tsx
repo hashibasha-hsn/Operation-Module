@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +70,7 @@ import {
   Loader2,
   Clock,
   Printer,
+  Settings,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import AddTicketModal from "@/components/AddTicketModal";
@@ -104,6 +106,7 @@ function isDeletedAsset(asset: any) {
 
 export default function Assets() {
   const { t } = useLanguage();
+  const [, navigate] = useLocation();
   const organizationId = getOrganizationId();
   const currentUserId = getCurrentUserId();
 
@@ -731,6 +734,10 @@ export default function Assets() {
           <Button variant="outline" className="gap-2" onClick={() => setShowBulkDialog(true)}>
             <FileUp className="w-4 h-4" />
             Bulk Upload
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={() => navigate("/asset-table-config")}>
+            <Settings className="w-4 h-4" />
+            Manage Tables
           </Button>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>

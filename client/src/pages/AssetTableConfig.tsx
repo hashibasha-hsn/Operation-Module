@@ -47,6 +47,7 @@ import {
   Send,
   Archive,
   Hash,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -243,6 +244,10 @@ export default function AssetTableConfig() {
 
   return (
     <div className="p-6 space-y-6">
+      <Button variant="ghost" onClick={() => window.history.back()} className="gap-2">
+        <ArrowLeft className="w-4 h-4" />
+        Back to Assets
+      </Button>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Settings className="w-8 h-8 text-primary" />
