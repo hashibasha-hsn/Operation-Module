@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   "createdBy" VARCHAR(255) NOT NULL,
   "assignedTeamId" VARCHAR(255),
   "categoryId" VARCHAR(255),
+  "assetId" VARCHAR(255),
   "ticketType" VARCHAR(50) NOT NULL DEFAULT 'custom',
   tags JSONB,
   attachments JSONB,

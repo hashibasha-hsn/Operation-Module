@@ -26,7 +26,40 @@ import { ArrowLeft, Save, Send, Trash2 } from "lucide-react";
 import FileAnswerInput from "@/components/FileAnswerInput";
 import MultipleAnswersInput from "@/components/MultipleAnswersInput";
 import { getCurrentLocation, distanceMeters } from "@/lib/geo";
+import { fetchAssets } from "@/lib/assetApi";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+function AssetQuestionInput({
+  value,
+  onValueChange,
+  tableId,
+}: {
+  value: string;
+  onValueChange: (next: string) => void;
+  tableId?: string;
+}) {
+  const [assets, setAssets] = useState<any[]>([]);
+  useEffect(() => {
+    fetchAssets(tableId ? { tableId } : {})
+      .then(setAssets)
+      .catch(() => setAssets([]));
+  }, [tableId]);
+  return (
+    <select
+      className="w-full border rounded-md px-3 py-2 text-sm"
+      value={value}
+      onChange={(e) => onValueChange(e.target.value)}
+    >
+      <option value="">Select an asset</option>
+      {assets.map((asset: any) => (
+        <option key={asset.id} value={asset.id}>
+          {asset.customAssetId ? `${asset.customAssetId} — ` : ""}
+          {asset.assetName}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export default function AuditFill() {
   const { t } = useLanguage();
@@ -271,6 +304,15 @@ export default function AuditFill() {
             </option>
           ))}
         </select>
+      );
+    }
+    if (question.questionType === "asset") {
+      return (
+        <AssetQuestionInput
+          value={value}
+          onValueChange={setValue}
+          tableId={question.options?.tableId}
+        />
       );
     }
     return <Input value={value} onChange={(e) => setValue(e.target.value)} />;

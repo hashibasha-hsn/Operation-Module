@@ -114,8 +114,16 @@ INSERT INTO features (name, display_name, category, description, requires_creato
 ('reporting_export', 'Export Reports', 'reporting', 'Export reports', false),
 ('asset_create', 'Create Assets', 'asset', 'Create new assets', false),
 ('asset_edit', 'Edit Assets', 'asset', 'Edit assets', false),
+('asset_view', 'View Assets', 'asset', 'View asset registers and details', false),
+('asset_delete', 'Delete Assets', 'asset', 'Delete assets', false),
+('asset_transfer', 'Transfer Asset Ownership', 'asset', 'Transfer asset ownership between users', false),
+('asset_publish', 'Publish Asset Tables', 'asset', 'Publish and archive asset tables', true),
+('asset_import', 'Bulk Import Assets', 'asset', 'Bulk upload assets from Excel', false),
+('asset_ticket', 'Create Tickets from Assets', 'asset', 'Create issue tickets from asset records', false),
+('asset_report', 'Asset Reports', 'asset', 'Access asset reports and PDF exports', false),
 ('ticket_create', 'Create Tickets', 'ticket', 'Create issue tickets', false),
-('ticket_resolve', 'Resolve Tickets', 'ticket', 'Resolve issue tickets', false)
+('ticket_resolve', 'Resolve Tickets', 'ticket', 'Resolve issue tickets', false),
+('learning_view', 'View Learning', 'learning', 'Access learning content and courses', false)
 ON CONFLICT (name) DO NOTHING;
 
 -- Grant default permissions for Company Admin (full access)

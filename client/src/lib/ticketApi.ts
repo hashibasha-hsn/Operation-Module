@@ -23,6 +23,7 @@ export type TicketRecord = {
   assignedTo: string;
   createdBy: string;
   categoryId?: string;
+  assetId?: string;
   ticketType: 'custom' | 'auto';
   tags?: Record<string, unknown>;
   attachments?: unknown[];

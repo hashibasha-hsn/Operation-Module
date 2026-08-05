@@ -35,6 +35,9 @@ export class Ticket {
   @Column({ nullable: true })
   categoryId: string; // For auto tickets
 
+  @Column({ nullable: true })
+  assetId: string; // Linked asset (Asset Management module)
+
   @Column({ default: 'custom' })
   ticketType: string; // 'custom' or 'auto'
 

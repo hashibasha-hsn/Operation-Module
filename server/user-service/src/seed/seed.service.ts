@@ -199,6 +199,55 @@ export class SeedService implements OnModuleInit {
         requiresCreatorAccess: false,
       },
       {
+        name: 'asset_view',
+        displayName: 'View Assets',
+        category: 'asset',
+        description: 'View asset registers and details',
+        requiresCreatorAccess: false,
+      },
+      {
+        name: 'asset_delete',
+        displayName: 'Delete Assets',
+        category: 'asset',
+        description: 'Delete assets',
+        requiresCreatorAccess: false,
+      },
+      {
+        name: 'asset_transfer',
+        displayName: 'Transfer Asset Ownership',
+        category: 'asset',
+        description: 'Transfer asset ownership between users',
+        requiresCreatorAccess: false,
+      },
+      {
+        name: 'asset_publish',
+        displayName: 'Publish Asset Tables',
+        category: 'asset',
+        description: 'Publish and archive asset tables',
+        requiresCreatorAccess: true,
+      },
+      {
+        name: 'asset_import',
+        displayName: 'Bulk Import Assets',
+        category: 'asset',
+        description: 'Bulk upload assets from Excel',
+        requiresCreatorAccess: false,
+      },
+      {
+        name: 'asset_ticket',
+        displayName: 'Create Tickets from Assets',
+        category: 'asset',
+        description: 'Create issue tickets from asset records',
+        requiresCreatorAccess: false,
+      },
+      {
+        name: 'asset_report',
+        displayName: 'Asset Reports',
+        category: 'asset',
+        description: 'Access asset reports and PDF exports',
+        requiresCreatorAccess: false,
+      },
+      {
         name: 'ticket_create',
         displayName: 'Create Tickets',
         category: 'ticket',
@@ -239,7 +288,8 @@ export class SeedService implements OnModuleInit {
         'workflow_create', 'workflow_edit', 'workflow_view', 'workflow_execute',
         'reporting_dashboard', 'reporting_export',
         'ticket_create', 'ticket_resolve',
-        'asset_create', 'asset_edit',
+        'asset_create', 'asset_edit', 'asset_view', 'asset_delete',
+        'asset_transfer', 'asset_publish', 'asset_import', 'asset_ticket', 'asset_report',
         'learning_view',
       ],
       non_creator_company_admin: [
@@ -248,21 +298,24 @@ export class SeedService implements OnModuleInit {
         'workflow_view', 'workflow_execute',
         'reporting_dashboard', 'reporting_export',
         'ticket_create', 'ticket_resolve',
-        'asset_create', 'asset_edit',
+        'asset_create', 'asset_edit', 'asset_view', 'asset_delete',
+        'asset_transfer', 'asset_import', 'asset_ticket', 'asset_report',
         'learning_view',
       ],
       area_manager: [
         'workflow_create', 'workflow_edit', 'workflow_view', 'workflow_execute',
         'reporting_dashboard', 'reporting_export',
         'ticket_create', 'ticket_resolve',
-        'asset_create', 'asset_edit',
+        'asset_create', 'asset_edit', 'asset_view',
+        'asset_transfer', 'asset_import', 'asset_ticket', 'asset_report',
         'learning_view',
       ],
       non_creator_area_manager: [
         'workflow_view', 'workflow_execute',
         'reporting_dashboard', 'reporting_export',
         'ticket_create', 'ticket_resolve',
-        'asset_create', 'asset_edit',
+        'asset_create', 'asset_edit', 'asset_view',
+        'asset_transfer', 'asset_import', 'asset_ticket', 'asset_report',
         'learning_view',
       ],
       process_manager: [
@@ -280,14 +333,16 @@ export class SeedService implements OnModuleInit {
         'workflow_create', 'workflow_edit', 'workflow_view', 'workflow_execute',
         'reporting_dashboard',
         'ticket_create', 'ticket_resolve',
-        'asset_create', 'asset_edit',
+        'asset_create', 'asset_edit', 'asset_view',
+        'asset_transfer', 'asset_import', 'asset_ticket', 'asset_report',
         'learning_view',
       ],
       non_creator_store_manager: [
         'workflow_view', 'workflow_execute',
         'reporting_dashboard',
         'ticket_create', 'ticket_resolve',
-        'asset_create', 'asset_edit',
+        'asset_create', 'asset_edit', 'asset_view',
+        'asset_transfer', 'asset_import', 'asset_ticket', 'asset_report',
         'learning_view',
       ],
       store_employee: ['workflow_execute', 'learning_view'],
@@ -313,9 +368,11 @@ export class SeedService implements OnModuleInit {
         const permissionLevel =
           roleName === 'company_admin'
             ? 'admin'
-            : featureName.includes('create') || featureName.includes('edit') || featureName === 'workflow_execute'
-              ? 'write'
-              : 'read';
+            : featureName.includes('delete')
+              ? 'delete'
+              : featureName.includes('create') || featureName.includes('edit') || featureName === 'workflow_execute'
+                ? 'write'
+                : 'read';
 
         await this.roleFeaturePermissionsRepository.save({
           roleId: role.id,

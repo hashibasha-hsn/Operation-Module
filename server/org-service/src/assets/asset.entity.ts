@@ -12,13 +12,19 @@ export class Asset {
   customAssetId: string;
 
   @Column({ nullable: true })
+  tableId: string;
+
+  @Column({ nullable: true })
   userId: string;
+
+  @Column({ nullable: true })
+  ownerUserId: string;
 
   @Column({ nullable: true })
   storeId: string;
 
   @Column({ length: 50, default: 'active' })
-  status: string; // active, inactive, maintenance, retired, disposed
+  status: string; // draft, active, inactive, maintenance, retired, disposed
 
   @Column({ length: 50, nullable: true, default: 'good' })
   condition: string; // excellent, good, fair, poor
@@ -37,6 +43,18 @@ export class Asset {
 
   @Column({ type: 'float', nullable: true, default: 0 })
   utilizationPercent: number;
+
+  @Column({ type: 'json', nullable: true })
+  photoUrls: string[];
+
+  @Column({ type: 'json', nullable: true })
+  fileUrls: any[];
+
+  @Column({ type: 'json', nullable: true })
+  ticketIds: string[];
+
+  @Column({ type: 'json', nullable: true })
+  previousOwners: any[];
 
   @Column({ type: 'json', nullable: true })
   history: any[];

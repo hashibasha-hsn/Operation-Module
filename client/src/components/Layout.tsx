@@ -24,6 +24,7 @@ import {
   LayoutGrid,
   ShieldCheck,
   ClipboardCheck,
+  Package,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ const SIDEBAR_ITEMS = [
   { labelKey: "actionPoints", href: "/action-points", icon: Flag },
   { labelKey: "approvals", href: "/approvals", icon: ClipboardCheck },
   { labelKey: "learning", href: "/learning", icon: GraduationCap },
+  { labelKey: "assetsManagement", href: "/assets", icon: Package },
   { labelKey: "issueTickets", href: "/tickets", icon: Ticket },
 ];
 

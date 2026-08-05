@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit2, Type, Settings, Grid2x2, Calculator, Calendar, Clock, Timer, Calculator as CalculatorIcon, Pen, MapPin, Users, Building2, FolderOpen, Folder, ChevronDown, Trash2, Copy, FileText, Check, Paperclip, MessageSquareMore, MessageSquarePlus, Clipboard, FilePlus, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Zap, Scan, AlertCircle, Plus } from "lucide-react";
+import { Edit2, Type, Settings, Grid2x2, Calculator, Calendar, Clock, Timer, Calculator as CalculatorIcon, Pen, MapPin, Users, Building2, FolderOpen, Folder, ChevronDown, Trash2, Copy, FileText, Check, Paperclip, MessageSquareMore, MessageSquarePlus, Clipboard, FilePlus, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Zap, Scan, AlertCircle, Plus, Package } from "lucide-react";
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { useLocation } from "wouter";
 import AssignTabContent from "@/components/AssignTabContent";
@@ -24,6 +24,7 @@ import {
   type ProcessSectionDraft,
 } from "@/lib/processDraft";
 import { fetchQuestionTags, saveProcessDraft } from "@/lib/processApi";
+import { fetchAssetTables } from "@/lib/assetApi";
 import {
   auditQuestionsToFormElements,
   formElementsToAuditQuestions,
@@ -97,9 +98,11 @@ export default function CreateForm() {
       weightage?: number;
       rangeValidation?: { min?: number; max?: number };
       calculatorFunction?: 'none' | 'average' | 'sum-na' | 'sum-weightage';
+      tableId?: string;
     };
   }>>([]);
   const [questionTags, setQuestionTags] = useState<Array<{ id?: string; tagName: string; values?: string[] }>>([]);
+  const [assetTables, setAssetTables] = useState<any[]>([]);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
 
@@ -392,6 +395,7 @@ export default function CreateForm() {
   const openSettingsDialog = (elementId: string) => {
     setSelectedElementId(elementId);
     setSettingsDialogOpen(true);
+    fetchAssetTables().then(setAssetTables).catch(() => setAssetTables([]));
   };
 
   const handleSaveSettings = () => {
@@ -424,6 +428,8 @@ export default function CreateForm() {
         acceptedTypes: 'pdf,xlsx,xls,jpeg,jpg,png,gif,webp,docx,doc,pptx,ppt,csv,txt',
         maxSizeMB: 10,
       };
+    } else if (type === 'asset') {
+      newElement.config = { tableId: '' };
     }
 
     setFormElements([...formElements, newElement]);
@@ -2105,6 +2111,34 @@ export default function CreateForm() {
                             </div>
                           )}
 
+                          {element.type === 'asset' && (
+                            <div>
+                              <span className="text-sm font-medium mb-2 block">Asset Table (optional filter):</span>
+                              <select
+                                className="border rounded px-2 py-1 text-sm w-full"
+                                value={element.config?.tableId || ''}
+                                onChange={(e) => {
+                                  const newElements = formElements.map(el => {
+                                    if (el.id === element.id) {
+                                      return {
+                                        ...el,
+                                        config: { ...el.config, tableId: e.target.value }
+                                      };
+                                    }
+                                    return el;
+                                  });
+                                  setFormElements(newElements);
+                                }}
+                              >
+                                <option value="">All asset tables</option>
+                                {assetTables.map((tb: any) => (
+                                  <option key={tb.id} value={tb.id}>{tb.tableName}</option>
+                                ))}
+                              </select>
+                              <p className="text-xs text-muted-foreground mt-1">Users will pick from assets in this table when filling the process.</p>
+                            </div>
+                          )}
+
                           {element.type === 'single-answer' && (
                             <div>
                               <span className="text-sm font-medium mb-2 block">Options:</span>
@@ -2840,6 +2874,10 @@ export default function CreateForm() {
                         <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('time', 'Time')}>
                           <Clock className="w-4 h-4" />
                           <span className="text-sm">Time</span>
+                        </div>
+                        <div className="p-3 border rounded hover:bg-muted cursor-pointer flex items-center gap-2" onClick={() => addFormElement('asset', 'Asset')}>
+                          <Package className="w-4 h-4" />
+                          <span className="text-sm">Asset</span>
                         </div>
                       </>
                     )}
