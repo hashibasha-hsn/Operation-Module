@@ -71,35 +71,9 @@ export class CommunicationService {
   // ---- Conversation creation ----
 
   async createDirectConversation(meId: string, otherUserId: string, organizationId: string) {
-    if (!otherUserId || otherUserId === meId) {
-      throw new BadRequestException('A direct conversation needs another user');
-    }
-
-    const existing = await this.memberRepository
-      .createQueryBuilder('m1')
-      .innerJoin(ConversationMember, 'm2', 'm1.conversationId = m2.conversationId')
-      .where('m1.userId = :me', { me: meId })
-      .andWhere('m2.userId = :other', { other: otherUserId })
-      .andWhere('m1.conversationId = m2.conversationId AND m1.id != m2.id')
-      .select('m1.conversationId', 'conversationId')
-      .getRawOne<{ conversationId: string }>();
-
-    if (existing) {
-      return this.serializeConversation(existing.conversationId, meId);
-    }
-
-    const conversation = await this.conversationRepository.save(
-      this.conversationRepository.create({
-        type: 'direct',
-        createdBy: meId,
-        organizationId,
-      }),
+    throw new BadRequestException(
+      'Direct messages are not allowed. Message others through a channel.',
     );
-    await this.memberRepository.save([
-      this.memberRepository.create({ conversationId: conversation.id, userId: meId, role: 'owner' }),
-      this.memberRepository.create({ conversationId: conversation.id, userId: otherUserId, role: 'member' }),
-    ]);
-    return this.serializeConversation(conversation.id, meId);
   }
 
   async createChannel(
@@ -170,9 +144,10 @@ export class CommunicationService {
       where: { id: In(conversationIds) },
       order: { updatedAt: 'DESC' },
     });
+    const channels = conversations.filter((c) => c.type === 'channel');
 
     return Promise.all(
-      conversations.map((c) => this.serializeConversation(c.id, meId)),
+      channels.map((c) => this.serializeConversation(c.id, meId)),
     );
   }
 

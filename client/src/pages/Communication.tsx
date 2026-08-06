@@ -40,7 +40,6 @@ import {
   ChatMessage,
   ChatAttachment,
   fetchConversations,
-  createDirectConversation,
   createChannel,
   markConversationRead,
   addChannelMembers,
@@ -51,9 +50,20 @@ import {
   editMessage,
   deleteMessage,
   uploadChatFile,
+  joinChannel,
+  declineChannel,
 } from "@/lib/communicationApi";
 import { fetchUsers } from "@/lib/processApi";
 import { getCurrentUserId } from "@/lib/authStorage";
+import {
+  fetchUserNotifications,
+  markNotificationRead,
+  getNotificationTypeLabel,
+  CHANNEL_INVITE_TYPE,
+  CHANNEL_MENTION_TYPE,
+  MESSAGE_RECEIVED_TYPE,
+  type AppNotification,
+} from "@/lib/notificationApi";
 
 const MAX_SIZE_BYTES = 25 * 1024 * 1024;
 
@@ -96,9 +106,11 @@ export default function Communication() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [showNewDm, setShowNewDm] = useState(false);
+  const [showNewMessage, setShowNewMessage] = useState(false);
   const [showNewChannel, setShowNewChannel] = useState(false);
   const [showAddMembers, setShowAddMembers] = useState(false);
+  const [messageNotifications, setMessageNotifications] = useState<AppNotification[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [composing, setComposing] = useState("");
   const [sending, setSending] = useState(false);
   const [attaching, setAttaching] = useState(false);
@@ -108,12 +120,30 @@ export default function Communication() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
+  const channels = useMemo(() => conversations.filter((c) => c.type === "channel"), [conversations]);
 
   const loadConversations = useCallback(async () => {
     const rows = await fetchConversations();
     setConversations(rows);
     setLoading(false);
   }, []);
+
+  const loadMessageNotifications = useCallback(async () => {
+    if (!meId) {
+      setMessageNotifications([]);
+      return;
+    }
+    setLoadingNotifications(true);
+    try {
+      const all = await fetchUserNotifications(meId);
+      const chatTypes = new Set([MESSAGE_RECEIVED_TYPE, CHANNEL_MENTION_TYPE, CHANNEL_INVITE_TYPE]);
+      setMessageNotifications(all.filter((n) => chatTypes.has(n.type)));
+    } catch {
+      setMessageNotifications([]);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  }, [meId]);
 
   useEffect(() => {
     void loadConversations();
@@ -153,6 +183,39 @@ export default function Communication() {
     void markConversationRead(id).catch(() => {});
     setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c)));
     void fetchMessages(id, undefined, 100).then((rows) => setMessages(rows));
+  };
+
+  const openConversationFromNotification = async (id: string) => {
+    setShowNewMessage(false);
+    await loadConversations();
+    setSelectedId(id);
+    setReplyingTo(null);
+    void markConversationRead(id).catch(() => {});
+    void fetchMessages(id, undefined, 100).then((rows) => setMessages(rows));
+  };
+
+  const handleNotificationClick = async (notification: AppNotification) => {
+    if (notification.status !== "READ") {
+      await markNotificationRead(notification.id).catch(() => {});
+      setMessageNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, status: "READ" } : n)),
+      );
+    }
+    const conversationId = String(notification.data?.conversationId || "");
+    if (conversationId) void openConversationFromNotification(conversationId);
+  };
+
+  const respondInvite = async (notification: AppNotification, accept: boolean) => {
+    const conversationId = String(notification.data?.conversationId || "");
+    try {
+      if (accept) await joinChannel(conversationId);
+      else await declineChannel(conversationId);
+    } catch {
+      /* keep notification so user can retry */
+    }
+    await markNotificationRead(notification.id).catch(() => {});
+    setMessageNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+    if (accept && conversationId) void openConversationFromNotification(conversationId);
   };
 
   const handleSend = async () => {
@@ -227,7 +290,13 @@ export default function Communication() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowNewDm(true)}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowNewMessage(true);
+              void loadMessageNotifications();
+            }}
+          >
             <MessageSquare className="w-4 h-4 mr-2" /> {t("newMessage") || "New message"}
           </Button>
           <Button onClick={() => setShowNewChannel(true)}>
@@ -262,12 +331,12 @@ export default function Communication() {
                     </div>
                   </div>
                 ))
-              ) : conversations.length === 0 ? (
+              ) : channels.length === 0 ? (
                 <div className="text-center text-sm text-muted-foreground py-10">
                   {t("noConversations") || "No conversations yet"}
                 </div>
               ) : (
-                conversations
+                channels
                   .filter((c) => convTitle(c).toLowerCase().includes(search.trim().toLowerCase()))
                   .map((c) => (
                     <button
@@ -452,21 +521,14 @@ export default function Communication() {
         </div>
       </div>
 
-      <UserPickerDialog
-        open={showNewDm}
-        onOpenChange={setShowNewDm}
-        title={t("newMessage") || "New message"}
-        subtitle={t("pickUserForDm") || "Start a direct conversation"}
-        users={userOptions}
-        loadUsers={loadUsers}
-        meId={meId}
-        onSelect={(id) => {
-          setShowNewDm(false);
-          void createDirectConversation(id).then((conv) => {
-            void loadConversations();
-            setSelectedId(conv.id);
-          });
-        }}
+      <MessageNotificationsDialog
+        open={showNewMessage}
+        onOpenChange={setShowNewMessage}
+        notifications={messageNotifications}
+        loading={loadingNotifications}
+        onReload={() => void loadMessageNotifications()}
+        onOpen={handleNotificationClick}
+        onRespondInvite={respondInvite}
         t={t}
       />
 
@@ -700,72 +762,118 @@ function ReplyQuote({
 
 type TT = (k: string) => string;
 
-function UserPickerDialog({
+function MessageNotificationsDialog({
   open,
   onOpenChange,
-  title,
-  subtitle,
-  users,
-  loadUsers,
-  meId,
-  onSelect,
+  notifications,
+  loading,
+  onReload,
+  onOpen,
+  onRespondInvite,
   t,
 }: {
   open: boolean;
   onOpenChange: (b: boolean) => void;
-  title: string;
-  subtitle?: string;
-  users: UserOption[];
-  loadUsers: () => Promise<UserOption[]>;
-  meId: string;
-  onSelect: (userId: string) => void;
+  notifications: AppNotification[];
+  loading: boolean;
+  onReload: () => void;
+  onOpen: (notification: AppNotification) => void;
+  onRespondInvite: (notification: AppNotification, accept: boolean) => void;
   t: TT;
 }) {
-  const [q, setQ] = useState("");
-  const [all, setAll] = useState<UserOption[]>(users);
-
-  useEffect(() => {
-    if (open) {
-      setQ("");
-      void loadUsers().then(setAll);
-    }
-  }, [open, loadUsers]);
-
-  const filtered = all.filter((u) => u.id !== meId && u.searchText.includes(q.trim().toLowerCase()));
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{t("newMessage") || "New message"}</DialogTitle>
         </DialogHeader>
-        {subtitle && <p className="text-sm text-muted-foreground -mt-2">{subtitle}</p>}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder={t("searchUsers") || "Search users"} value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
-        </div>
-        <ScrollArea className="max-h-72">
-          <div className="space-y-1">
-            {filtered.length === 0 ? (
-              <div className="text-center text-sm text-muted-foreground py-8">{t("noUsersFound") || "No users found"}</div>
-            ) : (
-              filtered.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => onSelect(u.id)}
-                  className="w-full text-left p-2.5 rounded-lg hover:bg-muted/60 flex items-center gap-3"
+        <p className="text-sm text-muted-foreground -mt-2">
+          {t("messageNotifications") || "Message notifications"}
+        </p>
+        <ScrollArea className="max-h-96">
+          {loading ? (
+            <div className="space-y-2 py-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 w-full" />
+              ))}
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="text-center text-sm text-muted-foreground py-8">
+              {t("noMessageNotifications") || "No message notifications yet"}
+            </div>
+          ) : (
+            <div className="space-y-2 py-2">
+              {notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`flex items-start gap-3 p-3 rounded-lg border ${
+                    notification.type === CHANNEL_INVITE_TYPE
+                      ? "cursor-default"
+                      : "cursor-pointer hover:bg-muted/50"
+                  } ${notification.status !== "READ" ? "bg-sky-50 border-sky-200" : "border-border"}`}
+                  onClick={() => {
+                    if (notification.type !== CHANNEL_INVITE_TYPE) onOpen(notification);
+                  }}
                 >
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarFallback className="bg-gradient-to-br from-sky-500 to-cyan-500 text-white text-xs">
-                      {initials(u.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium">{u.name}</span>
-                </button>
-              ))
-            )}
-          </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium truncate">{notification.title}</p>
+                      {notification.status !== "READ" && (
+                        <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                      )}
+                    </div>
+                    {notification.content && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                        {notification.content}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                        {getNotificationTypeLabel(notification.type || "", t)}
+                      </span>
+                      {notification.createdAt && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatTime(notification.createdAt)}
+                        </span>
+                      )}
+                    </div>
+                    {notification.type === CHANNEL_INVITE_TYPE && (
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRespondInvite(notification, true);
+                          }}
+                        >
+                          <Check className="w-3.5 h-3.5 mr-1" />
+                          {t("accept") || "Accept"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRespondInvite(notification, false);
+                          }}
+                        >
+                          <X className="w-3.5 h-3.5 mr-1" />
+                          {t("decline") || "Decline"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </ScrollArea>
+        <Button variant="outline" className="w-full" onClick={onReload}>
+          <MessageSquare className="w-4 h-4 mr-2" />
+          {t("refresh") || "Refresh"}
+        </Button>
       </DialogContent>
     </Dialog>
   );
