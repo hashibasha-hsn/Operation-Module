@@ -24,7 +24,7 @@ import PlatformMark from "@/components/PlatformMark";
 const GATEWAY = import.meta.env.VITE_USER_API?.replace('/api/user', '') || '';
 import { Checkbox } from "@/components/ui/checkbox";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { getRememberMePreference, setAuthSession, isProfileSetupComplete, syncProfileCompletionToSession } from "@/lib/authStorage";
+import { getRememberMePreference, setAuthSession, getAuthItem, getStoredUser, isProfileSetupComplete, syncProfileCompletionToSession } from "@/lib/authStorage";
 import { resendLoginOtp, verifyLoginOtp } from "@/lib/twoFactorApi";
 import { recordLoginAttendance } from "@/lib/attendanceApi";
 
@@ -52,6 +52,15 @@ export default function Login() {
 
   useEffect(() => {
     checkSetupStatus();
+    // Auto-restore a remembered session: if a valid session already exists in storage,
+    // skip the login form and go straight to the dashboard instead of asking again.
+    const hasSession =
+      getAuthItem("isAuthenticated") === "true" ||
+      Boolean(getAuthItem("accessToken") && getStoredUser()?.userId);
+    if (hasSession) {
+      navigate("/dashboard");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkSetupStatus = async () => {

@@ -91,7 +91,12 @@ export default function Layout({ children }: LayoutProps) {
   // Super admins are exempt — they manage the platform and don't need a store onboarding.
   useEffect(() => {
     const authenticated = getAuthItem("isAuthenticated") === "true" || Boolean(getAuthItem("accessToken"));
-    if (!authenticated) return;
+    if (!authenticated) {
+      if (!location.startsWith("/login") && !location.startsWith("/forgot-password") && !location.startsWith("/reset-password") && !location.startsWith("/admin-setup")) {
+        navigate("/login");
+      }
+      return;
+    }
     if (location.startsWith("/profile-settings") || location.startsWith("/login")) return;
     const storedUser = getStoredUser();
     if (storedUser.role === "super_admin") return;
