@@ -19,6 +19,10 @@ export class Message {
   @Column({ name: 'attachment', type: 'jsonb', nullable: true })
   attachment?: { url: string; fileName: string; mimeType: string; size: number } | null;
 
+  /** Id of the message this message replies to (WhatsApp-style reply) */
+  @Column({ name: 'parent_id', length: 255, nullable: true })
+  parentId?: string | null;
+
   @Column({ name: 'is_edited', default: false })
   isEdited: boolean;
 

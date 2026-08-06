@@ -1,4 +1,5 @@
-import { Bell, CheckCircle, Loader2 } from "lucide-react";
+import { Bell, CheckCircle, Loader2, Check, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,9 @@ import {
   type AppNotification,
   type SimplePreferences,
   getNotificationTypeLabel,
+  CHANNEL_INVITE_TYPE,
 } from "@/lib/notificationApi";
+import { joinChannel, declineChannel } from "@/lib/communicationApi";
 import { useLocation } from "wouter";
 
 export default function Notifications() {
@@ -65,6 +68,19 @@ export default function Notifications() {
     }
     const link = (notification.data as any)?.link;
     if (link) setLocation(link);
+  };
+
+  const respondInvite = async (notification: AppNotification, accept: boolean) => {
+    const conversationId = String(notification.data?.conversationId || "");
+    try {
+      if (accept) await joinChannel(conversationId);
+      else await declineChannel(conversationId);
+    } catch {
+      /* keep notification so user can retry */
+    }
+    await markNotificationRead(notification.id).catch(() => {});
+    setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+    if (accept && conversationId) setLocation(`/communication?conv=${conversationId}`);
   };
 
   const unreadCount = notifications.filter((n) => n.status !== "READ").length;
@@ -160,10 +176,14 @@ export default function Notifications() {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${
+                  className={`flex items-start gap-3 p-3 rounded-lg ${
+                    notification.type === CHANNEL_INVITE_TYPE ? "cursor-default" : "cursor-pointer hover:bg-muted/50"
+                  } transition-colors ${
                     notification.status !== "READ" ? "bg-muted/30 border-l-2 border-primary" : ""
                   }`}
-                  onClick={() => handleNotificationClick(notification)}
+                  onClick={() => {
+                    if (notification.type !== CHANNEL_INVITE_TYPE) handleNotificationClick(notification);
+                  }}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -185,6 +205,33 @@ export default function Notifications() {
                         </span>
                       )}
                     </div>
+                    {notification.type === CHANNEL_INVITE_TYPE && (
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void respondInvite(notification, true);
+                          }}
+                        >
+                          <Check className="w-3.5 h-3.5 mr-1" />
+                          {t("accept") || "Accept"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void respondInvite(notification, false);
+                          }}
+                        >
+                          <X className="w-3.5 h-3.5 mr-1" />
+                          {t("decline") || "Decline"}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   {notification.status !== "READ" && (
                     <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-1" />

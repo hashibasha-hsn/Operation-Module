@@ -103,6 +103,7 @@ export default function Communication() {
   const [sending, setSending] = useState(false);
   const [attaching, setAttaching] = useState(false);
   const [pendingAttachment, setPendingAttachment] = useState<ChatAttachment | null>(null);
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -119,6 +120,17 @@ export default function Communication() {
     const timer = setInterval(() => void loadConversations(), 20000);
     return () => clearInterval(timer);
   }, [loadConversations]);
+
+  useEffect(() => {
+    // Deep-link support: ?conv=<id> (e.g. after accepting a channel invite)
+    const target = new URLSearchParams(window.location.search).get("conv");
+    if (target && !selectedId && conversations.some((c) => c.id === target)) {
+      setSelectedId(target);
+      void markConversationRead(target).catch(() => {});
+      void fetchMessages(target, undefined, 100).then((rows) => setMessages(rows));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversations, selectedId]);
 
   const loadUsers = useCallback(async (): Promise<UserOption[]> => {
     const rows = (await fetchUsers(1000)) as any[];
@@ -137,6 +149,7 @@ export default function Communication() {
 
   const selectConversation = (id: string) => {
     setSelectedId(id);
+    setReplyingTo(null);
     void markConversationRead(id).catch(() => {});
     setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c)));
     void fetchMessages(id, undefined, 100).then((rows) => setMessages(rows));
@@ -147,10 +160,16 @@ export default function Communication() {
     if (!composing.trim() && !pendingAttachment) return;
     setSending(true);
     try {
-      const msg = await sendMessage(selected.id, composing, pendingAttachment);
+      const msg = await sendMessage(
+        selected.id,
+        composing,
+        pendingAttachment,
+        replyingTo?.id ?? null,
+      );
       setMessages((prev) => [...prev, msg]);
       setComposing("");
       setPendingAttachment(null);
+      setReplyingTo(null);
     } catch (e: any) {
       toast.error(e?.message || t("sendFailed") || "Could not send message");
     } finally {
@@ -342,13 +361,14 @@ export default function Communication() {
                           key={m.id}
                           message={m}
                           t={t}
+                          onReply={setReplyingTo}
                           onUpdated={(updated) =>
                             setMessages((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
                           }
                           onDeleted={(id) => setMessages((prev) => prev.filter((x) => x.id !== id))}
                         />
                       ) : (
-                        <OtherBubble key={m.id} message={m} t={t} />
+                        <OtherBubble key={m.id} message={m} t={t} onReply={setReplyingTo} />
                       ),
                     )
                   )}
@@ -356,6 +376,25 @@ export default function Communication() {
               </ScrollArea>
 
               <div className="p-4 border-t">
+                {replyingTo && (
+                  <div className="mb-2 flex items-center gap-2 bg-sky-50 border border-sky-200 rounded-lg p-2 text-sm">
+                    <ReplyIcon className="w-4 h-4 text-sky-600" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-sky-700">
+                        {t("replyingTo") || "Replying to"} {replyingTo.senderName}
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {replyingTo.body ||
+                          (replyingTo.attachment
+                            ? "📎 " + (replyingTo.attachment.fileName || (t("attachment") || "Attachment"))
+                            : "")}
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setReplyingTo(null)}>
+                      <X className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  </div>
+                )}
                 {pendingAttachment && (
                   <div className="mb-2 flex items-center gap-2 bg-muted rounded-lg p-2 text-sm">
                     <Paperclip className="w-4 h-4" />
@@ -499,11 +538,13 @@ function AttachmentView({ attachment, t }: { attachment: ChatAttachment; t: (k: 
 function MyBubble({
   message,
   t,
+  onReply,
   onUpdated,
   onDeleted,
 }: {
   message: ChatMessage;
   t: (k: string) => string;
+  onReply: (m: ChatMessage) => void;
   onUpdated: (m: ChatMessage) => void;
   onDeleted: (id: string) => void;
 }) {
@@ -540,6 +581,7 @@ function MyBubble({
       <div className="flex items-end gap-2 max-w-[75%]">
         <span className="text-[10px] text-muted-foreground mb-1">{formatTime(message.createdAt)}</span>
         <div className="bg-gradient-to-br from-sky-500 to-cyan-600 text-white rounded-2xl rounded-br-sm px-3 py-2">
+          {message.replyTo && <ReplyQuote reply={message.replyTo} invert />}
           {message.attachment && <AttachmentView attachment={message.attachment} t={t} />}
           {editing ? (
             <div className="flex items-center gap-2">
@@ -571,6 +613,9 @@ function MyBubble({
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" side="top" className="w-40">
+                    <DropdownMenuItem onClick={() => onReply(message)}>
+                      <ReplyIcon /> {t("reply") || "Reply"}
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setEditing(true)}>
                       <Edit3Icon /> {t("edit") || "Edit"}
                     </DropdownMenuItem>
@@ -588,9 +633,17 @@ function MyBubble({
   );
 }
 
-function OtherBubble({ message, t }: { message: ChatMessage; t: (k: string) => string }) {
+function OtherBubble({
+  message,
+  t,
+  onReply,
+}: {
+  message: ChatMessage;
+  t: (k: string) => string;
+  onReply: (m: ChatMessage) => void;
+}) {
   return (
-    <div className="flex justify-start">
+    <div className="flex justify-start group">
       <div className="flex items-end gap-2 max-w-[75%]">
         <Avatar className="h-7 w-7 shrink-0">
           <AvatarFallback className="bg-slate-200 text-slate-600 text-xs">
@@ -599,15 +652,47 @@ function OtherBubble({ message, t }: { message: ChatMessage; t: (k: string) => s
         </Avatar>
         <div>
           <div className="text-[10px] text-muted-foreground ml-1">{message.senderName}</div>
-          <div className="bg-slate-100 border rounded-2xl rounded-bl-sm px-3 py-2">
+          <div className="bg-slate-100 border rounded-2xl rounded-bl-sm px-3 py-2 group-hover:mr-1">
+            {message.replyTo && <ReplyQuote reply={message.replyTo} />}
             {message.attachment && <AttachmentView attachment={message.attachment} t={t} />}
             {message.body && <div className="whitespace-pre-wrap break-words text-sm">{message.body}</div>}
             <div className="flex items-center justify-end gap-1 mt-1">
+              <button
+                type="button"
+                onClick={() => onReply(message)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1 text-[10px] text-sky-600 hover:underline"
+              >
+                <ReplyIcon className="w-3 h-3" /> {t("reply") || "Reply"}
+              </button>
               {message.isEdited && <span className="text-[10px] text-muted-foreground">{t("edited") || "edited"}</span>}
               <span className="text-[10px] text-muted-foreground">{formatTime(message.createdAt)}</span>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ReplyQuote({
+  reply,
+  invert,
+}: {
+  reply: NonNullable<ChatMessage["replyTo"]>;
+  invert?: boolean;
+}) {
+  return (
+    <div
+      className={`mb-1 rounded-lg px-2 py-1 border-l-4 text-xs ${
+        invert
+          ? "bg-white/20 border-white/60 text-white/90"
+          : "bg-slate-200/70 border-sky-300 text-slate-700"
+      }`}
+    >
+      <div className="font-semibold">{reply.senderName}</div>
+      <div className="truncate">
+        {reply.body ||
+          (reply.attachment ? "📎 " + (reply.attachment.fileName || "") : "")}
       </div>
     </div>
   );
@@ -904,4 +989,22 @@ function Edit3Icon() {
 }
 function TrashIcon() {
   return <Trash2 className="w-4 h-4 mr-2" />;
+}
+function ReplyIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <polyline points="9 17 4 12 9 7" />
+      <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+    </svg>
+  );
 }

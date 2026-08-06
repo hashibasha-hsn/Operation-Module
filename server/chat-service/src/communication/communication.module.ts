@@ -6,12 +6,12 @@ import { CommunicationService } from './communication.service';
 import { Conversation } from './conversation.entity';
 import { ConversationMember } from './conversation-member.entity';
 import { Message } from './message.entity';
-import { SupabaseStorageService } from '../noticeboard/supabase-storage.service';
+import { SupabaseStorageService } from '../shared/supabase-storage.service';
 import { chatUploadOptions } from './chat-upload.config';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Conversation, ConversationMember, Message], 'org'),
+    TypeOrmModule.forFeature([Conversation, ConversationMember, Message], 'chat'),
     MulterModule.register(chatUploadOptions),
   ],
   controllers: [CommunicationController],

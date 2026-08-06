@@ -16,6 +16,10 @@ export class ConversationMember {
   @Column({ name: 'role', length: 20, default: 'member' })
   role: 'owner' | 'admin' | 'member';
 
+  /** 'member' = active/joined, 'invited' = pending invite, 'declined' = rejected invite */
+  @Column({ name: 'status', length: 20, default: 'member' })
+  status: 'member' | 'invited' | 'declined';
+
   /** Drives unread count: messages after this time (not sent by me) are unread */
   @Column({ name: 'last_read_at', type: 'timestamptz', nullable: true })
   lastReadAt?: Date | null;

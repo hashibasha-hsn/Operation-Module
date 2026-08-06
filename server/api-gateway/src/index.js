@@ -16,17 +16,20 @@ app.use(cors({
 // Merged architecture:
 // - user-service (:3002) hosts auth + permission + notification
 // - org-service (:3012) hosts location + language + org
+// - chat-service (:3017) hosts communication/chat
 // - audit-log-service (:3015) hosts audit logs
 // - email-service (:3016) hosts outgoing email delivery (Graph/SMTP)
 const USER = process.env.USER_SERVICE_URL || 'http://localhost:3002';
 const ORG = process.env.ORG_SERVICE_URL || 'http://localhost:3012';
 const AUDIT = process.env.AUDIT_LOG_SERVICE_URL || 'http://localhost:3015';
 const EMAIL = process.env.EMAIL_SERVICE_URL || 'http://localhost:3016';
+const CHAT = process.env.CHAT_SERVICE_URL || 'http://localhost:3017';
 
 const SERVICES = {
   AUTH: process.env.AUTH_SERVICE_URL || USER,
   USER,
   ORG,
+  CHAT,
   LOCATION: process.env.LOCATION_SERVICE_URL || ORG,
   LANGUAGE: process.env.LANGUAGE_SERVICE_URL || ORG,
   NOTIFICATION: process.env.NOTIFICATION_SERVICE_URL || USER,
@@ -58,6 +61,7 @@ app.use('/api/notification', proxy(SERVICES.NOTIFICATION, { '^/api/notification'
 app.use('/api/email', proxy(SERVICES.EMAIL, { '^/api': '' }));
 app.use('/api/permission', proxy(SERVICES.PERMISSION, { '^/api/permission': '' }));
 app.use('/api/org', proxy(SERVICES.ORG, { '^/api/org': '' }));
+app.use('/api/chat', proxy(SERVICES.CHAT, { '^/api/chat': '' }));
 app.use('/api/audits', proxy(SERVICES.ORG, { '^/api/audits': '/audits' }));
 app.use('/api/attendance', proxy(SERVICES.ORG, { '^/api/attendance': '/attendance' }));
 app.use('/uploads', proxy(SERVICES.ORG));
@@ -69,7 +73,7 @@ app.use('/api/audit-logs', proxy(SERVICES.ORG, { '^/api/audit-logs': '/audit-log
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    mode: 'four-backend',
+    mode: 'five-backend',
     services: SERVICES,
     timestamp: new Date().toISOString(),
   });
@@ -86,18 +90,20 @@ app.get('/api/status', async (req, res) => {
     }
   };
 
-  const [user, org, audit] = await Promise.all([
+  const [user, org, audit, chat] = await Promise.all([
     check(SERVICES.USER),
     check(SERVICES.ORG),
     check(SERVICES.AUDIT),
+    check(SERVICES.CHAT),
   ]);
 
   res.json({
     gateway: 'ok',
-    mode: 'four-backend',
+    mode: 'five-backend',
     services: {
       user,
       org,
+      chat,
       auditLog: audit,
       auth: user,
       permission: user,

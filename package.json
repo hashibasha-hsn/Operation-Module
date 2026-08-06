@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "start:user": "npm run start:dev --prefix server/user-service",
     "start:org": "npm run start:dev --prefix server/org-service",
+    "start:chat": "npm run start:dev --prefix server/chat-service",
     "start:audit-log": "npm run start:dev --prefix server/audit-log-service",
     "start:gateway": "npm run start:dev --prefix server/api-gateway",
     "setup:db": "node server/database/setup-all.cjs",
@@ -35,7 +36,7 @@
     "test:audit-logs": "node server/database/test-audit-logs-flow.cjs",
     "reset:admin-password": "node server/update-password.js",
     "test:entity-crud": "node server/database/test-entity-crud.js",
-    "start:all": "concurrently -n user,org,audit,gateway,web -c blue,magenta,yellow,red,violet \"npm run start:user\" \"npm run start:org\" \"npm run start:audit-log\" \"npm run start:gateway\" \"npm run dev\""
+    "start:all": "concurrently -n user,org,chat,audit,gateway,web -c blue,magenta,green,yellow,red,violet \"npm run start:user\" \"npm run start:org\" \"npm run start:chat\" \"npm run start:audit-log\" \"npm run start:gateway\" \"npm run dev\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

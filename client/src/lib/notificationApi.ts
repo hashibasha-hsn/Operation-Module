@@ -17,6 +17,9 @@ export const ACTION_POINT_ASSIGNED_TYPE = 'action_point_assigned';
 export const TICKET_ASSIGNED_TYPE = 'ticket_assigned';
 export const REVIEW_REQUESTED_TYPE = 'review_requested';
 export const REVIEW_RESOLVED_TYPE = 'review_resolved';
+export const MESSAGE_RECEIVED_TYPE = 'message_received';
+export const CHANNEL_MENTION_TYPE = 'channel_mention';
+export const CHANNEL_INVITE_TYPE = 'channel_invite';
 
 export type AppNotification = {
   id: string;
@@ -392,6 +395,12 @@ export function getNotificationTypeLabel(type: string, t?: (key: string) => stri
       return 'Review request';
     case REVIEW_RESOLVED_TYPE:
       return 'Review result';
+    case MESSAGE_RECEIVED_TYPE:
+      return translate('chat') || 'Chat';
+    case CHANNEL_MENTION_TYPE:
+      return translate('mention') || 'Mention';
+    case CHANNEL_INVITE_TYPE:
+      return translate('channelInvite') || 'Channel invite';
     default:
       return type.replace(/_/g, ' ');
   }

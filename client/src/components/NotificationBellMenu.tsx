@@ -17,8 +17,11 @@ import {
   fetchUserNotifications,
   getNotificationTypeLabel,
   markNotificationRead,
+  CHANNEL_INVITE_TYPE,
   type AppNotification,
 } from "@/lib/notificationApi";
+import { joinChannel, declineChannel } from "@/lib/communicationApi";
+import { Check, X } from "lucide-react";
 
 export default function NotificationBellMenu() {
   const { t } = useLanguage();
@@ -64,6 +67,26 @@ export default function NotificationBellMenu() {
     }
   };
 
+  const respondInvite = async (
+    notification: AppNotification,
+    accept: boolean,
+  ) => {
+    const conversationId = String(notification.data?.conversationId || "");
+    try {
+      if (!conversationId) return;
+      if (accept) await joinChannel(conversationId);
+      else await declineChannel(conversationId);
+    } catch {
+      /* keep the notification so the user can retry */
+    }
+    await markNotificationRead(notification.id).catch(() => {});
+    setNotifications((prev) =>
+      prev.filter((item) => item.id !== notification.id),
+    );
+    setOpen(false);
+    if (accept) navigate(`/communication?conv=${conversationId}`);
+  };
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
@@ -98,26 +121,62 @@ export default function NotificationBellMenu() {
             {t("noNotificationsYet") || "No notifications yet"}
           </DropdownMenuItem>
         ) : (
-          notifications.slice(0, 8).map((notification) => (
-            <DropdownMenuItem
-              key={notification.id}
-              className="flex flex-col items-start gap-1 py-2 cursor-pointer"
-              onClick={() => void handleOpenNotification(notification)}
-            >
-              <div className="flex w-full items-center justify-between gap-2">
-                <span className="font-medium text-sm">{notification.title}</span>
-                {notification.status !== "READ" && (
-                  <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
-                )}
+          notifications.slice(0, 8).map((notification) =>
+            notification.type === CHANNEL_INVITE_TYPE ? (
+              <div
+                key={notification.id}
+                className="flex flex-col items-start gap-1 py-2 px-2 cursor-default"
+              >
+                <div className="flex w-full items-center justify-between gap-2">
+                  <span className="font-medium text-sm">{notification.title}</span>
+                  {notification.status !== "READ" && (
+                    <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
+                  )}
+                </div>
+                <span className="text-xs text-muted-foreground line-clamp-2">
+                  {notification.content}
+                </span>
+                <div className="flex w-full gap-2 mt-1">
+                  <Button
+                    size="sm"
+                    className="flex-1 h-7 text-xs"
+                    onClick={() => void respondInvite(notification, true)}
+                  >
+                    <Check className="w-3.5 h-3.5 mr-1" />
+                    {t("accept") || "Accept"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 h-7 text-xs"
+                    onClick={() => void respondInvite(notification, false)}
+                  >
+                    <X className="w-3.5 h-3.5 mr-1" />
+                    {t("decline") || "Decline"}
+                  </Button>
+                </div>
               </div>
-              <span className="text-xs text-muted-foreground line-clamp-2">
-                {notification.content}
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-                {getNotificationTypeLabel(notification.type, t)}
-              </span>
-            </DropdownMenuItem>
-          ))
+            ) : (
+              <DropdownMenuItem
+                key={notification.id}
+                className="flex flex-col items-start gap-1 py-2 cursor-pointer"
+                onClick={() => void handleOpenNotification(notification)}
+              >
+                <div className="flex w-full items-center justify-between gap-2">
+                  <span className="font-medium text-sm">{notification.title}</span>
+                  {notification.status !== "READ" && (
+                    <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
+                  )}
+                </div>
+                <span className="text-xs text-muted-foreground line-clamp-2">
+                  {notification.content}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {getNotificationTypeLabel(notification.type, t)}
+                </span>
+              </DropdownMenuItem>
+            ),
+          )
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate("/notifications")} className="gap-2">

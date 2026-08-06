@@ -49,6 +49,16 @@ export class CommunicationController {
     return this.communicationService.markRead(id, body.meId);
   }
 
+  @Post('conversations/:id/join')
+  joinChannel(@Param('id') id: string, @Body() body: { meId: string }) {
+    return this.communicationService.joinChannel(id, body.meId);
+  }
+
+  @Post('conversations/:id/decline')
+  declineChannel(@Param('id') id: string, @Body() body: { meId: string }) {
+    return this.communicationService.declineChannelInvite(id, body.meId);
+  }
+
   @Post('conversations/:id/members')
   addMembers(
     @Param('id') id: string,
@@ -77,9 +87,15 @@ export class CommunicationController {
   @Post('conversations/:id/messages')
   sendMessage(
     @Param('id') id: string,
-    @Body() body: { meId: string; body?: string; attachment?: any },
+    @Body() body: { meId: string; body?: string; attachment?: any; parentId?: string },
   ) {
-    return this.communicationService.sendMessage(id, body.meId, body?.body ?? '', body?.attachment ?? null);
+    return this.communicationService.sendMessage(
+      id,
+      body.meId,
+      body?.body ?? '',
+      body?.attachment ?? null,
+      body?.parentId ?? null,
+    );
   }
 
   @Get('conversations/:id/messages')

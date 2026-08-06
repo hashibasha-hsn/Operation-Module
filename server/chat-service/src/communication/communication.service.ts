@@ -4,7 +4,7 @@ import { Repository, IsNull, In } from 'typeorm';
 import { Conversation } from './conversation.entity';
 import { ConversationMember } from './conversation-member.entity';
 import { Message } from './message.entity';
-import { SupabaseStorageService } from '../noticeboard/supabase-storage.service';
+import { SupabaseStorageService } from '../shared/supabase-storage.service';
 import {
   notifyMessageReceived,
   notifyChannelInvite,
@@ -18,11 +18,11 @@ type Attachment = { url: string; fileName: string; mimeType: string; size: numbe
 @Injectable()
 export class CommunicationService {
   constructor(
-    @InjectRepository(Conversation, 'org')
+    @InjectRepository(Conversation, 'chat')
     private conversationRepository: Repository<Conversation>,
-    @InjectRepository(ConversationMember, 'org')
+    @InjectRepository(ConversationMember, 'chat')
     private memberRepository: Repository<ConversationMember>,
-    @InjectRepository(Message, 'org')
+    @InjectRepository(Message, 'chat')
     private messageRepository: Repository<Message>,
     private storageService: SupabaseStorageService,
   ) {}
@@ -55,6 +55,9 @@ export class CommunicationService {
     });
     if (!member) {
       throw new ForbiddenException('You are not a member of this conversation');
+    }
+    if (member.status !== 'member') {
+      throw new ForbiddenException('You must accept the channel invitation before participating');
     }
     return member;
   }
@@ -119,25 +122,36 @@ export class CommunicationService {
       }),
     );
 
-    const memberUserIds = [...new Set([meId, ...(body.memberUserIds ?? [])])];
+    const invitedUserIds = [...new Set(body.memberUserIds ?? [])].filter((id) => id !== meId);
     await this.memberRepository.save(
-      memberUserIds.map((userId, index) =>
-        this.memberRepository.create({
-          conversationId: conversation.id,
-          userId,
-          role: index === 0 ? 'owner' : 'member',
-        }),
-      ),
+      this.memberRepository.create({
+        conversationId: conversation.id,
+        userId: meId,
+        role: 'owner',
+        status: 'member',
+      }),
     );
 
-    const invitedByName = (await this.userNameById(meId)) || meId;
-    for (const userId of memberUserIds.filter((id) => id !== meId)) {
-      await notifyChannelInvite({
-        userId,
-        conversationId: conversation.id,
-        conversationName: name,
-        invitedByName,
-      });
+    if (invitedUserIds.length) {
+      await this.memberRepository.save(
+        invitedUserIds.map((userId) =>
+          this.memberRepository.create({
+            conversationId: conversation.id,
+            userId,
+            role: 'member',
+            status: 'invited',
+          }),
+        ),
+      );
+      const invitedByName = (await this.userNameById(meId)) || meId;
+      for (const userId of invitedUserIds) {
+        await notifyChannelInvite({
+          userId,
+          conversationId: conversation.id,
+          conversationName: name,
+          invitedByName,
+        });
+      }
     }
 
     return this.serializeConversation(conversation.id, meId);
@@ -146,7 +160,9 @@ export class CommunicationService {
   // ---- Listing ----
 
   async listConversations(meId: string, organizationId: string) {
-    const memberships = await this.memberRepository.find({ where: { userId: meId } });
+    const memberships = await this.memberRepository.find({
+      where: { userId: meId, status: 'member' },
+    });
     if (!memberships.length) return [];
 
     const conversationIds = memberships.map((m) => m.conversationId);
@@ -180,7 +196,8 @@ export class CommunicationService {
       return match?.name?.trim() || match?.email?.trim() || userId;
     };
 
-    const memberCount = members.length;
+    const activeMembers = members.filter((m) => m.status === 'member');
+    const memberCount = activeMembers.length;
     let otherParty: { userId: string; name: string } | null = null;
     if (conversation.type === 'direct') {
       const other = members.find((m) => m.userId !== meId);
@@ -214,6 +231,7 @@ export class CommunicationService {
       members: members.map((m) => ({
         userId: m.userId,
         role: m.role,
+        status: m.status,
         name: nameOf(m.userId),
         notificationPreference: m.notificationPreference,
       })),
@@ -243,19 +261,45 @@ export class CommunicationService {
     const existingIds = new Set(existing.map((m) => m.userId));
     const newIds = [...new Set(userIds)].filter((id) => !existingIds.has(id));
 
-    await this.memberRepository.save(
-      newIds.map((userId) =>
-        this.memberRepository.create({ conversationId, userId, role: 'member' }),
-      ),
-    );
-
-    const invitedByName = (await this.userNameById(meId)) || meId;
-    const channelName = conversation.name || 'channel';
-    for (const userId of newIds) {
-      await notifyChannelInvite({ userId, conversationId, conversationName: channelName, invitedByName });
+    if (newIds.length) {
+      await this.memberRepository.save(
+        newIds.map((userId) =>
+          this.memberRepository.create({ conversationId, userId, role: 'member', status: 'invited' }),
+        ),
+      );
+      const invitedByName = (await this.userNameById(meId)) || meId;
+      const channelName = conversation.name || 'channel';
+      for (const userId of newIds) {
+        await notifyChannelInvite({ userId, conversationId, conversationName: channelName, invitedByName });
+      }
     }
 
     return this.serializeConversation(conversationId, meId);
+  }
+
+  async joinChannel(conversationId: string, meId: string) {
+    const conversation = await this.getConversationOrThrow(conversationId, '');
+    if (conversation.type !== 'channel') {
+      throw new BadRequestException('Only channels can be joined');
+    }
+    const membership = await this.memberRepository.findOne({ where: { conversationId, userId: meId } });
+    if (!membership) {
+      throw new ForbiddenException('You were not invited to this channel');
+    }
+    if (membership.status !== 'invited' && membership.status !== 'declined') {
+      return this.serializeConversation(conversationId, meId);
+    }
+    membership.status = 'member';
+    await this.memberRepository.save(membership);
+    return this.serializeConversation(conversationId, meId);
+  }
+
+  async declineChannelInvite(conversationId: string, meId: string) {
+    const membership = await this.memberRepository.findOne({ where: { conversationId, userId: meId } });
+    if (!membership) return { conversationId, declined: true };
+    membership.status = 'declined';
+    await this.memberRepository.save(membership);
+    return { conversationId, declined: true };
   }
 
   async removeMember(conversationId: string, meId: string, userId: string) {
@@ -297,9 +341,15 @@ export class CommunicationService {
     meId: string,
     body: string,
     attachment?: Attachment | null,
+    parentId?: string | null,
   ) {
     const conversation = await this.getConversationOrThrow(conversationId, '');
     const myMember = await this.assertMember(conversationId, meId);
+
+    if (parentId && conversation.type === 'channel') {
+      const parent = await this.messageRepository.findOne({ where: { id: parentId, conversationId } });
+      if (!parent || parent.deletedAt) throw new BadRequestException('The message you are replying to no longer exists');
+    }
 
     const message = await this.messageRepository.save(
       this.messageRepository.create({
@@ -308,6 +358,7 @@ export class CommunicationService {
         body: (body ?? '').trim(),
         attachment: attachment ?? null,
         isEdited: false,
+        parentId: parentId || null,
       }),
     );
 
@@ -367,9 +418,13 @@ export class CommunicationService {
       return match?.name?.trim() || match?.email?.trim() || userId;
     };
 
-    return messages
-      .map((m) => this.serializeMessage(m, nameOf(m.senderId)))
-      .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    return Promise.all(
+      messages.map(async (m) => await this.serializeMessage(m, nameOf(m.senderId))),
+    ).then((rows) =>
+      rows.sort(
+        (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      ),
+    );
   }
 
   async editMessage(conversationId: string, messageId: string, meId: string, body: string) {
@@ -379,7 +434,7 @@ export class CommunicationService {
     message.body = (body ?? '').trim();
     message.isEdited = true;
     await this.messageRepository.save(message);
-    return this.serializeMessage(message, (await this.userNameById(meId)) || meId);
+    return await this.serializeMessage(message, (await this.userNameById(meId)) || meId);
   }
 
   async deleteMessage(conversationId: string, messageId: string, meId: string) {
@@ -401,7 +456,29 @@ export class CommunicationService {
     return set;
   }
 
-  private serializeMessage(message: Message, senderName: string) {
+  private async serializeMessage(message: Message, senderName: string) {
+    let replyTo: {
+      id: string;
+      senderId: string;
+      senderName: string;
+      body: string;
+      attachment: Message['attachment'];
+    } | null = null;
+
+    if (message.parentId) {
+      const parent = await this.messageRepository.findOne({ where: { id: message.parentId } });
+      if (parent && !parent.deletedAt) {
+        replyTo = {
+          id: parent.id,
+          senderId: parent.senderId,
+          senderName:
+            (await this.userNameById(parent.senderId)) || parent.senderId,
+          body: parent.body,
+          attachment: parent.attachment,
+        };
+      }
+    }
+
     return {
       id: message.id,
       conversationId: message.conversationId,
@@ -411,6 +488,7 @@ export class CommunicationService {
       attachment: message.attachment,
       isEdited: message.isEdited,
       createdAt: message.createdAt,
+      replyTo,
     };
   }
 
