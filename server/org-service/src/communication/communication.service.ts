@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, In } from 'typeorm';
 import { Conversation } from './conversation.entity';
 import { ConversationMember } from './conversation-member.entity';
 import { Message } from './message.entity';
@@ -151,7 +151,7 @@ export class CommunicationService {
 
     const conversationIds = memberships.map((m) => m.conversationId);
     const conversations = await this.conversationRepository.find({
-      where: { id: conversationIds.map((id) => ({ id })) as any },
+      where: { id: In(conversationIds) },
       order: { updatedAt: 'DESC' },
     });
 
