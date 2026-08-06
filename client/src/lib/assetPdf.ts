@@ -18,9 +18,12 @@ export function exportAssetsToPdf(
   rows: AssetPdfRow[],
   filename = "assets-report.pdf",
   localeLabels: Record<string, string> = {},
+  storeNames: Record<string, string> = {},
 ) {
   if (!rows || rows.length === 0) return false;
   const t = (key: string, fallback: string) => localeLabels[key] || fallback;
+  const storeLabel = (storeId?: string) =>
+    (storeId && storeNames[storeId]) || storeId || "";
 
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -54,7 +57,7 @@ export function exportAssetsToPdf(
     String(row.customAssetId ?? ""),
     String(row.status ?? ""),
     String(row.condition ?? ""),
-    String(row.storeId ?? ""),
+    String(row.storeId != null ? storeLabel(row.storeId) : ""),
     String(row.ownerUserId ?? ""),
     row.expiryDate ? new Date(row.expiryDate).toLocaleDateString() : "",
     row.renewalDate ? new Date(row.renewalDate).toLocaleDateString() : "",
@@ -87,9 +90,12 @@ export async function exportAssetDetailPdf(
   history: any[],
   filename?: string,
   localeLabels: Record<string, string> = {},
+  storeNames: Record<string, string> = {},
 ) {
   if (!asset) return false;
   const t = (key: string, fallback: string) => localeLabels[key] || fallback;
+  const storeLabel = (storeId?: string) =>
+    (storeId && storeNames[storeId]) || storeId || "—";
   const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -107,7 +113,7 @@ export async function exportAssetDetailPdf(
   const fields = [
     [t("status", "Status"), asset.status || "—"],
     [t("condition", "Condition"), asset.condition || "—"],
-    [t("store", "Store"), asset.storeId || "—"],
+    [t("store", "Store"), storeLabel(asset.storeId)],
     [t("owner", "Owner"), asset.ownerUserId || asset.userId || "—"],
     [t("expiryDate", "Expiry Date"), asset.expiryDate ? new Date(asset.expiryDate).toLocaleDateString() : "—"],
     [t("renewalDate", "Renewal Date"), asset.renewalDate ? new Date(asset.renewalDate).toLocaleDateString() : "—"],

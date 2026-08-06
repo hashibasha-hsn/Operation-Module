@@ -95,6 +95,7 @@ import {
   type AssetFilters,
 } from "@/lib/assetApi";
 import { fetchUsers, fetchEntities, getUserDisplayName } from "@/lib/processApi";
+import { buildStoreNameMap } from "@/lib/displayLabels";
 import { createTicket } from "@/lib/ticketApi";
 import { exportAssetsToPdf, exportAssetDetailPdf } from "@/lib/assetPdf";
 
@@ -156,6 +157,8 @@ export default function Assets() {
     activeTable?.customFields && Array.isArray(activeTable.customFields)
       ? activeTable.customFields
       : [];
+
+  const storeNames = buildStoreNameMap(stores);
 
   const loadData = async () => {
     setLoading(true);
@@ -454,12 +457,12 @@ export default function Assets() {
       utilizationPercent: a.utilizationPercent,
       customFields: a.customFields,
     }));
-    const ok = exportAssetsToPdf(rows, `assets-${Date.now()}.pdf`);
+    const ok = exportAssetsToPdf(rows, `assets-${Date.now()}.pdf`, {}, storeNames);
     if (!ok) toast.error("No assets to export");
   };
 
   const handleExportAssetPdf = async (asset: any) => {
-    await exportAssetDetailPdf(asset, asset.history || []);
+    await exportAssetDetailPdf(asset, asset.history || [], undefined, {}, storeNames);
   };
 
   const handleDownloadExcel = () => {
@@ -1001,7 +1004,7 @@ export default function Assets() {
                         </Badge>
                       </TableCell>
                       <TableCell>{asset.condition || "good"}</TableCell>
-                      <TableCell>{asset.storeId || "—"}</TableCell>
+                      <TableCell>{storeNames[asset.storeId] || asset.storeId || "—"}</TableCell>
                       <TableCell>
                         {users.find((u) => u.id === (asset.ownerUserId || asset.userId))?.label ||
                           asset.ownerUserId ||
