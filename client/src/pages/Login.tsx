@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import {
   Mail,
   Lock,
+  Eye,
+  EyeOff,
   ArrowRight,
   Loader2,
   CheckSquare,
@@ -36,6 +38,7 @@ export default function Login() {
   const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(getRememberMePreference);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -400,13 +403,22 @@ export default function Login() {
                       <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <Input
                         id="password"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         placeholder={t("enterYourPassword")}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="pl-11 h-12 bg-background/60 border-border/80 focus-visible:ring-primary/25"
+                        className="pl-11 pr-11 h-12 bg-background/60 border-border/80 focus-visible:ring-primary/25"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={showPassword ? t("hidePassword") || "Hide password" : t("showPassword") || "Show password"}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </div>
                   </div>
 
