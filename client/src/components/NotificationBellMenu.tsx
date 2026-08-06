@@ -18,6 +18,7 @@ import {
   getNotificationTypeLabel,
   markNotificationRead,
   CHANNEL_INVITE_TYPE,
+  MESSAGE_RECEIVED_TYPE,
   type AppNotification,
 } from "@/lib/notificationApi";
 import { joinChannel, declineChannel } from "@/lib/communicationApi";
@@ -171,9 +172,11 @@ export default function NotificationBellMenu() {
                 <span className="text-xs text-muted-foreground line-clamp-2">
                   {notification.content}
                 </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {getNotificationTypeLabel(notification.type, t)}
-                </span>
+                {notification.type !== MESSAGE_RECEIVED_TYPE && (
+                  <span className="text-[10px] text-muted-foreground">
+                    {getNotificationTypeLabel(notification.type, t)}
+                  </span>
+                )}
               </DropdownMenuItem>
             ),
           )

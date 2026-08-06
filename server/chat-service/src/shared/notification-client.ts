@@ -43,15 +43,13 @@ export async function notifyMessageReceived(input: {
   senderName: string;
   body?: string;
 }): Promise<void> {
-  const preview = input.body ? `: ${input.body.slice(0, 120)}` : '';
   await sendUserNotification({
     userId: input.userId,
     type: MESSAGE_RECEIVED_TYPE,
-    title: input.conversationName,
-    content: `${input.senderName}${preview}`,
+    title: 'You got new message',
+    content: 'Check out the chat',
     data: {
       conversationId: input.conversationId,
-      senderName: input.senderName,
       link: `/communication?conv=${input.conversationId}`,
     },
     deliveryMethod: 'IN_APP',
